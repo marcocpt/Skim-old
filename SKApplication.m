@@ -54,6 +54,7 @@ NSString *SKDarkModeChangedNotification = @"SKDarkModeChangedNotification";
 }
 
 - (void)sendEvent:(NSEvent *)anEvent {
+    // 处理远程控制的事件，HIDRemote 相关
     if ([anEvent type] == NSApplicationDefined && [anEvent subtype] == SKRemoteButtonEvent) {
         id target = [self targetForAction:@selector(remoteButtonPressed:)];
         if (target == nil) {
