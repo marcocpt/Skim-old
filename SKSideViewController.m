@@ -39,7 +39,6 @@
 #import "SKSideViewController.h"
 #import "SKImageToolTipWindow.h"
 #import "SKGradientView.h"
-#import "SKImageToolTipWindow.h"
 #import "NSGeometry_SKExtensions.h"
 #import "SKStringConstants.h"
 
