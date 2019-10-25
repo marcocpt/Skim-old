@@ -42,9 +42,13 @@
 extern NSString *SKDocumentFileURLDidChangeNotification;
 
 typedef NS_ENUM(NSInteger, SKInteractionMode) {
+    /// 普通模式
     SKNormalMode,
+    /// 全屏模式。显示工具栏
     SKFullScreenMode,
+    /// 展示模式，不显示工具栏
     SKPresentationMode,
+    /// l遗留全屏模式？
     SKLegacyFullScreenMode
 };
 

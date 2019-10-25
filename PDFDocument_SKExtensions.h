@@ -49,6 +49,7 @@ typedef struct _SKLanguageDirections {
 - (NSArray *)fileIDStrings;
 - (NSDictionary *)initialSettings;
 - (SKLanguageDirections)languageDirections;
+/// 允许创建或修改笔记
 - (BOOL)allowsNotes;
 - (BOOL)realAllowsCommenting;
 - (NSDocument *)containingDocument;

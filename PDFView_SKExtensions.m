@@ -256,6 +256,7 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
     return context == NSDraggingContextWithinApplication ? NSDragOperationNone : NSDragOperationCopy;
 }
 
+/// 拖动选中的文字
 - (BOOL)doDragTextWithEvent:(NSEvent *)theEvent {
     if ([[self currentSelection] hasCharacters] == NO)
         return NO;

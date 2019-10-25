@@ -96,8 +96,11 @@ enum {
 @interface SKPDFView : PDFView {
     SKToolMode toolMode;
     SKNoteType annotationMode;
+    
+    /// 界面交互模式
     SKInteractionMode interactionMode;
     
+    /// 隐藏所有笔记内容
     BOOL hideNotes;
     
     NSInteger navigationMode;
@@ -109,6 +112,7 @@ enum {
     
     SKTypeSelectHelper *typeSelectHelper;
     
+    /// 激活的注释
 	PDFAnnotation *activeAnnotation;
 	PDFAnnotation *highlightAnnotation;
     
@@ -144,12 +148,14 @@ enum {
 @property (nonatomic) SKToolMode toolMode;
 @property (nonatomic) SKNoteType annotationMode;
 @property (nonatomic) SKInteractionMode interactionMode;
+/// 激活的注释
 @property (nonatomic, retain) PDFAnnotation *activeAnnotation;
 @property (nonatomic, readonly, getter=isZooming) BOOL zooming;
 @property (nonatomic, readonly) NSTextField *editTextField;
 @property (nonatomic) NSRect currentSelectionRect;
 @property (nonatomic, retain) PDFPage *currentSelectionPage;
 @property (nonatomic, readonly) CGFloat currentMagnification;
+/// 隐藏所有笔记内容
 @property (nonatomic) BOOL hideNotes;
 @property (nonatomic, readonly) BOOL hasReadingBar;
 @property (readonly) SKReadingBar *readingBar;

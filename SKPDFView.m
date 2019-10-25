@@ -193,6 +193,7 @@ enum {
 - (void)doMoveReadingBarForKey:(unichar)eventChar;
 - (void)doResizeReadingBarForKey:(unichar)eventChar;
 
+/// 选择注释
 - (BOOL)doSelectAnnotationWithEvent:(NSEvent *)theEvent;
 - (void)doDragAnnotationWithEvent:(NSEvent *)theEvent;
 - (void)doClickLinkWithEvent:(NSEvent *)theEvent;
