@@ -94,7 +94,9 @@ enum {
 @class SKReadingBar, SKTransitionController, SKTypeSelectHelper, SKNavigationWindow, SKTextNoteEditor, SKSyncDot;
 
 @interface SKPDFView : PDFView {
+    /// 已选择的工具模式
     SKToolMode toolMode;
+    /// 已选择的注释模式
     SKNoteType annotationMode;
     
     /// 界面交互模式
