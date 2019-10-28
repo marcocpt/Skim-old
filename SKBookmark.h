@@ -40,9 +40,12 @@
 #import <Quartz/Quartz.h>
 
 typedef NS_ENUM(NSInteger, SKBookmarkType) {
+    /// 书签
     SKBookmarkTypeBookmark,
+    /// 文件夹
     SKBookmarkTypeFolder,
     SKBookmarkTypeSession,
+    /// 分割符
     SKBookmarkTypeSeparator
 };
 

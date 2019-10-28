@@ -87,9 +87,9 @@
 #define LABEL_KEY    @"label"
 
 #define SAVE_DELAY 10.0
-
+/// KVO 中做 context
 static char SKBookmarkPropertiesObservationContext;
-
+/// 书签 id, 用在 NSUserDefaults 中
 static NSString *SKBookmarksIdentifier = nil;
 
 static NSArray *minimumCoverForBookmarks(NSArray *items);
@@ -97,9 +97,12 @@ static NSArray *minimumCoverForBookmarks(NSArray *items);
 @interface SKBookmarkController (SKPrivate)
 - (void)setupToolbar;
 - (void)saveBookmarksData;
+/// NSApplicationWillTerminateNotification 通知时执行
 - (void)handleApplicationWillTerminateNotification:(NSNotification *)notification;
 - (void)endEditing;
+/// ✅ 开始 KVO 书签
 - (void)startObservingBookmarks:(NSArray *)newBookmarks;
+/// ✅ 停止 KVO 书签
 - (void)stopObservingBookmarks:(NSArray *)oldBookmarks;
 @end
 
@@ -112,9 +115,9 @@ static NSArray *minimumCoverForBookmarks(NSArray *items);
 @synthesize outlineView, statusBar, bookmarkRoot, previousSession, undoManager;
 
 static SKBookmarkController *sharedBookmarkController = nil;
-
+/// 最大的“最近的文档”数
 static NSUInteger maxRecentDocumentsCount = 0;
-
+/// ✅ 设置 最大文档数，bookmarks 的 id
 + (void)initialize {
     SKINITIALIZE;
     
@@ -130,7 +133,7 @@ static NSUInteger maxRecentDocumentsCount = 0;
         [[[self alloc] init] release];
     return sharedBookmarkController;
 }
-
+/// ✅ This method exists for historical reasons; memory zones are no longer used by Objective-C.
 + (id)allocWithZone:(NSZone *)zone {
     return [sharedBookmarkController retain] ?: [super allocWithZone:zone];
 }
