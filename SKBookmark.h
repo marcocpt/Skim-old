@@ -63,11 +63,13 @@ typedef NS_ENUM(NSInteger, SKBookmarkType) {
 
 - (id)initWithURL:(NSURL *)aURL pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel;
 - (id)initWithSetup:(NSDictionary *)aSetupDict label:(NSString *)aLabel;
+/// ✅ 初始化文件夹
 - (id)initFolderWithChildren:(NSArray *)aChildren label:(NSString *)aLabel;
 - (id)initFolderWithLabel:(NSString *)aLabel;
 - (id)initRootWithChildrenProperties:(NSArray *)childrenProperties;
 - (id)initSessionWithSetups:(NSArray *)aSetupDicts label:(NSString *)aLabel;
 - (id)initSeparator;
+/// ✅ 使用字典属性初始化
 - (id)initWithProperties:(NSDictionary *)dictionary;
 
 @property (nonatomic, readonly) NSDictionary *properties;
@@ -82,6 +84,7 @@ typedef NS_ENUM(NSInteger, SKBookmarkType) {
 @property (nonatomic, retain) NSNumber *pageNumber;
 @property (nonatomic, readonly) BOOL hasSetup;
 @property (nonatomic, readonly) NSString *tabs;
+/// 父节点
 @property (nonatomic, assign) SKBookmark *parent;
 @property (nonatomic, readonly) NSArray *containingBookmarks;
 

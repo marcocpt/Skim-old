@@ -68,6 +68,7 @@
     NSUInteger pageIndex;
     NSDictionary *setup;
 }
+/// ✅ 初始化
 - (id)initWithAliasData:(NSData *)aData pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel;
 - (SKAlias *)alias;
 - (NSData *)aliasData;
@@ -342,7 +343,7 @@ static Class SKBookmarkClass = Nil;
 - (id)initFolderWithLabel:(NSString *)aLabel {
     return [self initFolderWithChildren:nil label:aLabel];
 }
-/// ✅ 使用 SKBookmarksIdentifier 域中保存的 bookmarks 来初始化
+/// ✅ 使用 SKBookmarksIdentifier 域中保存的 bookmarks 转换为 SKBookmark 来初始化
 - (id)initRootWithChildrenProperties:(NSArray *)childrenProperties {
     NSMutableArray *aChildren = [NSMutableArray array];
     SKBookmark *child;
