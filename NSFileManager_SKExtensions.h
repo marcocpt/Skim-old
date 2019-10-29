@@ -40,7 +40,7 @@
 
 
 @interface NSFileManager (SKExtensions)
-
+/// ✅ 获取应用支持的路径 urls
 - (NSArray *)applicationSupportDirectoryURLs;
 
 - (NSURL *)uniqueChewableItemsDirectoryURL;

@@ -62,10 +62,12 @@ typedef NS_ENUM(NSInteger, SKBookmarkType) {
 + (NSArray *)bookmarksForURLs:(NSArray *)urls;
 
 - (id)initWithURL:(NSURL *)aURL pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel;
+/// ✅ 初始化上次关闭应用前的文档的书签
 - (id)initWithSetup:(NSDictionary *)aSetupDict label:(NSString *)aLabel;
-/// ✅ 初始化文件夹
+/// ✅ 初始化书签中的文件夹
 - (id)initFolderWithChildren:(NSArray *)aChildren label:(NSString *)aLabel;
 - (id)initFolderWithLabel:(NSString *)aLabel;
+/// 初始化书签的根结点
 - (id)initRootWithChildrenProperties:(NSArray *)childrenProperties;
 - (id)initSessionWithSetups:(NSArray *)aSetupDicts label:(NSString *)aLabel;
 - (id)initSeparator;

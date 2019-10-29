@@ -40,5 +40,6 @@
 
 
 @interface NSApplication (SKScriptMenu)
+/// this creates the script menu if needed
 - (NSMenu *)scriptMenu;
 @end

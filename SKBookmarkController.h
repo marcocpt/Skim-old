@@ -52,6 +52,7 @@
     NSButton *deleteButton;
     NSButton *previewButton;
     SKBookmark *bookmarkRoot;
+    /// 上次关闭的会话。在 Bookmark 菜单栏下会生成 ”Restore Previous Session“ 菜单
     SKBookmark *previousSession;
     NSMutableArray *recentDocuments;
     NSUndoManager *undoManager;
