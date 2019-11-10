@@ -103,7 +103,7 @@ NSString *SKDocumentControllerDocumentKey = @"document";
 @implementation SKDocumentController
 
 @synthesize openedFile;
-
+/// ✅ 设置文档自动保存的时间间隔。SKAutosaveIntervalKey 未设置。
 - (id)init {
     self = [super init];
     if (self) {
@@ -608,7 +608,7 @@ static inline NSDictionary *optionsFromFragmentAndEvent(NSString *fragment) {
     }
 }
 
-// By not responding to newWindowForTab: no "+" button is shown in the tab bar
+/// ✅ By not responding to newWindowForTab: no "+" button is shown in the tab bar
 - (BOOL)respondsToSelector:(SEL)aSelector {
     return aSelector != @selector(newWindowForTab:) && [super respondsToSelector:aSelector];
 }

@@ -48,12 +48,14 @@ NSString *SKFullScreenBackgroundColorKey = @"SKFullScreenBackgroundColor";
 NSString *SKDarkBackgroundColorKey = @"SKDarkBackgroundColor";
 NSString *SKDarkFullScreenBackgroundColorKey = @"SKDarkFullScreenBackgroundColor";
 NSString *SKPageBackgroundColorKey = @"SKPageBackgroundColor";
+/// 最后一次打开的文件名
 NSString *SKLastOpenFileNamesKey = @"SKLastOpenFileNames";
 NSString *SKOpenContentsPaneOnlyForTOCKey = @"SKOpenContentsPaneOnlyForTOC";
 NSString *SKInitialWindowSizeOptionKey = @"SKInitialWindowSizeOption";
 NSString *SKReopenLastOpenFilesKey = @"SKReopenLastOpenFiles";
 NSString *SKRememberLastPageViewedKey = @"SKRememberLastPageViewed";
 NSString *SKRememberSnapshotsKey = @"SKRememberSnapshots";
+/// 配置中 General - Automatically save Skim notes backups
 NSString *SKAutoSaveSkimNotesKey = @"SKAutoSaveSkimNotes";
 NSString *SKSnapshotsOnTopKey = @"SKSnapshotsOnTop";
 NSString *SKSnapshotThumbnailSizeKey = @"SKSnapshotThumbnailSize";

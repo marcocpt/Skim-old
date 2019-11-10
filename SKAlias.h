@@ -49,7 +49,7 @@
 
 + (id)aliasWithData:(NSData *)data;
 + (id)aliasWithURL:(NSURL *)fileURL;
-
+/// ✅ 使用 NSData 初始化
 - (id)initWithData:(NSData *)data;
 - (id)initWithURL:(NSURL *)fileURL;
 

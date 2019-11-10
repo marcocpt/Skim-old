@@ -68,12 +68,14 @@
     NSUInteger pageIndex;
     NSDictionary *setup;
 }
+/// ✅ 初始化
 - (id)initWithAliasData:(NSData *)aData pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel;
 - (SKAlias *)alias;
 - (NSData *)aliasData;
 @end
 
 @interface SKFolderBookmark : SKBookmark {
+    /// Menu item label
     NSString *label;
     NSMutableArray *children;
 }
@@ -97,13 +99,13 @@
 
 static SKPlaceholderBookmark *defaultPlaceholderBookmark = nil;
 static Class SKBookmarkClass = Nil;
-
+/// ✅ 实现单利？
 + (void)initialize {
     SKINITIALIZE;
     SKBookmarkClass = self;
     defaultPlaceholderBookmark = (SKPlaceholderBookmark *)NSAllocateObject([SKPlaceholderBookmark class], 0, NSDefaultMallocZone());
 }
-
+/// ✅
 + (id)allocWithZone:(NSZone *)aZone {
     return SKBookmarkClass == self ? defaultPlaceholderBookmark : [super allocWithZone:aZone];
 }
@@ -206,7 +208,7 @@ static Class SKBookmarkClass = Nil;
 }
 
 - (NSDictionary *)properties { return nil; }
-
+/// 书签类型
 - (SKBookmarkType)bookmarkType { return SKBookmarkTypeSeparator; }
 
 - (NSImage *)icon { return nil; }
@@ -231,7 +233,7 @@ static Class SKBookmarkClass = Nil;
 - (BOOL)hasSetup { return NO; }
 
 - (NSArray *)containingBookmarks { return [NSArray array]; }
-
+/// ✅ 子节点
 - (NSArray *)children { return nil; }
 - (NSUInteger)countOfChildren { return 0; }
 - (SKBookmark *)objectInChildrenAtIndex:(NSUInteger)anIndex { return nil; }
@@ -341,7 +343,7 @@ static Class SKBookmarkClass = Nil;
 - (id)initFolderWithLabel:(NSString *)aLabel {
     return [self initFolderWithChildren:nil label:aLabel];
 }
-
+/// ✅ 使用 SKBookmarksIdentifier 域中保存的 bookmarks 转换为 SKBookmark 来初始化
 - (id)initRootWithChildrenProperties:(NSArray *)childrenProperties {
     NSMutableArray *aChildren = [NSMutableArray array];
     SKBookmark *child;
@@ -581,7 +583,7 @@ static Class SKBookmarkClass = Nil;
 #pragma mark -
 
 @implementation SKFolderBookmark
-
+/// KVO 中遇到 key 是 "fileDescription" 和 "toolTip" 就增加 "children"
 + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
     NSSet *keyPaths = [super keyPathsForValuesAffectingValueForKey:key];
     if ([key isEqualToString:@"fileDescription"] || [key isEqualToString:@"toolTip"])
