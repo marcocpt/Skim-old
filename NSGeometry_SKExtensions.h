@@ -50,11 +50,11 @@ typedef NS_OPTIONS(NSUInteger, SKRectEdges) {
 static inline NSPoint SKIntegralPoint(NSPoint point) {
     return NSMakePoint(round(point.x), round(point.y));
 }
-
+/// 两点相加
 static inline NSPoint SKAddPoints(NSPoint aPoint, NSPoint bPoint) {
     return NSMakePoint(aPoint.x + bPoint.x, aPoint.y + bPoint.y);
 }
-
+/// 两点相减
 static inline NSPoint SKSubstractPoints(NSPoint aPoint, NSPoint bPoint) {
     return NSMakePoint(aPoint.x - bPoint.x, aPoint.y - bPoint.y);
 }
