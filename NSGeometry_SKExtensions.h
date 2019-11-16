@@ -46,15 +46,15 @@ typedef NS_OPTIONS(NSUInteger, SKRectEdges) {
 	SKMaxYEdgeMask = 1 << NSMaxYEdge,
 	SKEveryEdgeMask = SKMinXEdgeMask | SKMinYEdgeMask | SKMaxXEdgeMask | SKMaxYEdgeMask,
 };
-
+/// 取整
 static inline NSPoint SKIntegralPoint(NSPoint point) {
     return NSMakePoint(round(point.x), round(point.y));
 }
-
+/// 两点相加
 static inline NSPoint SKAddPoints(NSPoint aPoint, NSPoint bPoint) {
     return NSMakePoint(aPoint.x + bPoint.x, aPoint.y + bPoint.y);
 }
-
+/// 两点相减
 static inline NSPoint SKSubstractPoints(NSPoint aPoint, NSPoint bPoint) {
     return NSMakePoint(aPoint.x - bPoint.x, aPoint.y - bPoint.y);
 }
@@ -117,7 +117,7 @@ static inline NSRect SKRectFromCenterAndSize(NSPoint center, NSSize size) {
     rect.size = size;
     return rect;
 }
-
+/// 依据中心点和边长获得矩形
 static inline NSRect SKRectFromCenterAndSquareSize(NSPoint center, CGFloat size) {
     NSRect rect;
     rect.origin.x = center.x - 0.5 * size;
