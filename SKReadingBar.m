@@ -252,7 +252,7 @@ static inline BOOL topAbovePoint(NSRect rect, NSPoint point, NSInteger lineAngle
     [self updateCurrentBounds];
     return YES;
 }
-
+/// 绘制 reading bar
 - (void)drawForPage:(PDFPage *)pdfPage withBox:(PDFDisplayBox)box inContext:(CGContextRef)context {
     BOOL invert = [[NSUserDefaults standardUserDefaults] boolForKey:SKReadingBarInvertKey];
     
