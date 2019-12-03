@@ -2765,6 +2765,7 @@ static inline CGFloat secondaryOutset(CGFloat x) {
     if (wantsAdded && [self wantsLayer]) {
         [[self layer] addSublayer:layer];
     } else {
+        // 使用放大镜时调用
         overlay = [[SKAnimatedBorderlessWindow alloc] initWithContentRect:[self convertRectToScreen:[self bounds]]];
         [overlay setIgnoresMouseEvents:YES];
         [[overlay contentView] setWantsLayer:YES];
