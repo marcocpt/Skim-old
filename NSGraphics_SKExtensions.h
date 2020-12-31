@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 10/20/11.
 /*
- This software is Copyright (c) 2011-2019
+ This software is Copyright (c) 2011-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 extern BOOL SKHasDarkAppearance(id object);
 extern void SKSetHasDarkAppearance(id object);
 extern void SKSetHasLightAppearance(id object);
+extern void SKSetHasDefaultAppearance(id object);
 
 extern void SKRunWithAppearance(id object, void (^code)(void));
 void SKRunWithLightAppearance(void (^code)(void));

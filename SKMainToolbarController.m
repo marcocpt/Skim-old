@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/2/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -59,6 +59,7 @@
 #import "NSColor_SKExtensions.h"
 #import "PDFAnnotation_SKExtensions.h"
 #import "PDFDocument_SKExtensions.h"
+#import "SKShareMenuController.h"
 
 #define SKDocumentToolbarIdentifier @"SKDocumentToolbar"
 
@@ -90,10 +91,14 @@
 #define SKDocumentToolbarSingleTwoUpItemIdentifier @"SKDocumentToolbarSingleTwoUpItemIdentifier"
 #define SKDocumentToolbarContinuousItemIdentifier @"SKDocumentToolbarContinuousItemIdentifier"
 #define SKDocumentToolbarDisplayModeItemIdentifier @"SKDocumentToolbarDisplayModeItemIdentifier"
+#define SKDocumentToolbarDisplayDirectionItemIdentifier @"SKDocumentToolbarDisplayDirectionItemIdentifier"
+#define SKDocumentToolbarDisplaysRTLItemIdentifier @"SKDocumentToolbarDisplaysRTLItemIdentifier"
 #define SKDocumentToolbarBookModeItemIdentifier @"SKDocumentToolbarBookModeItemIdentifier"
 #define SKDocumentToolbarPageBreaksItemIdentifier @"SKDocumentToolbarPageBreaksItemIdentifier"
 #define SKDocumentToolbarDisplayBoxItemIdentifier @"SKDocumentToolbarDisplayBoxItemIdentifier"
 #define SKDocumentToolbarColorSwatchItemIdentifier @"SKDocumentToolbarColorSwatchItemIdentifier"
+#define SKDocumentToolbarShareItemIdentifier @"SKDocumentToolbarShareItemIdentifier"
+#define SKDocumentToolbarPacerItemIdentifier @"SKDocumentToolbarPacerItemIdentifier"
 #define SKDocumentToolbarColorsItemIdentifier @"SKDocumentToolbarColorsItemIdentifier"
 #define SKDocumentToolbarFontsItemIdentifier @"SKDocumentToolbarFontsItemIdentifier"
 #define SKDocumentToolbarLinesItemIdentifier @"SKDocumentToolbarLinesItemIdentifier"
@@ -102,17 +107,9 @@
 #define SKDocumentToolbarPrintItemIdentifier @"SKDocumentToolbarPrintItemIdentifier"
 #define SKDocumentToolbarCustomizeItemIdentifier @"SKDocumentToolbarCustomizeItemIdentifier"
 
-#define PERCENT_FACTOR 100.0
-
 static NSString *noteToolImageNames[] = {@"ToolbarTextNoteMenu", @"ToolbarAnchoredNoteMenu", @"ToolbarCircleNoteMenu", @"ToolbarSquareNoteMenu", @"ToolbarHighlightNoteMenu", @"ToolbarUnderlineNoteMenu", @"ToolbarStrikeOutNoteMenu", @"ToolbarLineNoteMenu", @"ToolbarInkNoteMenu"};
 
 static NSString *addNoteToolImageNames[] = {@"ToolbarAddTextNoteMenu", @"ToolbarAddAnchoredNoteMenu", @"ToolbarAddCircleNoteMenu", @"ToolbarAddSquareNoteMenu", @"ToolbarAddHighlightNoteMenu", @"ToolbarAddUnderlineNoteMenu", @"ToolbarAddStrikeOutNoteMenu", @"ToolbarAddLineNoteMenu", @"ToolbarAddInkNoteMenu"};
-
-#if SDK_BEFORE(10_10)
-enum {
-    NSSegmentStyleSeparated = 8
-}
-#endif
 
 @interface SKToolbar : NSToolbar
 @end
@@ -131,7 +128,7 @@ enum {
 
 @implementation SKMainToolbarController
 
-@synthesize mainController, backForwardButton, pageNumberField, previousNextPageButton, previousPageButton, nextPageButton, previousNextFirstLastPageButton, zoomInOutButton, zoomInActualOutButton, zoomActualButton, zoomFitButton, zoomSelectionButton, rotateLeftButton, rotateRightButton, rotateLeftRightButton, cropButton, fullScreenButton, presentationButton, leftPaneButton, rightPaneButton, toolModeButton, textNoteButton, circleNoteButton, markupNoteButton, lineNoteButton, singleTwoUpButton, continuousButton, displayModeButton, bookModeButton, pageBreaksButton, displayBoxButton, infoButton, colorsButton, fontsButton, linesButton, printButton, customizeButton, scaleField, noteButton, colorSwatch;
+@synthesize mainController, backForwardButton, pageNumberField, previousNextPageButton, previousPageButton, nextPageButton, previousNextFirstLastPageButton, zoomInOutButton, zoomInActualOutButton, zoomActualButton, zoomFitButton, zoomSelectionButton, rotateLeftButton, rotateRightButton, rotateLeftRightButton, cropButton, fullScreenButton, presentationButton, leftPaneButton, rightPaneButton, toolModeButton, textNoteButton, circleNoteButton, markupNoteButton, lineNoteButton, singleTwoUpButton, continuousButton, displayModeButton, displayDirectionButton, displaysRTLButton, bookModeButton, pageBreaksButton, displayBoxButton, infoButton, colorsButton, fontsButton, linesButton, printButton, customizeButton, scaleField, noteButton, colorSwatch, pacerView, pacerButton, pacerSpeedField, pacerSpeedStepper, shareButton;
 
 - (void)dealloc {
     mainController = nil;
@@ -162,6 +159,8 @@ enum {
     SKDESTROY(singleTwoUpButton);
     SKDESTROY(continuousButton);
     SKDESTROY(displayModeButton);
+    SKDESTROY(displayDirectionButton);
+    SKDESTROY(displaysRTLButton);
     SKDESTROY(bookModeButton);
     SKDESTROY(pageBreaksButton);
     SKDESTROY(displayBoxButton);
@@ -175,6 +174,12 @@ enum {
     SKDESTROY(pageNumberField);
     SKDESTROY(scaleField);
     SKDESTROY(colorSwatch);
+    SKDESTROY(pacerView);
+    SKDESTROY(pacerButton);
+    SKDESTROY(pacerSpeedField);
+    SKDESTROY(pacerSpeedStepper);
+    SKDESTROY(shareButton);
+    SKDESTROY(shareMenuController);
     [super dealloc];
 }
 
@@ -235,8 +240,7 @@ enum {
             [item setToolTip:NSLocalizedString(@"Previous/Next", @"Tool tip message")];
             [previousNextPageButton setHelp:NSLocalizedString(@"Go To Previous Page", @"Tool tip message") forSegment:0];
             [previousNextPageButton setHelp:NSLocalizedString(@"Go To Next Page", @"Tool tip message") forSegment:1];
-            if (RUNNING_AFTER(10_9))
-                [previousNextPageButton setSegmentStyle:NSSegmentStyleSeparated];
+            [previousNextPageButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:previousNextPageButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -251,8 +255,7 @@ enum {
             [item setToolTip:NSLocalizedString(@"Go To Previous Page", @"Tool tip message")];
             [previousPageButton setHelp:NSLocalizedString(@"Go To First page", @"Tool tip message") forSegment:0];
             [previousPageButton setHelp:NSLocalizedString(@"Go To Previous Page", @"Tool tip message") forSegment:1];
-            if (RUNNING_AFTER(10_9))
-                [previousPageButton setSegmentStyle:NSSegmentStyleSeparated];
+            [previousPageButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:previousPageButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -267,8 +270,7 @@ enum {
             [item setToolTip:NSLocalizedString(@"Go To Next Page", @"Tool tip message")];
             [nextPageButton setHelp:NSLocalizedString(@"Go To Next Page", @"Tool tip message") forSegment:0];
             [nextPageButton setHelp:NSLocalizedString(@"Go To Last page", @"Tool tip message") forSegment:1];
-            if (RUNNING_AFTER(10_9))
-                [nextPageButton setSegmentStyle:NSSegmentStyleSeparated];
+            [nextPageButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:nextPageButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -287,8 +289,7 @@ enum {
             [previousNextFirstLastPageButton setHelp:NSLocalizedString(@"Go To Previous Page", @"Tool tip message") forSegment:1];
             [previousNextFirstLastPageButton setHelp:NSLocalizedString(@"Go To Next Page", @"Tool tip message") forSegment:2];
             [previousNextFirstLastPageButton setHelp:NSLocalizedString(@"Go To Last page", @"Tool tip message") forSegment:3];
-            if (RUNNING_AFTER(10_9))
-                [previousNextFirstLastPageButton setSegmentStyle:NSSegmentStyleSeparated];
+            [previousNextFirstLastPageButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:previousNextFirstLastPageButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -303,8 +304,7 @@ enum {
             [item setToolTip:NSLocalizedString(@"Back/Forward", @"Tool tip message")];
             [backForwardButton setHelp:NSLocalizedString(@"Go Back", @"Tool tip message") forSegment:0];
             [backForwardButton setHelp:NSLocalizedString(@"Go Forward", @"Tool tip message") forSegment:1];
-            if (RUNNING_AFTER(10_9))
-                [backForwardButton setSegmentStyle:NSSegmentStyleSeparated];
+            [backForwardButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:backForwardButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -326,8 +326,8 @@ enum {
             [item setViewWithSizes:scaleField];
             [item setMenuFormRepresentation:menuItem];
             
-            [(NSNumberFormatter *)[scaleField formatter] setMinimum:[NSNumber numberWithDouble:100.0 * [mainController.pdfView minimumScaleFactor]]];
-            [(NSNumberFormatter *)[scaleField formatter] setMaximum:[NSNumber numberWithDouble:100.0 * [mainController.pdfView maximumScaleFactor]]];
+            [(NSNumberFormatter *)[scaleField formatter] setMinimum:[NSNumber numberWithDouble:[mainController.pdfView minimumScaleFactor]]];
+            [(NSNumberFormatter *)[scaleField formatter] setMaximum:[NSNumber numberWithDouble:[mainController.pdfView maximumScaleFactor]]];
             
         } else if ([identifier isEqualToString:SKDocumentToolbarZoomActualItemIdentifier]) {
             
@@ -367,8 +367,7 @@ enum {
             [item setToolTip:NSLocalizedString(@"Zoom", @"Tool tip message")];
             [zoomInOutButton setHelp:NSLocalizedString(@"Zoom Out", @"Tool tip message") forSegment:0];
             [zoomInOutButton setHelp:NSLocalizedString(@"Zoom In", @"Tool tip message") forSegment:1];
-            if (RUNNING_AFTER(10_9))
-                [zoomInOutButton setSegmentStyle:NSSegmentStyleSeparated];
+            [zoomInOutButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:zoomInOutButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -385,8 +384,7 @@ enum {
             [zoomInActualOutButton setHelp:NSLocalizedString(@"Zoom Out", @"Tool tip message") forSegment:0];
             [zoomInActualOutButton setHelp:NSLocalizedString(@"Zoom To Actual Size", @"Tool tip message") forSegment:1];
             [zoomInActualOutButton setHelp:NSLocalizedString(@"Zoom In", @"Tool tip message") forSegment:2];
-            if (RUNNING_AFTER(10_9))
-                [zoomInActualOutButton setSegmentStyle:NSSegmentStyleSeparated];
+            [zoomInActualOutButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:zoomInActualOutButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -419,8 +417,7 @@ enum {
             [item setToolTip:NSLocalizedString(@"Rotate Left or Right", @"Tool tip message")];
             [rotateLeftRightButton setHelp:NSLocalizedString(@"Rotate Left", @"Tool tip message") forSegment:0];
             [rotateLeftRightButton setHelp:NSLocalizedString(@"Rotate Right", @"Tool tip message") forSegment:1];
-            if (RUNNING_AFTER(10_9))
-                [rotateLeftRightButton setSegmentStyle:NSSegmentStyleSeparated];
+            [rotateLeftRightButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:rotateLeftRightButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -537,8 +534,7 @@ enum {
             [noteButton setHelp:NSLocalizedString(@"Add New Underline", @"Tool tip message") forSegment:SKUnderlineNote];
             [noteButton setHelp:NSLocalizedString(@"Add New Strike Out", @"Tool tip message") forSegment:SKStrikeOutNote];
             [noteButton setHelp:NSLocalizedString(@"Add New Line", @"Tool tip message") forSegment:SKLineNote];
-            if (RUNNING_AFTER(10_9))
-                [noteButton setSegmentStyle:NSSegmentStyleSeparated];
+            [noteButton setSegmentStyle:NSSegmentStyleSeparated];
             [item setViewWithSizes:noteButton];
             [item setMenuFormRepresentation:menuItem];
             
@@ -619,19 +615,62 @@ enum {
             [menu addItemWithTitle:NSLocalizedString(@"Single Page Continuous", @"Menu item title") action:@selector(changeDisplayMode:) target:mainController tag:kPDFDisplaySinglePageContinuous];
             [menu addItemWithTitle:NSLocalizedString(@"Two Pages", @"Menu item title") action:@selector(changeDisplayMode:) target:mainController tag:kPDFDisplayTwoUp];
             [menu addItemWithTitle:NSLocalizedString(@"Two Pages Continuous", @"Menu item title") action:@selector(changeDisplayMode:) target:mainController tag:kPDFDisplayTwoUpContinuous];
-            
+            [menu addItemWithTitle:NSLocalizedString(@"Horizontal Continuous", @"Menu item title") action:@selector(changeDisplayMode:) target:mainController tag:4];
+
             [item setLabels:NSLocalizedString(@"Display Mode", @"Toolbar item label")];
             [item setToolTip:NSLocalizedString(@"Display Mode", @"Tool tip message")];
             [displayModeButton setHelp:NSLocalizedString(@"Single Page", @"Tool tip message") forSegment:kPDFDisplaySinglePage];
             [displayModeButton setHelp:NSLocalizedString(@"Single Page Continuous", @"Tool tip message") forSegment:kPDFDisplaySinglePageContinuous];
             [displayModeButton setHelp:NSLocalizedString(@"Two Pages", @"Tool tip message") forSegment:kPDFDisplayTwoUp];
             [displayModeButton setHelp:NSLocalizedString(@"Two Pages Continuous", @"Tool tip message") forSegment:kPDFDisplayTwoUpContinuous];
+            [displayModeButton setHelp:NSLocalizedString(@"Horizontal Continuous", @"Tool tip message") forSegment:4];
+            
+            if (RUNNING_BEFORE(10_13))
+                [displayModeButton setSegmentCount:4];
+            
             [item setViewWithSizes:displayModeButton];
+            [item setMenuFormRepresentation:menuItem];
+            
+        } else if ([identifier isEqualToString:SKDocumentToolbarDisplayDirectionItemIdentifier]) {
+            
+            menuItem = [NSMenuItem menuItemWithSubmenuAndTitle:NSLocalizedString(@"Direction", @"Toolbar item label")];
+            menu = [menuItem submenu];
+            [menu addItemWithTitle:NSLocalizedString(@"Vertical", @"Menu item title") action:@selector(changeDisplayDirection:) target:mainController tag:0];
+            [menu addItemWithTitle:NSLocalizedString(@"Horizontal", @"Menu item title") action:@selector(changeDisplayDirection:) target:mainController tag:1];
+            
+            [item setLabels:NSLocalizedString(@"Direction", @"Toolbar item label")];
+            [item setToolTip:NSLocalizedString(@"Direction", @"Tool tip message")];
+            [displayDirectionButton setHelp:NSLocalizedString(@"Vertical", @"Tool tip message") forSegment:0];
+            [displayDirectionButton setHelp:NSLocalizedString(@"Horizontal", @"Tool tip message") forSegment:1];
+            [item setViewWithSizes:displayDirectionButton];
+            [item setMenuFormRepresentation:menuItem];
+            
+            } else if ([identifier isEqualToString:SKDocumentToolbarDisplayDirectionItemIdentifier]) {
+                
+                menuItem = [NSMenuItem menuItemWithSubmenuAndTitle:NSLocalizedString(@"Direction", @"Toolbar item label")];
+                menu = [menuItem submenu];
+                [menu addItemWithTitle:NSLocalizedString(@"Vertical", @"Menu item title") action:@selector(changeDisplayDirection:) target:mainController tag:0];
+                [menu addItemWithTitle:NSLocalizedString(@"Horizontal", @"Menu item title") action:@selector(changeDisplayDirection:) target:mainController tag:1];
+                
+                [item setLabels:NSLocalizedString(@"Direction", @"Toolbar item label")];
+                [item setToolTip:NSLocalizedString(@"Direction", @"Tool tip message")];
+                [displayDirectionButton setHelp:NSLocalizedString(@"Vertical", @"Tool tip message") forSegment:0];
+                [displayDirectionButton setHelp:NSLocalizedString(@"Horizontal", @"Tool tip message") forSegment:1];
+                [item setViewWithSizes:displayDirectionButton];
+                [item setMenuFormRepresentation:menuItem];
+                
+        } else if ([identifier isEqualToString:SKDocumentToolbarDisplaysRTLItemIdentifier]) {
+            
+            menuItem = [NSMenuItem menuItemWithTitle:NSLocalizedString(@"Right to Left", @"Menu item title") action:@selector(toggleDisplaysRTL:) target:mainController];
+            
+            [item setLabels:NSLocalizedString(@"Right to Left", @"Toolbar item label")];
+            [item setToolTip:NSLocalizedString(@"Right to Left", @"Tool tip message")];
+            [item setViewWithSizes:displaysRTLButton];
             [item setMenuFormRepresentation:menuItem];
             
         } else if ([identifier isEqualToString:SKDocumentToolbarBookModeItemIdentifier]) {
             
-            menuItem = [NSMenuItem menuItemWithTitle:NSLocalizedString(@"Book Mode", @"Menu item title") action:@selector(toggleDisplayAsBook:) target:mainController];
+            menuItem = [NSMenuItem menuItemWithTitle:NSLocalizedString(@"Book Mode", @"Menu item title") action:@selector(toggleDisplaysAsBook:) target:mainController];
             
             [item setLabels:NSLocalizedString(@"Book Mode", @"Toolbar item label")];
             [item setToolTip:NSLocalizedString(@"Book Mode", @"Tool tip message")];
@@ -661,7 +700,8 @@ enum {
             
         } else if ([identifier isEqualToString:SKDocumentToolbarColorSwatchItemIdentifier]) {
             
-            NSDictionary *options = [NSDictionary dictionaryWithObject:SKUnarchiveFromDataArrayTransformerName forKey:NSValueTransformerNameBindingOption];
+            NSValueTransformer *transformer = [NSValueTransformer arrayTransformerWithValueTransformerForName:NSUnarchiveFromDataTransformerName];
+            NSDictionary *options = [NSDictionary dictionaryWithObject:transformer forKey:NSValueTransformerBindingOption];
             [colorSwatch bind:@"colors" toObject:[NSUserDefaultsController sharedUserDefaultsController] withKeyPath:[@"values." stringByAppendingString:SKSwatchColorsKey] options:options];
             [colorSwatch sizeToFit];
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleColorSwatchColorsChangedNotification:)
@@ -676,7 +716,58 @@ enum {
             [item setViewWithSizes:colorSwatch];
             [item setMenuFormRepresentation:menuItem];
             [self handleColorSwatchFrameChangedNotification:nil];
+            [self handleColorSwatchColorsChangedNotification:nil];
 
+        } else if ([identifier isEqualToString:SKDocumentToolbarShareItemIdentifier]) {
+            
+            shareMenuController = [[SKShareMenuController alloc] initForDocument:[[self mainController] document]];
+            menuItem = [NSMenuItem menuItemWithSubmenuAndTitle:NSLocalizedString(@"Share", @"Toolbar item label")];
+            menu = [menuItem submenu];
+            [menu setDelegate:shareMenuController];
+            
+            menu = [[[NSMenu alloc] init] autorelease];
+            [menu setDelegate:shareMenuController];
+            [shareButton setMenu:menu forSegment:0];
+            
+            [item setLabels:NSLocalizedString(@"Share", @"Toolbar item label")];
+            [item setToolTip:NSLocalizedString(@"Share", @"Toolbar item label")];
+            [item setViewWithSizes:shareButton];
+            [item setMenuFormRepresentation:menuItem];
+            
+        } else if ([identifier isEqualToString:SKDocumentToolbarPacerItemIdentifier]) {
+            
+            [pacerButton sizeToFit];
+            NSRect frame;
+            frame = [pacerButton frame];
+            if (NSHeight(frame) < 25.0) {
+                frame.size.height = 25.0;
+                [pacerButton setFrame:frame];
+            }
+            frame = [pacerSpeedField frame];
+            frame.size.height = NSHeight([pacerButton frame]);
+            [pacerSpeedField setFrame:frame];
+            frame = [pacerSpeedStepper frame];
+            frame.origin.y = ceil(NSMidY([pacerButton frame]) - 0.5 * NSHeight([pacerSpeedStepper frame]));
+            [pacerSpeedStepper setFrame:frame];
+            frame = [pacerView frame];
+            frame.size.height = NSHeight([pacerButton frame]) + 1.0;
+            [pacerView setFrame:frame];
+
+            menuItem = [NSMenuItem menuItemWithSubmenuAndTitle:NSLocalizedString(@"Pacer", @"Toolbar item label")];
+            menu = [menuItem submenu];
+            [menu addItemWithTitle:NSLocalizedString(@"Start Pacer", @"Menu item title") action:@selector(togglePacer:) target:mainController tag:0];
+            [menu addItemWithTitle:NSLocalizedString(@"Pacer Speed", @"Menu item title") action:@selector(choosePacerSpeed:) target:self tag:0];
+            [menu addItemWithTitle:NSLocalizedString(@"Faster", @"Menu item title") action:@selector(changePacerSpeed:) target:mainController tag:0];
+            [menu addItemWithTitle:NSLocalizedString(@"Slower", @"Menu item title") action:@selector(changePacerSpeed:) target:mainController tag:-1];
+            
+            [item setLabels:NSLocalizedString(@"Pacer", @"Toolbar item label")];
+            [item setToolTip:NSLocalizedString(@"Pacer", @"Tool tip message")];
+            [pacerButton setHelp:NSLocalizedString(@"Pacer", @"Tool tip message") forSegment:0];
+            [pacerSpeedField setToolTip:NSLocalizedString(@"Pacer Speed", @"Tool tip message")];
+            [pacerSpeedStepper setToolTip:NSLocalizedString(@"Pacer Speed", @"Tool tip message")];
+            [item setViewWithSizes:pacerView];
+            [item setMenuFormRepresentation:menuItem];
+            
         } else if ([identifier isEqualToString:SKDocumentToolbarColorsItemIdentifier]) {
             
             menuItem = [NSMenuItem menuItemWithTitle:NSLocalizedString(@"Colors", @"Menu item title") action:@selector(orderFrontColorPanel:) target:nil];
@@ -761,6 +852,8 @@ enum {
     NSToolbarItem *item = [self toolbarItemForItemIdentifier:itemIdent];
     
     if (willBeInserted == NO) {
+        if ([itemIdent isEqualToString:SKDocumentToolbarShareItemIdentifier])
+             [[shareButton menuForSegment:0] removeAllItems];
         item = [[item copy] autorelease];
         [item setEnabled:YES];
         if ([[item view] respondsToSelector:@selector(setEnabled:)])
@@ -783,49 +876,99 @@ enum {
 }
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
-    return [NSArray arrayWithObjects: 
-        SKDocumentToolbarPreviousNextItemIdentifier, 
-        SKDocumentToolbarPreviousNextFirstLastItemIdentifier, 
-        SKDocumentToolbarPreviousItemIdentifier, 
-        SKDocumentToolbarPageNumberItemIdentifier, 
-        SKDocumentToolbarNextItemIdentifier, 
-        SKDocumentToolbarBackForwardItemIdentifier, 
-        SKDocumentToolbarZoomInActualOutItemIdentifier, 
-        SKDocumentToolbarZoomInOutItemIdentifier, 
-        SKDocumentToolbarZoomActualItemIdentifier, 
-        SKDocumentToolbarZoomToFitItemIdentifier, 
-        SKDocumentToolbarZoomToSelectionItemIdentifier, 
-        SKDocumentToolbarScaleItemIdentifier, 
-        SKDocumentToolbarSingleTwoUpItemIdentifier, 
-        SKDocumentToolbarContinuousItemIdentifier, 
-        SKDocumentToolbarDisplayModeItemIdentifier, 
-        SKDocumentToolbarBookModeItemIdentifier, 
-        SKDocumentToolbarPageBreaksItemIdentifier, 
-        SKDocumentToolbarDisplayBoxItemIdentifier, 
-        SKDocumentToolbarFullScreenItemIdentifier, 
-        SKDocumentToolbarPresentationItemIdentifier, 
-        SKDocumentToolbarContentsPaneItemIdentifier, 
-        SKDocumentToolbarNotesPaneItemIdentifier, 
-        SKDocumentToolbarRotateRightItemIdentifier, 
-        SKDocumentToolbarRotateLeftItemIdentifier, 
-        SKDocumentToolbarRotateLeftRightItemIdentifier, 
-        SKDocumentToolbarCropItemIdentifier, 
-        SKDocumentToolbarNewNoteItemIdentifier, 
-        SKDocumentToolbarNewTextNoteItemIdentifier, 
-        SKDocumentToolbarNewCircleNoteItemIdentifier, 
+    if (RUNNING_BEFORE(10_13))
+        return [NSArray arrayWithObjects:
+            SKDocumentToolbarPreviousNextItemIdentifier,
+            SKDocumentToolbarPreviousNextFirstLastItemIdentifier,
+            SKDocumentToolbarPreviousItemIdentifier,
+            SKDocumentToolbarPageNumberItemIdentifier,
+            SKDocumentToolbarNextItemIdentifier,
+            SKDocumentToolbarBackForwardItemIdentifier,
+            SKDocumentToolbarZoomInActualOutItemIdentifier,
+            SKDocumentToolbarZoomInOutItemIdentifier,
+            SKDocumentToolbarZoomActualItemIdentifier,
+            SKDocumentToolbarZoomToFitItemIdentifier,
+            SKDocumentToolbarZoomToSelectionItemIdentifier,
+            SKDocumentToolbarScaleItemIdentifier,
+            SKDocumentToolbarDisplayModeItemIdentifier,
+            SKDocumentToolbarSingleTwoUpItemIdentifier,
+            SKDocumentToolbarContinuousItemIdentifier,
+            SKDocumentToolbarBookModeItemIdentifier,
+            SKDocumentToolbarPageBreaksItemIdentifier,
+            SKDocumentToolbarDisplayBoxItemIdentifier,
+            SKDocumentToolbarFullScreenItemIdentifier,
+            SKDocumentToolbarPresentationItemIdentifier,
+            SKDocumentToolbarContentsPaneItemIdentifier,
+            SKDocumentToolbarNotesPaneItemIdentifier,
+            SKDocumentToolbarRotateRightItemIdentifier,
+            SKDocumentToolbarRotateLeftItemIdentifier,
+            SKDocumentToolbarRotateLeftRightItemIdentifier,
+            SKDocumentToolbarCropItemIdentifier,
+            SKDocumentToolbarNewNoteItemIdentifier,
+            SKDocumentToolbarNewTextNoteItemIdentifier,
+            SKDocumentToolbarNewCircleNoteItemIdentifier,
+            SKDocumentToolbarNewMarkupItemIdentifier,
+            SKDocumentToolbarNewLineItemIdentifier,
+            SKDocumentToolbarToolModeItemIdentifier,
+            SKDocumentToolbarColorSwatchItemIdentifier,
+            SKDocumentToolbarShareItemIdentifier,
+            SKDocumentToolbarPacerItemIdentifier,
+            SKDocumentToolbarInfoItemIdentifier,
+            SKDocumentToolbarColorsItemIdentifier,
+            SKDocumentToolbarFontsItemIdentifier,
+            SKDocumentToolbarLinesItemIdentifier,
+            SKDocumentToolbarPrintItemIdentifier,
+            NSToolbarFlexibleSpaceItemIdentifier,
+            NSToolbarSpaceItemIdentifier,
+            NSToolbarSeparatorItemIdentifier,
+            SKDocumentToolbarCustomizeItemIdentifier, nil];
+    return [NSArray arrayWithObjects:
+        SKDocumentToolbarPreviousNextItemIdentifier,
+        SKDocumentToolbarPreviousNextFirstLastItemIdentifier,
+        SKDocumentToolbarPreviousItemIdentifier,
+        SKDocumentToolbarPageNumberItemIdentifier,
+        SKDocumentToolbarNextItemIdentifier,
+        SKDocumentToolbarBackForwardItemIdentifier,
+        SKDocumentToolbarZoomInActualOutItemIdentifier,
+        SKDocumentToolbarZoomInOutItemIdentifier,
+        SKDocumentToolbarZoomActualItemIdentifier,
+        SKDocumentToolbarZoomToFitItemIdentifier,
+        SKDocumentToolbarZoomToSelectionItemIdentifier,
+        SKDocumentToolbarScaleItemIdentifier,
+        SKDocumentToolbarDisplayModeItemIdentifier,
+        SKDocumentToolbarSingleTwoUpItemIdentifier,
+        SKDocumentToolbarContinuousItemIdentifier,
+        SKDocumentToolbarDisplayDirectionItemIdentifier,
+        SKDocumentToolbarBookModeItemIdentifier,
+        SKDocumentToolbarDisplaysRTLItemIdentifier,
+        SKDocumentToolbarPageBreaksItemIdentifier,
+        SKDocumentToolbarDisplayBoxItemIdentifier,
+        SKDocumentToolbarFullScreenItemIdentifier,
+        SKDocumentToolbarPresentationItemIdentifier,
+        SKDocumentToolbarContentsPaneItemIdentifier,
+        SKDocumentToolbarNotesPaneItemIdentifier,
+        SKDocumentToolbarRotateRightItemIdentifier,
+        SKDocumentToolbarRotateLeftItemIdentifier,
+        SKDocumentToolbarRotateLeftRightItemIdentifier,
+        SKDocumentToolbarCropItemIdentifier,
+        SKDocumentToolbarNewNoteItemIdentifier,
+        SKDocumentToolbarNewTextNoteItemIdentifier,
+        SKDocumentToolbarNewCircleNoteItemIdentifier,
         SKDocumentToolbarNewMarkupItemIdentifier,
         SKDocumentToolbarNewLineItemIdentifier,
-        SKDocumentToolbarToolModeItemIdentifier, 
-        SKDocumentToolbarColorSwatchItemIdentifier, 
-        SKDocumentToolbarInfoItemIdentifier, 
-        SKDocumentToolbarColorsItemIdentifier, 
-        SKDocumentToolbarFontsItemIdentifier, 
-        SKDocumentToolbarLinesItemIdentifier, 
-		SKDocumentToolbarPrintItemIdentifier,
-		NSToolbarFlexibleSpaceItemIdentifier, 
-		NSToolbarSpaceItemIdentifier, 
-		NSToolbarSeparatorItemIdentifier, 
-		SKDocumentToolbarCustomizeItemIdentifier, nil];
+        SKDocumentToolbarToolModeItemIdentifier,
+        SKDocumentToolbarColorSwatchItemIdentifier,
+        SKDocumentToolbarShareItemIdentifier,
+        SKDocumentToolbarPacerItemIdentifier,
+        SKDocumentToolbarInfoItemIdentifier,
+        SKDocumentToolbarColorsItemIdentifier,
+        SKDocumentToolbarFontsItemIdentifier,
+        SKDocumentToolbarLinesItemIdentifier,
+        SKDocumentToolbarPrintItemIdentifier,
+        NSToolbarFlexibleSpaceItemIdentifier,
+        NSToolbarSpaceItemIdentifier,
+        NSToolbarSeparatorItemIdentifier,
+        SKDocumentToolbarCustomizeItemIdentifier, nil];
 }
 
 - (BOOL)validateToolbarItem:(NSToolbarItem *)toolbarItem {
@@ -834,31 +977,40 @@ enum {
     if ([[toolbarItem toolbar] customizationPaletteIsRunning]) {
         return NO;
     } else if ([identifier isEqualToString:SKDocumentToolbarZoomActualItemIdentifier]) {
-        return [mainController.pdfView.document isLocked] == NO && ([mainController.pdfView  autoScales] || fabs([mainController.pdfView scaleFactor] - 1.0 ) > 0.01);
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO && ([mainController.pdfView  autoScales] || fabs([mainController.pdfView scaleFactor] - 1.0 ) > 0.01);
     } else if ([identifier isEqualToString:SKDocumentToolbarZoomToFitItemIdentifier]) {
-        return [mainController.pdfView.document isLocked] == NO && [mainController.pdfView autoScales] == NO;
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO && [mainController.pdfView autoScales] == NO;
     } else if ([identifier isEqualToString:SKDocumentToolbarZoomToSelectionItemIdentifier]) {
-        return [mainController.pdfView.document isLocked] == NO && NSIsEmptyRect([mainController.pdfView currentSelectionRect]) == NO;
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO && NSIsEmptyRect([mainController.pdfView currentSelectionRect]) == NO;
+    } else if ([identifier isEqualToString:SKDocumentToolbarZoomInOutItemIdentifier] ||
+               [identifier isEqualToString:SKDocumentToolbarZoomInActualOutItemIdentifier]) {
+        return [mainController hasOverview] == NO;
     } else if ([identifier isEqualToString:SKDocumentToolbarScaleItemIdentifier]) {
-        return [mainController.pdfView.document isLocked] == NO;
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO;
     } else if ([identifier isEqualToString:SKDocumentToolbarPageNumberItemIdentifier]) {
         return [mainController.pdfView.document isLocked] == NO;
     } else if ([identifier isEqualToString:SKDocumentToolbarDisplayBoxItemIdentifier] || [identifier isEqualToString:SKDocumentToolbarDisplayModeItemIdentifier] || [identifier isEqualToString:SKDocumentToolbarSingleTwoUpItemIdentifier] || [identifier isEqualToString:SKDocumentToolbarContinuousItemIdentifier] || [identifier isEqualToString:SKDocumentToolbarPageBreaksItemIdentifier]) {
-        return [mainController.pdfView.document isLocked] == NO;
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO;
+    } else if ([identifier isEqualToString:SKDocumentToolbarDisplayDirectionItemIdentifier]) {
+        return RUNNING_AFTER(10_12) && [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO && [mainController.pdfView displayMode] == kPDFDisplaySinglePageContinuous;
+    } else if ([identifier isEqualToString:SKDocumentToolbarDisplaysRTLItemIdentifier]) {
+        return RUNNING_AFTER(10_12) && [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO && ([mainController.pdfView displayMode] & kPDFDisplayTwoUp) != 0;
     } else if ([identifier isEqualToString:SKDocumentToolbarBookModeItemIdentifier]) {
-        return [mainController.pdfView.document isLocked] == NO && ([mainController.pdfView displayMode] == kPDFDisplayTwoUp || [mainController.pdfView displayMode] == kPDFDisplayTwoUpContinuous);
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO && ([mainController.pdfView displayMode] & kPDFDisplayTwoUp) != 0;
+    } else if ([identifier isEqualToString:SKDocumentToolbarToolModeItemIdentifier]) {
+        return [mainController hasOverview] == NO;
     } else if ([identifier isEqualToString:SKDocumentToolbarNewTextNoteItemIdentifier] || [identifier isEqualToString:SKDocumentToolbarNewCircleNoteItemIdentifier] || [identifier isEqualToString:SKDocumentToolbarNewLineItemIdentifier]) {
-        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes];
+        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController hasOverview] == NO && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes];
     } else if ([identifier isEqualToString:SKDocumentToolbarNewMarkupItemIdentifier]) {
-        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes] && [[mainController.pdfView currentSelection] hasCharacters];
+        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController hasOverview] == NO && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes] && [[mainController.pdfView currentSelection] hasCharacters];
     } else if ([identifier isEqualToString:SKDocumentToolbarNewLineItemIdentifier]) {
-        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes] && [[mainController.pdfView currentSelection] hasCharacters];
+        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController hasOverview] == NO && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes] && [[mainController.pdfView currentSelection] hasCharacters];
     } else if ([identifier isEqualToString:SKDocumentToolbarNewNoteItemIdentifier]) {
-        BOOL enabled = ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [[mainController.pdfView currentSelection] hasCharacters];
+        BOOL enabled = ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController hasOverview] == NO && [mainController.pdfView hideNotes] == NO && [[mainController.pdfView currentSelection] hasCharacters];
         [noteButton setEnabled:enabled forSegment:SKHighlightNote];
         [noteButton setEnabled:enabled forSegment:SKUnderlineNote];
         [noteButton setEnabled:enabled forSegment:SKStrikeOutNote];
-        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes];
+        return ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController hasOverview] == NO && [mainController.pdfView hideNotes] == NO && [mainController.pdfView.document allowsNotes];
     } else if ([identifier isEqualToString:SKDocumentToolbarFullScreenItemIdentifier]) {
         return [mainController canEnterFullscreen] || [mainController canExitFullscreen];
     } else if ([identifier isEqualToString:SKDocumentToolbarPresentationItemIdentifier]) {
@@ -874,18 +1026,18 @@ enum {
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
     SEL action = [menuItem action];
     if (action == @selector(chooseScale:)) {
-        return [mainController.pdfView.document isLocked] == NO;
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO;
     } else if (action == @selector(zoomActualPhysical:)) {
-        return [mainController.pdfView.document isLocked] == NO;
+        return [mainController.pdfView.document isLocked] == NO && [mainController hasOverview] == NO;
     } else if (action == @selector(createNewTextNote:)) {
         [menuItem setState:[[textNoteButton cell] tagForSegment:0] == [menuItem tag] ? NSOnState : NSOffState];
-        return [mainController interactionMode] != SKPresentationMode && [mainController.pdfView.document allowsNotes] && ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO;
+        return [mainController interactionMode] != SKPresentationMode && [mainController hasOverview] == NO && [mainController.pdfView.document allowsNotes] && ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO;
     } else if (action == @selector(createNewCircleNote:)) {
         [menuItem setState:[[circleNoteButton cell] tagForSegment:0] == [menuItem tag] ? NSOnState : NSOffState];
-        return [mainController interactionMode] != SKPresentationMode && [mainController.pdfView.document allowsNotes] && ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO;
+        return [mainController interactionMode] != SKPresentationMode && [mainController hasOverview] == NO && [mainController.pdfView.document allowsNotes] && ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO;
     } else if (action == @selector(createNewMarkupNote:)) {
         [menuItem setState:[[markupNoteButton cell] tagForSegment:0] == [menuItem tag] ? NSOnState : NSOffState];
-        return [mainController interactionMode] != SKPresentationMode && [mainController.pdfView.document allowsNotes] && ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [[mainController.pdfView currentSelection] hasCharacters];
+        return [mainController interactionMode] != SKPresentationMode && [mainController hasOverview] == NO && [mainController.pdfView.document allowsNotes] && ([mainController.pdfView toolMode] == SKTextToolMode || [mainController.pdfView toolMode] == SKNoteToolMode) && [mainController.pdfView hideNotes] == NO && [[mainController.pdfView currentSelection] hasCharacters];
     } else if (action == @selector(toggleFullScreen:)) {
         return [mainController canEnterFullscreen] || [mainController canExitFullscreen];
     } else if (action == @selector(togglePresentation:)) {
@@ -905,8 +1057,9 @@ enum {
     for (NSColor *color in [colorSwatch colors]) {
         NSMenuItem *item = [menu addItemWithTitle:@"" action:@selector(selectColor:) target:self];
         
-        NSImage *image = [NSImage bitmapImageWithSize:size drawingHandler:^(NSRect rect){
+        NSImage *image = [NSImage imageWithSize:size flipped:NO drawingHandler:^(NSRect rect){
                 [color drawSwatchInRoundedRect:rect];
+                return YES;
             }];
         [item setRepresentedObject:color];
         [item setImage:image];
@@ -940,18 +1093,20 @@ enum {
 }
 
 - (IBAction)changeScaleFactor:(id)sender {
-    [mainController.pdfView setScaleFactor:[sender integerValue] / PERCENT_FACTOR];
+    [mainController.pdfView setScaleFactor:[sender doubleValue]];
     [mainController.pdfView setAutoScales:NO];
 }
 
 - (IBAction)chooseScale:(id)sender {
     SKTextFieldSheetController *scaleSheetController = [[[SKTextFieldSheetController alloc] initWithWindowNibName:@"ScaleSheet"] autorelease];
     
-    [[scaleSheetController textField] setIntegerValue:[mainController.pdfView scaleFactor] * PERCENT_FACTOR];
+    [(NSNumberFormatter *)[[scaleSheetController textField] formatter] setMinimum:[NSNumber numberWithDouble:[mainController.pdfView minimumScaleFactor]]];
+    [(NSNumberFormatter *)[[scaleSheetController textField] formatter] setMaximum:[NSNumber numberWithDouble:[mainController.pdfView maximumScaleFactor]]];
+    [[scaleSheetController textField] setDoubleValue:[mainController.pdfView scaleFactor]];
     
     [scaleSheetController beginSheetModalForWindow:[mainController window] completionHandler:^(NSInteger result) {
-            if (result == NSOKButton)
-                [mainController.pdfView setScaleFactor:[[scaleSheetController textField] integerValue] / PERCENT_FACTOR];
+            if (result == NSModalResponseOK)
+                [mainController.pdfView setScaleFactor:[[scaleSheetController textField] doubleValue]];
         }];
 }
 
@@ -1010,17 +1165,31 @@ enum {
 
 - (IBAction)changeDisplaySinglePages:(id)sender {
     PDFDisplayMode displayMode = ([mainController.pdfView displayMode] & ~kPDFDisplayTwoUp) | [sender selectedTag];
-    [mainController.pdfView setDisplayModeAndRewind:displayMode];
+    if ([mainController.pdfView displaysHorizontally] && displayMode == kPDFDisplaySinglePageContinuous)
+        displayMode = kPDFDisplayHorizontalContinuous;
+    [mainController.pdfView setExtendedDisplayModeAndRewind:displayMode];
 }
 
 - (IBAction)changeDisplayContinuous:(id)sender {
     PDFDisplayMode displayMode = ([mainController.pdfView displayMode] & ~kPDFDisplaySinglePageContinuous) | [sender selectedTag];
-    [mainController.pdfView setDisplayModeAndRewind:displayMode];
+    if ([mainController.pdfView displaysHorizontally] && displayMode == kPDFDisplaySinglePageContinuous)
+        displayMode = kPDFDisplayHorizontalContinuous;
+    [mainController.pdfView setExtendedDisplayModeAndRewind:displayMode];
 }
 
 - (IBAction)changeDisplayMode:(id)sender {
     PDFDisplayMode displayMode = [sender selectedTag];
-    [mainController.pdfView setDisplayModeAndRewind:displayMode];
+    [mainController.pdfView setExtendedDisplayModeAndRewind:displayMode];
+}
+
+- (IBAction)changeDisplayDirection:(id)sender {
+    BOOL horizontally = [sender selectedTag] == 1;
+    [mainController.pdfView setDisplaysHorizontallyAndRewind:horizontally];
+}
+
+- (IBAction)changeDisplaysRTL:(id)sender {
+    BOOL horizontally = [sender selectedTag] == 1;
+    [mainController.pdfView setDisplaysRightToLeftAndRewind:horizontally];
 }
 
 - (IBAction)changeBookMode:(id)sender {
@@ -1070,8 +1239,28 @@ enum {
     NSColor *newColor = [sender respondsToSelector:@selector(color)] ? [sender color] : [sender respondsToSelector:@selector(representedObject)] ? [sender representedObject] : nil;
     BOOL isShift = ([NSEvent standardModifierFlags] & NSShiftKeyMask) != 0;
     BOOL isAlt = ([NSEvent standardModifierFlags] & NSAlternateKeyMask) != 0;
-    if ([annotation isSkimNote])
+    if ([annotation isSkimNote]) {
         [annotation setColor:newColor alternate:isAlt updateDefaults:isShift];
+    } else {
+        NSString *defaultKey = [mainController.pdfView currentColorDefaultKeyForAlternate:isAlt];
+        if (defaultKey)
+            [[NSUserDefaults standardUserDefaults] setColor:newColor forKey:defaultKey];
+    }
+}
+
+- (IBAction)togglePacer:(id)sender {
+    [mainController togglePacer:sender];
+}
+
+- (IBAction)choosePacerSpeed:(id)sender {
+    SKTextFieldSheetController *speedSheetController = [[[SKTextFieldSheetController alloc] initWithWindowNibName:@"SpeedSheet"] autorelease];
+    
+    [[speedSheetController textField] setObjectValue:[NSNumber numberWithDouble:[mainController.pdfView pacerSpeed]]];
+    
+    [speedSheetController beginSheetModalForWindow:[mainController window] completionHandler:^(NSInteger result) {
+            if (result == NSModalResponseOK)
+                [mainController.pdfView setPacerSpeed:[[speedSheetController textField] doubleValue]];
+        }];
 }
 
 #pragma mark Notifications
@@ -1095,7 +1284,7 @@ enum {
 }
 
 - (void)handleScaleChangedNotification:(NSNotification *)notification {
-    [scaleField setDoubleValue:[mainController.pdfView scaleFactor] * PERCENT_FACTOR];
+    [scaleField setDoubleValue:[mainController.pdfView scaleFactor]];
     
     [zoomInOutButton setEnabled:[mainController.pdfView canZoomOut] forSegment:0];
     [zoomInOutButton setEnabled:[mainController.pdfView canZoomIn] forSegment:1];
@@ -1115,9 +1304,25 @@ enum {
 
 - (void)handleDisplayModeChangedNotification:(NSNotification *)notification {
     PDFDisplayMode displayMode = [mainController.pdfView displayMode];
-    [displayModeButton selectSegmentWithTag:displayMode];
     [singleTwoUpButton selectSegmentWithTag:displayMode & kPDFDisplayTwoUp];
     [continuousButton selectSegmentWithTag:displayMode & kPDFDisplaySinglePageContinuous];
+    if ([mainController.pdfView displaysHorizontally] && displayMode == kPDFDisplaySinglePageContinuous && [displayModeButton segmentCount] > 4)
+        displayMode = kPDFDisplayHorizontalContinuous;
+    [displayModeButton selectSegmentWithTag:displayMode];
+}
+
+- (void)handleDisplayDirectionChangedNotification:(NSNotification *)notification {
+    NSInteger direction = [mainController.pdfView displaysHorizontally] ? 1 : 0;
+    [displayDirectionButton selectSegmentWithTag:direction];
+    PDFDisplayMode displayMode = [mainController.pdfView displayMode];
+    if (direction == 1 && displayMode == kPDFDisplaySinglePageContinuous && [displayModeButton segmentCount] > 4)
+        displayMode = kPDFDisplayHorizontalContinuous;
+    [displayModeButton selectSegmentWithTag:displayMode];
+}
+
+- (void)handleDisplaysRTLChangedNotification:(NSNotification *)notification {
+    BOOL displaysRTL = [mainController.pdfView displaysRightToLeft];
+    [displaysRTLButton setSelected:displaysRTL forSegment:0];
 }
 
 - (void)handleBookModeChangedNotification:(NSNotification *)notification {
@@ -1132,6 +1337,11 @@ enum {
 
 - (void)handleAnnotationModeChangedNotification:(NSNotification *)notification {
     [toolModeButton setImage:[NSImage imageNamed:noteToolImageNames[[mainController.pdfView annotationMode]]] forSegment:SKNoteToolMode];
+}
+
+- (void)handlePacerStartedOrStoppedNotification:(NSNotification *)notification {
+    NSString *name = [mainController.pdfView hasPacer] ? SKImageNameToolbarPause : SKImageNameToolbarPlay;
+    [pacerButton setImage:[NSImage imageNamed:name] forSegment:0];
 }
 
 - (void)registerForNotifications {
@@ -1149,19 +1359,27 @@ enum {
                              name:SKPDFViewToolModeChangedNotification object:mainController.pdfView];
     [nc addObserver:self selector:@selector(handleAnnotationModeChangedNotification:) 
                              name:SKPDFViewAnnotationModeChangedNotification object:mainController.pdfView];
-    [nc addObserver:self selector:@selector(handleDisplayModeChangedNotification:) 
+    [nc addObserver:self selector:@selector(handlePacerStartedOrStoppedNotification:)
+                             name:SKPDFViewPacerStartedOrStoppedNotification object:mainController.pdfView];
+    [nc addObserver:self selector:@selector(handleDisplayModeChangedNotification:)
                              name:PDFViewDisplayModeChangedNotification object:mainController.pdfView];
-    [nc addObserver:self selector:@selector(handleDisplayBoxChangedNotification:) 
+    [nc addObserver:self selector:@selector(handleDisplayDirectionChangedNotification:)
+                             name:SKPDFViewDisplaysHorizontallyChangedNotification object:mainController.pdfView];
+    [nc addObserver:self selector:@selector(handleDisplaysRTLChangedNotification:)
+                             name:SKPDFViewDisplaysRTLChangedNotification object:mainController.pdfView];
+    [nc addObserver:self selector:@selector(handleDisplayBoxChangedNotification:)
                              name:PDFViewDisplayBoxChangedNotification object:mainController.pdfView];
-    [nc addObserver:self selector:@selector(handleChangedHistoryNotification:) 
+    [nc addObserver:self selector:@selector(handleChangedHistoryNotification:)
                              name:PDFViewChangedHistoryNotification object:mainController.pdfView];
-    
+
     [self handleChangedHistoryNotification:nil];
     [self handlePageChangedNotification:nil];
     [self handleScaleChangedNotification:nil];
     [self handleToolModeChangedNotification:nil];
     [self handleDisplayBoxChangedNotification:nil];
     [self handleDisplayModeChangedNotification:nil];
+    [self handleDisplayDirectionChangedNotification:nil];
+    [self handleDisplaysRTLChangedNotification:nil];
     [self handleBookModeChangedNotification:nil];
     [self handlePageBreaksChangedNotification:nil];
     [self handleAnnotationModeChangedNotification:nil];

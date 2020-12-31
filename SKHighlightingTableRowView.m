@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan hofman on 22/04/2019.
 /*
- This software is Copyright (c) 2019
+ This software is Copyright (c) 2019-2020
  Christiaan Hofman. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -64,7 +64,7 @@ static BOOL supportsHighlights = YES;
 }
 
 - (BOOL)hasHighlights {
-    return supportsHighlights && (RUNNING_BEFORE(10_10) || ([[self window] isKeyWindow] && [[[self window] firstResponder] isDescendantOf:[self superview]]));
+    return supportsHighlights && ([[self window] isKeyWindow] && [[[self window] firstResponder] isDescendantOf:[self superview]]);
 }
 
 - (void)setHighlightLevel:(NSInteger)newHighlightLevel {
@@ -74,25 +74,32 @@ static BOOL supportsHighlights = YES;
     }
 }
 
+typedef struct { CGFloat r, g, b, a; } rgba;
+
+static void evaluateHighlight(void *info, const CGFloat *in, CGFloat *out) {
+    CGFloat x = fmin(1.0, 4.0 * fmin(in[0], 1.0 - in[0]));
+    rgba color = *(rgba*)info;
+    out[0] = color.r;
+    out[1] = color.g;
+    out[2] = color.b;
+    out[3] = color.a * x * (2.0 - x);
+}
+
 - (void)drawBackgroundInRect:(NSRect)dirtyRect {
     if ([self isSelected] == NO && [self highlightLevel] > 0 && [self hasHighlights]) {
-        NSColor *color = nil;
-        if (RUNNING_BEFORE(10_10)) {
-            NSWindow *window = [self window];
-            if ([window isKeyWindow] && [[window firstResponder] isDescendantOf:[self superview]])
-                color = [NSColor keySourceListHighlightColor];
-            else if ([window isMainWindow] || [window isKeyWindow])
-                color = [NSColor mainSourceListHighlightColor];
-            else
-                color = [NSColor disabledSourceListHighlightColor];
-        } else {
-            color = [[NSColor selectedMenuItemColor] colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
-        }
-        if (color && NSIntersectsRect([self bounds], dirtyRect)) {
-            NSGradient *gradient = [[NSGradient alloc] initWithColors:[NSArray arrayWithObjects:[NSColor clearColor], [color  colorWithAlphaComponent:fmin(1.0, 0.1 * [self highlightLevel])], [NSColor clearColor], nil]];
-            [gradient drawInRect:[self bounds] angle:0.0];
-            [gradient release];
-        }
+        NSRect rect = [[self viewAtColumn:0] frame];
+        rgba color;
+        [[[NSColor selectedMenuItemColor] colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] getRed:&color.r green:&color.g blue:&color.b alpha:NULL];
+        color.a = fmin(1.0, 0.1 * [self highlightLevel]);
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        CGFloat domain[] = {0.0, 1.0};
+        CGFloat range[] = {0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0};
+        CGFunctionCallbacks callbacks = {0, &evaluateHighlight, NULL};
+        CGFunctionRef function = CGFunctionCreate((void *)&color, 1, domain, 4, range, &callbacks);
+        CGShadingRef shading = CGShadingCreateAxial(colorSpace, CGPointMake(NSMinX(rect), 0.0), CGPointMake(NSMaxX(rect), 0.0), function, false, false);
+        CGColorSpaceRelease(colorSpace);
+        CGContextDrawShading([[NSGraphicsContext currentContext] graphicsPort], shading);
+        CGShadingRelease(shading);
     }
     
     [super drawBackgroundInRect:dirtyRect];

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 1/21/13.
 /*
- This software is Copyright (c)2013-2019
+ This software is Copyright (c)2013-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,38 +41,76 @@
 
 @implementation SKAlias
 
-@dynamic data, fileURL, fileURLNoUI;
+@dynamic data, isBookmark, fileURL, fileURLNoUI;
 
-+ (id)aliasWithData:(NSData *)data {
-    return [[[self alloc] initWithData:data] autorelease];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+static inline AliasHandle createAliasHandleFromURL(NSURL *fileURL) {
+    AliasHandle aliasHandle = NULL;
+    FSRef fileRef;
+    if (fileURL && CFURLGetFSRef((CFURLRef)fileURL, &fileRef))
+        FSNewAlias(NULL, &fileRef, &aliasHandle);
+    return aliasHandle;
 }
 
-+ (id)aliasWithURL:(NSURL *)fileURL {
-    return [[[self alloc] initWithURL:fileURL] autorelease];
+static inline AliasHandle createAliasHandleFromData(NSData *data) {
+    NSUInteger len = [data length];
+    Handle handle = NewHandle(len);
+    if (handle != NULL && len > 0) {
+        HLock(handle);
+        memmove((void *)*handle, (const void *)[data bytes], len);
+        HUnlock(handle);
+    }
+    return (AliasHandle)handle;
 }
 
-- (id)initWithData:(NSData *)data {
+static inline NSData *dataFromAliasHandle(AliasHandle aliasHandle) {
+    NSData *data = nil;
+    Handle handle = (Handle)aliasHandle;
+    NSUInteger len = GetHandleSize(handle);
+    SInt8 handleState = HGetState(handle);
+    HLock(handle);
+    data = [NSData dataWithBytes:(const void *)*handle length:len];
+    HSetState(handle, handleState);
+    return data;
+}
+
+static inline NSURL *fileURLFromAliasHandle(AliasHandle aliasHandle, NSUInteger mountFlags) {
+    FSRef fileRef;
+    Boolean wasChanged;
+    if (noErr == FSResolveAliasWithMountFlags(NULL, aliasHandle, &fileRef, &wasChanged, mountFlags))
+        return [(NSURL *)CFURLCreateFromFSRef(kCFAllocatorDefault, &fileRef) autorelease];
+    return nil;
+}
+
+static inline void disposeAliasHandle(AliasHandle aliasHandle) {
+    if (aliasHandle) DisposeHandle((Handle)aliasHandle);
+}
+#pragma clang diagnostic pop
+
+- (id)initWithAliasData:(NSData *)aliasData {
     self = [super init];
     if (self) {
-        
-        if (data == nil) {
+        if (aliasData)
+            aliasHandle = createAliasHandleFromData(aliasData);
+        if (aliasHandle) {
+            data = [aliasData retain];
+        } else {
             [self release];
             self = nil;
-        } else {
-            CFIndex len = CFDataGetLength((CFDataRef)data);
-            Handle handle = NewHandle(len);
-        
-            if (handle != NULL && len > 0) {
-                HLock(handle);
-                memmove((void *)*handle, (const void *)CFDataGetBytePtr((CFDataRef)data), len);
-                HUnlock(handle);
-                
-                aliasHandle = (AliasHandle)handle;
-            } else {
-                [self release];
-                self = nil;
-            }
+        }
+    }
+    return self;
+}
 
+- (id)initWithBookmarkData:(NSData *)bookmarkData {
+    self = [super init];
+    if (self) {
+        if (bookmarkData) {
+            data = [bookmarkData retain];
+        } else {
+            [self release];
+            self = nil;
         }
     }
     return self;
@@ -81,12 +119,8 @@
 - (id)initWithURL:(NSURL *)fileURL {
     self = [super init];
     if (self) {
-        FSRef fileRef;
-        
-        if (nil == fileURL ||
-            false == CFURLGetFSRef((CFURLRef)fileURL, &fileRef) || 
-            noErr != FSNewAlias(NULL, &fileRef, &aliasHandle)) {
-            
+        aliasHandle = createAliasHandleFromURL(fileURL);
+        if (aliasHandle == nil) {
             [self release];
             self = nil;
         }
@@ -95,44 +129,56 @@
 }
 
 - (void)dealloc {
-    if (aliasHandle) DisposeHandle((Handle)aliasHandle);
+    disposeAliasHandle(aliasHandle);
     aliasHandle = NULL;
+    SKDESTROY(data);
     [super dealloc];
 }
 
 - (NSData *)data {
-    CFDataRef data = NULL;
-    Handle handle = (Handle)aliasHandle;
-    
-    if (handle) {
-        CFIndex len = GetHandleSize(handle);
-        SInt8 handleState = HGetState(handle);
-        
-        HLock(handle);
-        data = CFDataCreate(kCFAllocatorDefault, (const UInt8 *)*handle, len);
-        HSetState(handle, handleState);
-    }
-    
-    return [(NSData *)data autorelease];
+    if (aliasHandle == NULL && data)
+        // try to convert bookmark data to alias handle
+        [self fileURLNoUI];
+    if (aliasHandle)
+        // we could return data if present when fileURLNoUI is nil
+        return dataFromAliasHandle(aliasHandle) ?: data;
+    else
+        return data;
+    return nil;
 }
 
-- (NSURL *)fileURLWithMountFlags:(unsigned int)flags {
-    CFURLRef fileURL = NULL;
-    FSRef fileRef;
-    Boolean wasChanged;
-    
-    if (aliasHandle && noErr == FSResolveAliasWithMountFlags(NULL, aliasHandle, &fileRef, &wasChanged, flags))
-        fileURL = CFURLCreateFromFSRef(kCFAllocatorDefault, &fileRef);
-    
-    return [(NSURL *)fileURL autorelease];
+- (BOOL)isBookmark {
+    return aliasHandle == nil && data != nil;
+}
+
+- (NSURL *)fileURLAllowingUI:(BOOL)allowUI {
+    // we could cache the fileURL, but it would break when moving the file while we run
+    NSURL *fileURL = nil;
+    if (aliasHandle) {
+        fileURL = fileURLFromAliasHandle(aliasHandle, allowUI ? 0 : kResolveAliasFileNoUI);
+    } else if (data) {
+        BOOL stale = NO;
+        NSURLBookmarkResolutionOptions options = allowUI ? 0 : NSURLBookmarkResolutionWithoutUI;
+        fileURL = [NSURL URLByResolvingBookmarkData:data options:options relativeToURL:nil bookmarkDataIsStale:&stale error:NULL];
+        // convert back to alias handle
+        if (fileURL) {
+            AliasHandle handle = createAliasHandleFromURL(fileURL);
+            if (handle) {
+                aliasHandle = handle;
+                [data release];
+                data = nil;
+            }
+        }
+    }
+    return fileURL;
 }
 
 - (NSURL *)fileURL {
-    return [self fileURLWithMountFlags:0];
+    return [self fileURLAllowingUI:NO];
 }
 
 - (NSURL *)fileURLNoUI {
-    return [self fileURLWithMountFlags:kResolveAliasFileNoUI];
+    return [self fileURLAllowingUI:YES];
 }
 
 @end

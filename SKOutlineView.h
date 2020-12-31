@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/22/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,9 @@
 - (void)scrollToEndOfDocument:(id)sender;
 
 - (void)reloadTypeSelectStrings;
+
+- (void)noteHeightOfRowsChangedAnimating:(BOOL)animate;
+- (void)noteHeightOfRowChanged:(NSInteger)row animating:(BOOL)animate;
 
 - (id <SKOutlineViewDelegate>)delegate;
 - (void)setDelegate:(id <SKOutlineViewDelegate>)newDelegate;

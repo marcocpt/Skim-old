@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/14/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,21 +43,12 @@
 
 @interface SKGeneralPreferences : SKViewController <SKPreferencePane> {
     NSPopUpButton *updateIntervalPopUpButton;
-    NSButton *revertPopUpButton;
-    NSButton *revertFullScreenPopUpButton;
-    NSMatrix *openFilesMatrix;
-    NSMatrix *savePasswordsMatrix;
     NSInteger updateInterval;
 }
 
 @property (nonatomic, retain) IBOutlet NSPopUpButton *updateIntervalPopUpButton;
-@property (nonatomic, retain) IBOutlet NSButton *revertPDFSettingsButton;
-@property (nonatomic, retain) IBOutlet NSButton *revertFullScreenPDFSettingsButton;
-@property (nonatomic, retain) IBOutlet NSMatrix *openFilesMatrix;
-@property (nonatomic, retain) IBOutlet NSMatrix *savePasswordsMatrix;
 @property (nonatomic) NSInteger updateInterval;
 
-- (IBAction)revertPDFViewSettings:(id)sender;
-- (IBAction)revertFullScreenPDFViewSettings:(id)sender;
+- (IBAction)changePDFViewSettings:(id)sender;
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/1/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -223,6 +223,8 @@ static inline void addLineTipToPath(CGMutablePathRef path, NSPoint point, CGFloa
 
 - (BOOL)isMovable { return [self isSkimNote]; }
 
+- (BOOL)hasInteriorColor { return [self isSkimNote]; }
+
 - (BOOL)isConvertibleAnnotation { return YES; }
 
 - (BOOL)hitTest:(NSPoint)point {
@@ -242,11 +244,11 @@ static inline void addLineTipToPath(CGMutablePathRef path, NSPoint point, CGFloa
 - (NSRect)displayRectForBounds:(NSRect)bounds lineWidth:(CGFloat)lineWidth {
     NSRect rect = [super displayRectForBounds:bounds lineWidth:lineWidth];
     // need a large padding amount for large line width and cap changes
-    CGFloat delta = ceil(fmax(2.0 * lineWidth, 2.0));
+    CGFloat delta = ceil(fmax(3.0 * lineWidth, 2.0));
     rect = NSInsetRect(rect, -delta, -delta);
-    if (NSWidth(bounds) < 3.0 * delta)
+    if (NSWidth(bounds) < 2.0 * delta)
         rect = NSInsetRect(rect, -delta, 0.0);
-    if (NSHeight(bounds) < 3.0 * delta)
+    if (NSHeight(bounds) < 2.0 * delta)
         rect = NSInsetRect(rect, 0.0, -delta);
     return rect;
 }
@@ -264,10 +266,9 @@ static inline void addLineTipToPath(CGMutablePathRef path, NSPoint point, CGFloa
         return 0;
 }
 
-- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context {
+- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context active:(BOOL)active {
     if (NSIsEmptyRect([self bounds]))
         return;
-    BOOL active = RUNNING_AFTER(10_12) ? YES : [[pdfView window] isKeyWindow] && [[[pdfView window] firstResponder] isDescendantOf:pdfView];
     NSPoint origin = [self bounds].origin;
     NSPoint point = SKAddPoints(origin, [self startPoint]);
     CGFloat delta = 4.0 * [pdfView unitWidthOnPage:[self page]];

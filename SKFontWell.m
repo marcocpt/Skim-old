@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/13/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -187,11 +187,15 @@ static char SKFontWellFontSizeObservationContext;
     NSDictionary *info = [self infoForBinding:TEXTCOLOR_KEY];
     if (info) {
         id value = [self textColor];
-        NSString *transformerName = [[info objectForKey:NSOptionsKey] objectForKey:NSValueTransformerNameBindingOption];
-        if (transformerName && [transformerName isEqual:[NSNull null]] == NO) {
-            NSValueTransformer *valueTransformer = [NSValueTransformer valueTransformerForName:transformerName];
-            value = [valueTransformer reverseTransformedValue:value]; 
+        NSValueTransformer *valueTransformer = [[info objectForKey:NSOptionsKey] objectForKey:NSValueTransformerBindingOption];
+        if (valueTransformer == nil || [valueTransformer isEqual:[NSNull null]]) {
+            NSString *transformerName = [[info objectForKey:NSOptionsKey] objectForKey:NSValueTransformerNameBindingOption];
+            if (transformerName && [transformerName isEqual:[NSNull null]] == NO)
+                valueTransformer = [NSValueTransformer valueTransformerForName:transformerName];
         }
+        if (valueTransformer && [valueTransformer isEqual:[NSNull null]] == NO &&
+            [[valueTransformer class] allowsReverseTransformation])
+            value = [valueTransformer reverseTransformedValue:value];
         [[info objectForKey:NSObservedObjectKey] setValue:value forKeyPath:[info objectForKey:NSObservedKeyPathKey]];
     }
 }
@@ -505,13 +509,13 @@ static char SKFontWellFontSizeObservationContext;
     
     if ([self state] == NSOnState) {
         [NSGraphicsContext saveGraphicsState];
+        [[NSGraphicsContext currentContext] setCompositingOperation:NSCompositeMultiply];
         [[NSColor selectedControlColor] setFill];
         [NSBezierPath fillRect:NSInsetRect(frame, 1.0, 1.0)];
         [NSGraphicsContext restoreGraphicsState];
     }
     if ([self isHighlighted]) {
         [NSGraphicsContext saveGraphicsState];
-        // @@ Dark mode
         [[[NSColor controlTextColor] colorWithAlphaComponent:0.3] setStroke];
         [NSBezierPath strokeRect:NSInsetRect(frame, 0.5, 0.5)];
         [NSGraphicsContext restoreGraphicsState];
@@ -530,9 +534,8 @@ static char SKFontWellFontSizeObservationContext;
     if ([self hasTextColor]) {
         NSMutableAttributedString *attrString = [[[super attributedTitle] mutableCopy] autorelease];
         [attrString addAttribute:NSForegroundColorAttributeName value:[self textColor] range:NSMakeRange(0, [attrString length])];
-        // @@ Dark mode
         CGFloat textLuminance = [[self textColor] luminance];
-        CGFloat backgroundLuminance = [[self backgroundColor] luminance];
+        CGFloat backgroundLuminance = [([self state] == NSOnState ? [NSColor selectedControlColor] : [self backgroundColor]) luminance];
         if ((fmax(textLuminance, backgroundLuminance) + 0.05) / (fmin(textLuminance, backgroundLuminance) + 0.05) < 4.5) {
             NSShadow *shade = [[[NSShadow alloc] init] autorelease];
             [shade setShadowColor:backgroundLuminance < 0.5 ? [NSColor whiteColor] : [NSColor blackColor]];

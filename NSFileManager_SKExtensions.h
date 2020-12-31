@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/4/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@
 
 
 @interface NSFileManager (SKExtensions)
-/// ✅ 获取应用支持的路径 urls
+
 - (NSArray *)applicationSupportDirectoryURLs;
 
 - (NSURL *)uniqueChewableItemsDirectoryURL;

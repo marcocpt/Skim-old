@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,9 +38,36 @@
 
 #import "NSCursor_SKExtensions.h"
 #import "NSImage_SKExtensions.h"
+#import "SKRuntime.h"
+#import "SKAnimatedBorderlessWindow.h"
+#import "NSGeometry_SKExtensions.h"
 
+static inline void hideLaserPointer(void);
+
+@interface SKLaserPointerCursor : NSCursor
+@end
+
+#pragma mark -
 
 @implementation NSCursor (SKExtensions)
+
+static void (*original_set)(id, SEL) = NULL;
+static void (*original_hide)(id, SEL) = NULL;
+
+- (void)replacement_set {
+    original_set(self, _cmd);
+    hideLaserPointer();
+}
+
++ (void)replacement_hide {
+    original_hide(self, _cmd);
+    hideLaserPointer();
+}
+
++ (void)load {
+    original_set = (void(*)(id, SEL))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(set), @selector(replacement_set));
+    original_hide = (void(*)(id, SEL))SKReplaceClassMethodImplementationFromSelector(self, @selector(hide), @selector(replacement_hide));
+}
 
 + (NSCursor *)zoomInCursor {
     static NSCursor *zoomInCursor = nil;
@@ -195,4 +222,57 @@
     return emptyCursor;
 }
 
++ (NSCursor *)laserPointerCursorWithColor:(NSInteger)color {
+    static NSPointerArray *laserPointerCursors = nil;
+    if (laserPointerCursors == nil) {
+        laserPointerCursors = [[NSPointerArray alloc] initWithOptions:NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPersonality];
+        [laserPointerCursors setCount:7];
+    }
+    NSCursor *cursor = (id)[laserPointerCursors pointerAtIndex:color % 7];
+    if (nil == cursor) {
+        NSImage *cursorImage = [NSImage laserPointerImageWithColor:color];
+        cursor = [[[SKLaserPointerCursor alloc] initWithImage:cursorImage hotSpot:NSMakePoint(0.5 * [cursorImage size].width, 0.5 * [cursorImage size].height)] autorelease];
+        [laserPointerCursors insertPointer:cursor atIndex:color % 7];
+    }
+    return cursor;
+}
+
 @end
+
+#pragma mark -
+
+static NSWindow *laserPointerWindow = nil;
+
+static inline void hideLaserPointer(void) {
+    if (laserPointerWindow) {
+        [laserPointerWindow close];
+        SKDESTROY(laserPointerWindow);
+    }
+}
+
+@implementation SKLaserPointerCursor
+
+- (void)set {
+    if (original_set)
+        original_set([NSCursor emptyCursor], _cmd);
+    else
+        [[NSCursor emptyCursor] set];
+    
+    NSPoint p = [NSEvent mouseLocation];
+    p = NSMakePoint(round(p.x), round(p.y));
+    if (laserPointerWindow) {
+        [(SKAnimatedBorderlessWindow *)laserPointerWindow setBackgroundImage:[self image]];
+        [laserPointerWindow setFrame:SKRectFromCenterAndSize(p, [laserPointerWindow frame].size) display:YES];
+    } else {
+        NSImage *image = [self image];
+        NSNumber *size = [[[NSUserDefaults standardUserDefaults] persistentDomainForName:@"com.apple.universalaccess"] objectForKey:@"mouseDriverCursorSize"];
+        CGFloat s = 2.0 * round(0.5 * (size ? [size doubleValue] : 1.0) * [image size].width);
+        laserPointerWindow = [[SKAnimatedBorderlessWindow alloc] initWithContentRect:SKRectFromCenterAndSquareSize(p, s)];
+        [laserPointerWindow setLevel:(NSWindowLevel)kCGCursorWindowLevel];
+        [(SKAnimatedBorderlessWindow *)laserPointerWindow setBackgroundImage:image];
+        [laserPointerWindow orderFrontRegardless];
+    }
+}
+
+@end
+

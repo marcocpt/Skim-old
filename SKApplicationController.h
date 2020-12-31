@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,10 @@
 
 @class SKBookmark, SKDownload;
 
-@interface SKApplicationController : NSObject <SKApplicationDelegate, HIDRemoteDelegate> {
-    NSTimer *currentDocumentsSetupTimer;
+@interface SKApplicationController : NSObject <SKApplicationDelegate, HIDRemoteDelegate, NSMenuDelegate> {
+    NSMenu *noteColumnsMenu;
+    NSMenu *noteTypeMenu;
+    NSTimer *currentDocumentsTimer;
     BOOL didCheckReopen;
     BOOL remoteScrolling;
     id activity;
@@ -57,6 +59,10 @@
 - (IBAction)showPreferencePanel:(id)sender;
 - (IBAction)showReleaseNotes:(id)sender;
 - (IBAction)showDownloads:(id)sender;
+
+@property (nonatomic, retain) IBOutlet NSMenu *noteColumnsMenu, *noteTypeMenu;
+
+@property (nonatomic, readonly) NSColorList *colorList;
 
 @property (nonatomic, copy) NSDictionary *defaultPdfViewSettings, *defaultFullScreenPdfViewSettings;
 @property (nonatomic, copy) NSColor *backgroundColor, *fullScreenBackgroundColor, *pageBackgroundColor, *defaultTextNoteFontColor;

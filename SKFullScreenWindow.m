@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,12 +43,12 @@
 
 @implementation SKFullScreenWindow
 
-- (id)initWithScreen:(NSScreen *)screen backgroundColor:(NSColor *)backgroundColor level:(NSInteger)level isMain:(BOOL)flag {
+- (id)initWithScreen:(NSScreen *)screen level:(NSInteger)level isMain:(BOOL)flag {
     NSRect screenFrame = [(screen ?: [NSScreen mainScreen]) frame];
     self = [self initWithContentRect:screenFrame styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
     if (self) {
         isMain = flag;
-        [self setBackgroundColor:backgroundColor];
+        [self setBackgroundColor:[NSColor blackColor]];
         [self setLevel:level];
         [self setReleasedWhenClosed:NO];
         [self setDisplaysWhenScreenProfileChanges:isMain];
@@ -61,99 +61,44 @@
     return self;
 }
 
-- (void)stopAnimation {
-    [animation stopAnimation];
-    SKDESTROY(animation);
-}
-
-- (void)dealloc {
-    [self stopAnimation];
-    [super dealloc];
-}
-
 - (BOOL)canBecomeKeyWindow { return isMain; }
 
 - (BOOL)canBecomeMainWindow { return isMain; }
 
-- (void)orderFront:(id)sender {
-    [self stopAnimation];
-    [self setAlphaValue:1.0];
-    [super orderFront:sender];
-}
-
-- (void)makeKeyAndOrderFront:(id)sender {
-    [self stopAnimation];
-    [self setAlphaValue:1.0];
-    [super makeKeyAndOrderFront:sender];
-}
-
-- (void)orderOut:(id)sender {
-    [self stopAnimation];
-    [super orderOut:sender];
-    [self setAlphaValue:1.0];
-}
-
-- (void)fadeOutWithBlockingMode:(NSAnimationBlockingMode)blockingMode {
+- (void)fadeOutBlocking:(BOOL)blocking {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey]) {
         [self orderOut:nil];
     } else {
-        NSDictionary *fadeOutDict = [[NSDictionary alloc] initWithObjectsAndKeys:self, NSViewAnimationTargetKey, NSViewAnimationFadeOutEffect, NSViewAnimationEffectKey, nil];
-        animation = [[NSViewAnimation alloc] initWithViewAnimations:[NSArray arrayWithObjects:fadeOutDict, nil]];
-        [fadeOutDict release];
-        
-        [animation setAnimationBlockingMode:blockingMode];
-        [animation setDuration:DURATION];
-        [animation setDelegate:self];
-        [animation startAnimation];
+        __block BOOL wait = blocking;
+        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
+            [context setDuration:DURATION];
+            [[self animator] setAlphaValue:0.0];
+        } completionHandler:^{
+            [self orderOut:nil];
+            [self setAlphaValue:1.0];
+            wait = NO;
+        }];
+        NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+        while (wait && [runLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]]);
     }
 }
 
-- (void)fadeInWithBlockingMode:(NSAnimationBlockingMode)blockingMode {
+- (void)fadeInBlocking:(BOOL)blocking {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey]) {
         [self orderFront:nil];
     } else {
-        NSDictionary *fadeInDict = [[NSDictionary alloc] initWithObjectsAndKeys:self, NSViewAnimationTargetKey, NSViewAnimationFadeInEffect, NSViewAnimationEffectKey, nil];
-        animation = [[NSViewAnimation alloc] initWithViewAnimations:[NSArray arrayWithObjects:fadeInDict, nil]];
-        [fadeInDict release];
-        
+        __block BOOL wait = blocking;
         [self setAlphaValue:0.0];
-        [super orderFront:nil];
-        
-        [animation setAnimationBlockingMode:blockingMode];
-        [animation setDuration:DURATION];
-        [animation setDelegate:self];
-        [animation startAnimation];
+        [self orderFront:nil];
+        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
+            [context setDuration:DURATION];
+            [[self animator] setAlphaValue:1.0];
+        } completionHandler:^{
+            wait = NO;
+        }];
+        NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+        while (wait && [runLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]]);
     }
-}
-
-- (void)fadeOutBlocking {
-    [self fadeOutWithBlockingMode:NSAnimationBlocking];
-}
-
-- (void)fadeOut {
-    [self fadeOutWithBlockingMode:NSAnimationNonblockingThreaded];
-}
-
-- (void)fadeInBlocking {
-    [self fadeInWithBlockingMode:NSAnimationBlocking];
-}
-
-- (void)fadeIn {
-    [self fadeInWithBlockingMode:NSAnimationNonblockingThreaded];
-}
-
-- (void)animationDidEnd:(NSAnimation *)anAnimation {
-    BOOL isFadeOut = [[[[animation viewAnimations] lastObject] objectForKey:NSViewAnimationEffectKey] isEqual:NSViewAnimationFadeOutEffect];
-    SKDESTROY(animation);
-    if (isFadeOut)
-        [self orderOut:nil];
-    [self setAlphaValue:1.0];
-}
-
-- (void)animationDidStop:(NSAnimation *)anAnimation {
-    SKDESTROY(animation);
-    [self orderOut:nil];
-    [self setAlphaValue:1.0];
 }
 
 - (void)sendEvent:(NSEvent *)theEvent {

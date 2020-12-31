@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/20/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,15 +42,22 @@
 
 @protocol SKTableViewDelegate;
 
+typedef NS_ENUM(NSInteger, SKTableImageToolTipLayout) {
+    SKTableImageToolTipNone,
+    SKTableImageToolTipByRow,
+    SKTableImageToolTipByCell
+};
+
 @interface SKTableView : NSTableView <SKTypeSelectDelegate> {
     SKTypeSelectHelper *typeSelectHelper;
-    BOOL hasImageToolTips;
     BOOL supportsQuickLook;
+    SKTableImageToolTipLayout imageToolTipLayout;
     NSFont *font;
 }
 
 @property (nonatomic, readonly) BOOL canDelete, canCopy, canPaste;
-@property (nonatomic) BOOL hasImageToolTips, supportsQuickLook;
+@property (nonatomic) BOOL supportsQuickLook;
+@property (nonatomic) SKTableImageToolTipLayout imageToolTipLayout;
 @property (nonatomic, retain) SKTypeSelectHelper *typeSelectHelper;
 
 - (void)delete:(id)sender;
@@ -64,6 +71,9 @@
 - (void)moveRight:(id)sender;
 
 - (void)reloadTypeSelectStrings;
+
+- (void)noteHeightOfRowsChangedAnimating:(BOOL)animate;
+- (void)noteHeightOfRowChanged:(NSInteger)row animating:(BOOL)animate;
 
 - (id <SKTableViewDelegate>)delegate;
 - (void)setDelegate:(id <SKTableViewDelegate>)newDelegate;
@@ -88,7 +98,7 @@
 
 - (BOOL)tableView:(NSTableView *)tableView commandSelectRow:(NSInteger)rowIndex;
 
-- (id <SKImageToolTipContext>)tableView:(NSTableView *)aTableView imageContextForRow:(NSInteger)rowIndex;
+- (id <SKImageToolTipContext>)tableView:(NSTableView *)aTableView imageContextForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)rowIndex;
 
 - (NSArray *)tableView:(NSTableView *)aTableView typeSelectHelperSelectionStrings:(SKTypeSelectHelper *)aTypeSelectHelper;
 - (void)tableView:(NSTableView *)aTableView typeSelectHelper:(SKTypeSelectHelper *)aTypeSelectHelper didFailToFindMatchForSearchString:(NSString *)searchString;

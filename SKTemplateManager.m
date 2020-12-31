@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/19/11.
 /*
- This software is Copyright (c) 2011-2019
+ This software is Copyright (c) 2011-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -65,11 +65,11 @@
         NSMutableArray *templates = [NSMutableArray array];
         
         for (NSURL *appSupportURL in [fm applicationSupportDirectoryURLs]) {
-            NSURL *templatesURL = [appSupportURL URLByAppendingPathComponent:TEMPLATES_DIRECTORY];
+            NSURL *templatesURL = [appSupportURL URLByAppendingPathComponent:TEMPLATES_DIRECTORY isDirectory:YES];
             NSNumber *isDir = nil;
             [appSupportURL getResourceValue:&isDir forKey:NSURLIsDirectoryKey error:NULL];
             if ([isDir boolValue]) {
-                for (NSURL *url in [fm contentsOfDirectoryAtURL:templatesURL includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL]) {
+                for (NSURL *url in [fm contentsOfDirectoryAtURL:templatesURL includingPropertiesForKeys:[NSArray array] options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL]) {
                     NSString *file = [url lastPathComponent];
                     if ([[file stringByDeletingPathExtension] isEqualToString:@"notesTemplate"] == NO &&
                         [templates containsObject:file] == NO)
@@ -92,7 +92,7 @@
     NSURL *url = nil;
     
     for (NSURL *appSupportURL in [[fm applicationSupportDirectoryURLs] arrayByAddingObject:[[NSBundle mainBundle] sharedSupportURL]]) {
-        url = [[appSupportURL URLByAppendingPathComponent:TEMPLATES_DIRECTORY] URLByAppendingPathComponent:typeName];
+        url = [[appSupportURL URLByAppendingPathComponent:TEMPLATES_DIRECTORY isDirectory:YES] URLByAppendingPathComponent:typeName isDirectory:NO];
         if ([url checkResourceIsReachableAndReturnError:NULL] == NO)
             url = nil;
         else break;

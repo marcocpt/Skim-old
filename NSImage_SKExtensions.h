@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/27/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -68,6 +68,8 @@ extern NSString *SKImageNameToolbarSinglePage;
 extern NSString *SKImageNameToolbarTwoUp;
 extern NSString *SKImageNameToolbarSinglePageContinuous;
 extern NSString *SKImageNameToolbarTwoUpContinuous;
+extern NSString *SKImageNameToolbarHorizontal;
+extern NSString *SKImageNameToolbarRTL;
 extern NSString *SKImageNameToolbarBookMode;
 extern NSString *SKImageNameToolbarPageBreaks;
 extern NSString *SKImageNameToolbarMediaBox;
@@ -105,6 +107,9 @@ extern NSString *SKImageNameToolbarTextTool;
 extern NSString *SKImageNameToolbarMoveTool;
 extern NSString *SKImageNameToolbarMagnifyTool;
 extern NSString *SKImageNameToolbarSelectTool;
+extern NSString *SKImageNameToolbarShare;
+extern NSString *SKImageNameToolbarPlay;
+extern NSString *SKImageNameToolbarPause;
 extern NSString *SKImageNameToolbarInfo;
 extern NSString *SKImageNameToolbarColors;
 extern NSString *SKImageNameToolbarFonts;
@@ -196,12 +201,16 @@ extern NSString *SKImageNameRemoteStateScroll;
 
 @interface NSImage (SKExtensions)
 
-+ (NSImage *)imageWithSize:(NSSize)size drawingHandler:(BOOL (^)(NSRect dstRect))drawingHandler;
 + (NSImage *)bitmapImageWithSize:(NSSize)size scale:(CGFloat)scale drawingHandler:(void (^)(NSRect dstRect))drawingHandler;
-+ (NSImage *)bitmapImageWithSize:(NSSize)size drawingHandler:(void (^)(NSRect dstRect))drawingHandler;
 + (NSImage *)PDFImageWithSize:(NSSize)size drawingHandler:(void (^)(NSRect dstRect))drawingHandler;
 
-/// 绘制界面中使用的小图标
+// 0=red, 1=orange, 2=yellow, 3=green, 4=blue, 5=indigo, 6=violet
++ (NSImage *)laserPointerImageWithColor:(NSInteger)color;
+
++ (NSImage *)stampForType:(NSString *)type;
+
++ (NSImage *)maskImageWithSize:(NSSize)size cornerRadius:(CGFloat)radius;
+
 + (void)makeImages;
 
 @end

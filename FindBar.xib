@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="16097.3" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <development version="8000" identifier="xcode"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14490.70"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="16097.3"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -19,15 +17,15 @@
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
         <customObject id="-3" userLabel="Application" customClass="NSObject"/>
-        <customView id="1" customClass="SKGradientView">
-            <rect key="frame" x="0.0" y="0.0" width="220" height="25"/>
+        <customView id="1" customClass="SKTopBarView">
+            <rect key="frame" x="0.0" y="0.0" width="220" height="36"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
             <subviews>
-                <searchField verticalHuggingPriority="750" tag="1" textCompletion="NO" id="3">
-                    <rect key="frame" x="119" y="4" width="42" height="19"/>
+                <searchField verticalHuggingPriority="750" fixedFrame="YES" tag="1" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="3">
+                    <rect key="frame" x="77" y="7" width="34" height="22"/>
                     <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
-                    <searchFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" borderStyle="bezel" tag="1" bezelStyle="round" sendsSearchStringImmediately="YES" sendsWholeSearchString="YES" id="4">
-                        <font key="font" metaFont="smallSystem"/>
+                    <searchFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" borderStyle="bezel" tag="1" bezelStyle="round" sendsSearchStringImmediately="YES" sendsWholeSearchString="YES" id="4">
+                        <font key="font" metaFont="message"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                     </searchFieldCell>
@@ -41,26 +39,26 @@
                         <outlet property="delegate" destination="-2" id="36"/>
                     </connections>
                 </searchField>
-                <segmentedControl verticalHuggingPriority="750" id="5">
-                    <rect key="frame" x="69" y="3" width="43" height="20"/>
-                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                <segmentedControl verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="5">
+                    <rect key="frame" x="118" y="8" width="43" height="20"/>
+                    <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
                     <segmentedCell key="cell" borderStyle="border" alignment="left" segmentDistribution="fill" style="roundRect" trackingMode="momentary" id="6">
                         <font key="font" metaFont="cellTitle"/>
                         <segments>
-                            <segment image="NSGoLeftTemplate" width="18"/>
-                            <segment image="NSGoRightTemplate" width="18" tag="1"/>
+                            <segment image="NSGoLeftTemplate" width="19"/>
+                            <segment image="NSGoRightTemplate" width="19" tag="1"/>
                         </segments>
                     </segmentedCell>
                     <connections>
                         <action selector="find:" target="-2" id="29"/>
                     </connections>
                 </segmentedControl>
-                <button verticalHuggingPriority="750" imageHugsTitle="YES" id="7">
-                    <rect key="frame" x="169" y="3" width="42" height="19"/>
+                <button verticalHuggingPriority="750" fixedFrame="YES" imageHugsTitle="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7">
+                    <rect key="frame" x="168" y="8" width="44" height="19"/>
                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
                     <buttonCell key="cell" type="roundRect" title="Done" bezelStyle="roundedRect" alignment="center" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="8">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                        <font key="font" metaFont="smallSystem"/>
+                        <font key="font" metaFont="cellTitle"/>
                         <string key="keyEquivalent" base64-UTF8="YES">
 Gw
 </string>
@@ -69,16 +67,17 @@ Gw
                         <action selector="remove:" target="-2" id="10"/>
                     </connections>
                 </button>
-                <textField hidden="YES" verticalHuggingPriority="750" id="31">
-                    <rect key="frame" x="6" y="6" width="58" height="14"/>
+                <textField hidden="YES" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="31">
+                    <rect key="frame" x="6" y="10" width="65" height="16"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Not found" id="32">
-                        <font key="font" metaFont="smallSystem"/>
+                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Not found" id="32">
+                        <font key="font" metaFont="message"/>
                         <color key="textColor" name="disabledControlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                     </textFieldCell>
                 </textField>
             </subviews>
+            <point key="canvasLocation" x="139" y="154"/>
         </customView>
         <objectController id="18">
             <declaredKeys>

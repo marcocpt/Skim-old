@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -75,6 +75,11 @@
 #import "SKAnimatedBorderlessWindow.h"
 #import "NSGraphics_SKExtensions.h"
 #import "NSUserDefaultsController_SKExtensions.h"
+#import "NSColor_SKExtensions.h"
+#import "SKNoteOutlineView.h"
+#import "NSView_SKExtensions.h"
+#import "SKColorList.h"
+#import "NSCharacterSet_SKExtensions.h"
 
 #define WEBSITE_URL @"https://skim-app.sourceforge.io/"
 #define WIKI_URL    @"https://sourceforge.net/p/skim-app/wiki/"
@@ -84,6 +89,7 @@
 #define RESETTABLE_KEYS_KEY             @"ResettableKeys"
 
 #define VIEW_MENU_INDEX      4
+#define PDF_MENU_INDEX       5
 
 #define REOPEN_WARNING_LIMIT 50
 
@@ -102,8 +108,6 @@
 #define SKLineInteriorString    @"LineInterior"
 #define SKFreeTextFontString    @"FreeTextFont"
 
-#define SKUseLegacyFullScreenKey @"SKUseLegacyFullScreen"
-
 static char SKApplicationObservationContext;
 
 NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
@@ -121,6 +125,7 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
 
 @implementation SKApplicationController
 
+@synthesize noteColumnsMenu, noteTypeMenu, colorList;
 @dynamic defaultPdfViewSettings, defaultFullScreenPdfViewSettings, backgroundColor, fullScreenBackgroundColor, pageBackgroundColor, defaultNoteColors, defaultLineWidths, defaultLineStyles, defaultDashPatterns, defaultStartLineStyle, defaultEndLineStyle, defaultFontNames, defaultFontSizes, defaultTextNoteFontColor, defaultAlignment, defaultIconType, favoriteColors;
 
 + (void)initialize{
@@ -161,30 +166,28 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
 - (void)awakeFromNib {
     [[NSApp mainMenu] localizeStringsFromTable:@"MainMenu"];
     
-    NSMenu *viewMenu = [[[NSApp mainMenu] itemAtIndex:VIEW_MENU_INDEX] submenu];
-    for (NSMenuItem *menuItem in [viewMenu itemArray]) {
+    NSMenu *menu = [[[NSApp mainMenu] itemAtIndex:VIEW_MENU_INDEX] submenu];
+    for (NSMenuItem *menuItem in [menu itemArray]) {
         if ([menuItem action] == @selector(changeLeftSidePaneState:) || [menuItem action] == @selector(changeRightSidePaneState:))
             [menuItem setIndentationLevel:1];
+    }
+    
+    // horizontal layout is currently buggy, so don't support it
+    if (RUNNING_BEFORE(10_13)) {
+        menu = [[[[[NSApp mainMenu] itemAtIndex:PDF_MENU_INDEX] submenu] itemAtIndex:0] submenu];
+        for (NSMenuItem *menuItem in [menu itemArray]) {
+            if (([menuItem action] == @selector(changeDisplayMode:) && [menuItem tag] == 4) || [menuItem action] == @selector(toggleDisplaysRTL:))
+                [menuItem setHidden:YES];
+        }
     }
     
     // this creates the script menu if needed
     (void)[NSApp scriptMenu];
 }
 
-- (void)registerCurrentDocuments {
+- (void)registerCurrentDocuments:(id)timerOrNotification {
     [[NSUserDefaults standardUserDefaults] setObject:[[NSApp orderedDocuments] valueForKey:CURRENTDOCUMENTSETUP_KEY] forKey:SKLastOpenFileNamesKey];
-    [[[NSDocumentController sharedDocumentController] documents] makeObjectsPerformSelector:@selector(saveRecentDocumentInfoIfNeeded)];
-}
-
-- (void)registerCurrentDocuments:(NSNotification *)aNotification {
-    [self registerCurrentDocuments];
-    if (RUNNING_BEFORE(10_9))
-        [[NSUserDefaults standardUserDefaults] synchronize];
-}
-
-- (void)handleWindowDidBecomeMainNotification:(NSNotification *)aNotification {
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKUseLegacyFullScreenKey])
-        [NSApp updatePresentationOptionsForWindow:[aNotification object]];
+    [[[NSDocumentController sharedDocumentController] documents] makeObjectsPerformSelector:@selector(saveRecentDocumentInfo)];
 }
 
 #pragma mark KVO
@@ -222,7 +225,7 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
                 [alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Button title")];
                 [alert addButtonWithTitle:NSLocalizedString(@"Open", @"Button title")];
                 
-                if (NSAlertFirstButtonReturn == [alert runModal])
+                if (NSAlertSecondButtonReturn == [alert runModal])
                     previousSession = nil;
             }
             
@@ -238,6 +241,7 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
     [NSImage makeImages];
+    [NSColor makeHighlightColors];
     [NSValueTransformer registerCustomTransformers];
     [[NSAppleEventManager sharedAppleEventManager] setEventHandler:self andSelector:@selector(handleGetURLEvent:withReplyEvent:) forEventClass:kInternetEventClass andEventID:kAEGetURL];
 }
@@ -266,10 +270,8 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
                              name:SKDocumentDidShowNotification object:nil];
     [nc addObserver:self selector:@selector(registerCurrentDocuments:) 
                              name:SKDocumentControllerDidRemoveDocumentNotification object:nil];
-    [nc addObserver:self selector:@selector(handleWindowDidBecomeMainNotification:) 
-                             name:NSWindowDidBecomeMainNotification object:nil];
     
-    currentDocumentsSetupTimer = [[NSTimer scheduledTimerWithTimeInterval:CURRENTDOCUMENTSETUP_INTERVAL target:self selector:@selector(registerCurrentDocuments) userInfo:nil repeats:YES] retain];
+    currentDocumentsTimer = [[NSTimer scheduledTimerWithTimeInterval:CURRENTDOCUMENTSETUP_INTERVAL target:self selector:@selector(registerCurrentDocuments:) userInfo:nil repeats:YES] retain];
     
     if (RUNNING_AFTER(10_13))
         [NSApp addObserver:self forKeyPath:@"effectiveAppearance" options:0 context:&SKApplicationObservationContext];
@@ -279,6 +281,8 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
         [[HIDRemote sharedHIDRemote] startRemoteControl:kHIDRemoteModeExclusiveAuto];
         [[HIDRemote sharedHIDRemote] setDelegate:self];
     }
+    
+    [[NSColorPanel sharedColorPanel] attachColorList:[SKColorList favoriteColorList]];
     
     [[NSColorPanel sharedColorPanel] setShowsAlpha:YES];
     
@@ -295,8 +299,8 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
 }
 
 - (void)applicationStartsTerminating:(NSNotification *)aNotification {
-    [currentDocumentsSetupTimer invalidate];
-    SKDESTROY(currentDocumentsSetupTimer);
+    [currentDocumentsTimer invalidate];
+    SKDESTROY(currentDocumentsTimer);
     [self registerCurrentDocuments:aNotification];
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
     [nc removeObserver:self name:SKDocumentDidShowNotification object:nil];
@@ -375,12 +379,20 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
         if (remoteStateWindow == nil) {
             NSRect contentRect = SKRectFromCenterAndSize(SKCenterPoint([[NSScreen mainScreen] frame]), SKMakeSquareSize(60.0));
             remoteStateWindow = [[SKAnimatedBorderlessWindow alloc] initWithContentRect:contentRect];
-            [remoteStateWindow setIgnoresMouseEvents:YES];
             [remoteStateWindow setDisplaysWhenScreenProfileChanges:NO];
             [remoteStateWindow setLevel:NSStatusWindowLevel];
-            [remoteStateWindow setDefaultAlphaValue:0.95];
             [remoteStateWindow setAutoHideTimeInterval:timeInterval];
-        }
+            contentRect.origin = NSZeroPoint;
+            NSVisualEffectView *contentView = [[NSVisualEffectView alloc] init];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+            [contentView setMaterial:RUNNING_BEFORE(10_14) ? NSVisualEffectMaterialAppearanceBased : NSVisualEffectMaterialUnderWindowBackground];
+#pragma clang diagnostic pop
+            [contentView setState:NSVisualEffectStateActive];
+            [remoteStateWindow setContentView:contentView];
+            [contentView setMaskImage:[NSImage maskImageWithSize:contentRect.size cornerRadius:10.0]];
+            [contentView release];
+         }
         [remoteStateWindow center];
         [remoteStateWindow setBackgroundImage:[NSImage imageNamed:remoteScrolling ? SKImageNameRemoteStateScroll : SKImageNameRemoteStateResize]];
         [remoteStateWindow orderFrontRegardless];
@@ -419,9 +431,8 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
         NSDictionary *versionInfo = [[NSUserDefaults standardUserDefaults] dictionaryForKey:SKSpotlightVersionInfoKey];
         
         // getting gestaltSystemVersion breaks on 10.10, so we simulate it using the minor and bugfix version component
-        SInt32 sysVersionMinor, sysVersionBugFix, sysVersion = 0;
-        if (noErr == Gestalt(gestaltSystemVersionMinor, &sysVersionMinor) && noErr == Gestalt(gestaltSystemVersionBugFix, &sysVersionBugFix))
-            sysVersion = 0x1000 + sysVersionMinor * 0x10 + sysVersionBugFix;
+        NSOperatingSystemVersion systemVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
+        NSInteger sysVersion = 0x600 + systemVersion.majorVersion * 0x100 + systemVersion.minorVersion * 0x10 + systemVersion.patchVersion * 0x1;
         
         BOOL runImporter = NO;
         if ([versionInfo count] == 0) {
@@ -429,7 +440,7 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
         } else {
             NSString *lastImporterVersion = [versionInfo objectForKey:SKSpotlightLastImporterVersionKey];
             
-            int lastSysVersion = [[versionInfo objectForKey:SKSpotlightLastSysVersionKey] intValue];
+            NSInteger lastSysVersion = [[versionInfo objectForKey:SKSpotlightLastSysVersionKey] integerValue];
             
             runImporter = sysVersion > 0 ? ([SKVersionNumber compareVersionString:lastImporterVersion toVersionString:importerVersion] == NSOrderedAscending || sysVersion > lastSysVersion) : YES;
         }
@@ -438,13 +449,42 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
             if ([[NSFileManager defaultManager] isExecutableFileAtPath:mdimportPath]) {
                 @try { [NSTask launchedTaskWithLaunchPath:mdimportPath arguments:[NSArray arrayWithObjects:@"-r", importerPath, nil]]; }
                 @catch(id exception) {}
-                NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:sysVersion], SKSpotlightLastSysVersionKey, importerVersion, SKSpotlightLastImporterVersionKey, nil];
+                NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInteger:sysVersion], SKSpotlightLastSysVersionKey, importerVersion, SKSpotlightLastImporterVersionKey, nil];
                 [[NSUserDefaults standardUserDefaults] setObject:info forKey:SKSpotlightVersionInfoKey];
                 
             } else NSLog(@"%@ not found!", mdimportPath);
         }
     }
 }
+
+#pragma mark NSMenu Delegate
+
+- (void)menuNeedsUpdate:(NSMenu *)menu {
+    NSMenu *notesMenu = [[[NSDocumentController sharedDocumentController] currentDocument] notesMenu];
+    [menu removeAllItems];
+    if (notesMenu) {
+        if (menu == noteColumnsMenu) {
+            for (NSMenuItem *item in [notesMenu itemArray]) {
+                if ([item isSeparatorItem])
+                    break;
+                item = [item copy];
+                [menu addItem:item];
+                [item release];
+            }
+        } else if (menu == noteTypeMenu) {
+            notesMenu = [[notesMenu itemAtIndex:[notesMenu numberOfItems] - 1] submenu];
+            for (NSMenuItem *item in [notesMenu itemArray]) {
+                item = [item copy];
+                [menu addItem:item];
+                [item release];
+            }
+        }
+    } else {
+        [menu addItemWithTitle:NSLocalizedString(@"No Document", @"Menu item title") action:NULL keyEquivalent:@""];
+    }
+}
+
+- (BOOL)menuHasKeyEquivalent:(NSMenu *)menu forEvent:(NSEvent *)event target:(id *)target action:(SEL *)action { return NO; }
 
 #pragma mark Scripting support
 
@@ -461,7 +501,7 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
         if ([theURLString hasPrefix:@"URL:"])
             theURLString = [theURLString substringFromIndex:4];
         
-        NSURL *theURL = [NSURL URLWithString:theURLString] ?: [NSURL URLWithString:[(NSString *)CFURLCreateStringByAddingPercentEscapes(NULL, (CFStringRef)theURLString, CFSTR("#%"), NULL, kCFStringEncodingUTF8) autorelease]];
+        NSURL *theURL = [NSURL URLWithString:theURLString] ?: [NSURL URLWithString:[theURLString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLGenericAllowedCharacterSet]]];
         
         if ([theURL isFileURL]) {
             [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:theURL display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error) {
@@ -823,8 +863,7 @@ NSString *SKFavoriteColorListName = @"Skim Favorite Colors";
 }
 
 - (NSArray *)favoriteColors {
-    NSValueTransformer *transformer = [NSValueTransformer arrayTransformerWithValueTransformerForName:NSUnarchiveFromDataTransformerName];
-    return [transformer transformedValue:[[NSUserDefaults standardUserDefaults] arrayForKey:SKSwatchColorsKey]];
+    return [NSColor favoriteColors];
 }
 
 - (void)setFavoriteColors:(NSArray *)array {

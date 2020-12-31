@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 1/23/12.
 /*
- This software is Copyright (c) 2012-2019
+ This software is Copyright (c) 2012-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -68,15 +68,15 @@
     }
 }
 
-- (void)beginSheetModalForWindow:(NSWindow *)window completionHandler:(void (^)(NSInteger result))handler {
+- (void)windowDidLoad {
+    [super windowDidLoad];
+    
     SKBookmarkController *bookmarkController = [SKBookmarkController sharedBookmarkController];
     SKBookmark *root = [bookmarkController bookmarkRoot];
     [self window];
     [folderPopUp removeAllItems];
     [self addMenuItemsForBookmarks:[NSArray arrayWithObjects:root, nil] level:0 toMenu:[folderPopUp menu]];
     [folderPopUp selectItemAtIndex:0];
-    
-    [super beginSheetModalForWindow:window completionHandler:handler];
 }
 
 - (SKBookmark *)selectedFolder {

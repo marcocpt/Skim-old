@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 11/28/05.
 /*
- This software is Copyright (c) 2005-2019
+ This software is Copyright (c) 2005-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -126,12 +126,8 @@
                         NSRect bounds = [self bounds];
                         CGFloat scale = [self backingScale];
                         
-                        NSBitmapImageRep *imageRep = [NSBitmapImageRep imageRepWithSize:bounds.size scale:scale drawingHandler:^(NSRect rect){
-                            [[self cell] drawInteriorWithFrame:rect inView:self];
-                        }];
-                        
                         NSImage *dragImage = [NSImage bitmapImageWithSize:bounds.size scale:scale drawingHandler:^(NSRect rect){
-                            [imageRep drawInRect:rect fromRect:rect operation:NSCompositeCopy fraction:1.0 respectFlipped:YES hints:nil];
+                            [[self cell] drawInteriorWithFrame:rect inView:self];
                         }];
                         
                         NSDraggingItem *dragItem = [[[NSDraggingItem alloc] initWithPasteboardWriter:object] autorelease];

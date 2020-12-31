@@ -1,10 +1,10 @@
 //
-//  SKTextNoteField.h
+//  PDFDocumentView_SKExtensions.h
 //  Skim
 //
-//  Created by Christiaan Hofman on 10/31/13.
+//  Created by Christiaan Hofman on 4/22/08.
 /*
- This software is Copyright (c)2013-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -37,18 +37,6 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import <Quartz/Quartz.h>
 
-
-@interface SKTextNoteField : NSTextField
-@end
-
-
-@interface SKTextNoteFieldCell : NSTextFieldCell {
-    CGFloat scaleFactor;
-    CGFloat lineWidth;
-    NSArray *dashPattern;
-}
-@property (nonatomic) CGFloat scaleFactor;
-@property (nonatomic) CGFloat lineWidth;
-@property (nonatomic, copy) NSArray *dashPattern;
-@end
+extern void SKSwizzlePDFDocumentViewMethods();

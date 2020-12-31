@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/8/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,6 @@ static id (*original_toolTip)(id, SEL) = NULL;
 + (void)load {
     original_toolTip = (id (*)(id, SEL))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(toolTip), @selector(replacement_toolTip));
 }
-
-- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context {}
 
 - (BOOL)isLink { return YES; }
 

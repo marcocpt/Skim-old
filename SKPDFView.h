@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,8 @@
 
 extern NSString *SKPDFViewDisplaysAsBookChangedNotification;
 extern NSString *SKPDFViewDisplaysPageBreaksChangedNotification;
+extern NSString *SKPDFViewDisplaysHorizontallyChangedNotification;
+extern NSString *SKPDFViewDisplaysRTLChangedNotification;
 extern NSString *SKPDFViewToolModeChangedNotification;
 extern NSString *SKPDFViewToolModeChangedNotification;
 extern NSString *SKPDFViewAnnotationModeChangedNotification;
@@ -53,6 +55,7 @@ extern NSString *SKPDFViewReadingBarDidChangeNotification;
 extern NSString *SKPDFViewSelectionChangedNotification;
 extern NSString *SKPDFViewMagnificationChangedNotification;
 extern NSString *SKPDFViewCurrentSelectionChangedNotification;
+extern NSString *SKPDFViewPacerStartedOrStoppedNotification;
 
 extern NSString *SKPDFViewAnnotationKey;
 extern NSString *SKPDFViewPageKey;
@@ -89,32 +92,31 @@ enum {
     SKSpecialToolArea = 1 << 22
 };
 
+enum {
+     kPDFDisplayHorizontalContinuous = 4
+};
+
 @protocol SKPDFViewDelegate;
 
 @class SKReadingBar, SKTransitionController, SKTypeSelectHelper, SKNavigationWindow, SKTextNoteEditor, SKSyncDot;
 
 @interface SKPDFView : PDFView {
-    /// 已选择的工具模式
     SKToolMode toolMode;
-    /// 已选择的注释模式
     SKNoteType annotationMode;
-    
-    /// 界面交互模式
     SKInteractionMode interactionMode;
-    
-    /// 隐藏所有笔记内容
-    BOOL hideNotes;
     
     NSInteger navigationMode;
     SKNavigationWindow *navWindow;
     
     SKReadingBar *readingBar;
     
+    NSTimer *pacerTimer;
+    CGFloat pacerSpeed;
+    
     SKTransitionController *transitionController;
     
     SKTypeSelectHelper *typeSelectHelper;
     
-    /// 激活的注释
 	PDFAnnotation *activeAnnotation;
 	PDFAnnotation *highlightAnnotation;
     
@@ -134,39 +136,48 @@ enum {
     CGFloat gestureRotation;
     NSUInteger gesturePageIndex;
     
-    BOOL zooming;
-    
-    BOOL wantsNewUndoGroup;
-    
-    BOOL cursorHidden;
-    
     NSInteger minHistoryIndex;
     
     NSTrackingArea *trackingArea;
     
     NSInteger spellingTag;
+    
+    NSInteger laserPointerColor;
+    
+    struct _pdfvFlags {
+        unsigned int hideNotes:1;
+        unsigned int zooming:1;
+        unsigned int wantsNewUndoGroup:1;
+        unsigned int cursorHidden:1;
+        unsigned int useArrowCursorInPresentation:1;
+        unsigned int inKeyWindow:1;
+    } pdfvFlags;
 }
 
+@property (nonatomic) PDFDisplayMode extendedDisplayMode;
+@property (nonatomic) BOOL displaysHorizontally;
+@property (nonatomic) BOOL displaysRightToLeft;
 @property (nonatomic) SKToolMode toolMode;
 @property (nonatomic) SKNoteType annotationMode;
 @property (nonatomic) SKInteractionMode interactionMode;
-/// 激活的注释
 @property (nonatomic, retain) PDFAnnotation *activeAnnotation;
 @property (nonatomic, readonly, getter=isZooming) BOOL zooming;
-@property (nonatomic, readonly) NSTextField *editTextField;
 @property (nonatomic) NSRect currentSelectionRect;
 @property (nonatomic, retain) PDFPage *currentSelectionPage;
 @property (nonatomic, readonly) CGFloat currentMagnification;
-/// 隐藏所有笔记内容
 @property (nonatomic) BOOL hideNotes;
 @property (nonatomic, readonly) BOOL hasReadingBar;
 @property (readonly) SKReadingBar *readingBar;
+@property (nonatomic) CGFloat pacerSpeed;
+@property (nonatomic, readonly) BOOL hasPacer;
 @property (nonatomic, readonly) SKTransitionController *transitionController;
 @property (nonatomic, retain) SKTypeSelectHelper *typeSelectHelper;
 
 @property (nonatomic) BOOL needsRewind;
 
 - (void)toggleReadingBar;
+
+- (void)togglePacer;
 
 - (IBAction)delete:(id)sender;
 - (IBAction)paste:(id)sender;
@@ -180,6 +191,9 @@ enum {
 - (IBAction)changeAnnotationMode:(id)sender;
 
 - (void)setDisplayModeAndRewind:(PDFDisplayMode)mode;
+- (void)setExtendedDisplayModeAndRewind:(PDFDisplayMode)mode;
+- (void)setDisplaysHorizontallyAndRewind:(BOOL)flag;
+- (void)setDisplaysRightToLeftAndRewind:(BOOL)flag;
 - (void)setDisplayBoxAndRewind:(PDFDisplayBox)box;
 - (void)setDisplaysAsBookAndRewind:(BOOL)asBook;
 
@@ -187,9 +201,8 @@ enum {
 - (void)toggleAutoActualSize:(id)sender;
 - (void)exitFullscreen:(id)sender;
 
-- (void)addAnnotation:(id)sender;
+- (void)addAnnotationForContext:(id)sender;
 - (void)addAnnotationWithType:(SKNoteType)annotationType;
-- (void)addAnnotationWithType:(SKNoteType)annotationType selection:(PDFSelection *)selection;
 - (void)addAnnotation:(PDFAnnotation *)annotation toPage:(PDFPage *)page;
 - (void)removeActiveAnnotation:(id)sender;
 - (void)removeThisAnnotation:(id)sender;
@@ -216,6 +229,8 @@ enum {
 - (id <SKPDFViewDelegate>)delegate;
 - (void)setDelegate:(id <SKPDFViewDelegate>)newDelegate;
 
+- (NSString *)currentColorDefaultKeyForAlternate:(BOOL)isAlt;
+
 @end
 
 #pragma mark -
@@ -227,5 +242,6 @@ enum {
 - (void)PDFView:(PDFView *)sender editAnnotation:(PDFAnnotation *)annotation;
 - (void)PDFView:(PDFView *)sender showSnapshotAtPageNumber:(NSInteger)pageNum forRect:(NSRect)rect scaleFactor:(CGFloat)scaleFactor autoFits:(BOOL)autoFits;
 - (void)PDFViewExitFullscreen:(PDFView *)sender;
+- (void)PDFViewTogglePages:(PDFView *)sender;
 - (void)PDFViewToggleContents:(PDFView *)sender;
 @end

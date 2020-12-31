@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -37,11 +37,12 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import <Quartz/Quartz.h>
+#import "SKSnapshotPDFView.h"
 
 extern NSString *SKSnapshotCurrentSetupKey;
-extern NSString *SKSnapshotTabsKey;
 
-@class SKSnapshotPDFView, PDFDocument, PDFPage;
+@class PDFDocument, PDFPage;
 @protocol SKSnapshotWindowControllerDelegate;
 
 typedef NS_ENUM(NSInteger, SKSnapshotOpenType) {
@@ -50,7 +51,7 @@ typedef NS_ENUM(NSInteger, SKSnapshotOpenType) {
     SKSnapshotOpenPreview
 };
 
-@interface SKSnapshotWindowController : NSWindowController <NSWindowDelegate, NSPasteboardItemDataProvider, NSFilePromiseProviderDelegate> {
+@interface SKSnapshotWindowController : NSWindowController <NSWindowDelegate, NSPasteboardItemDataProvider, NSFilePromiseProviderDelegate, SKSnapshotPDFViewDelegate> {
     SKSnapshotPDFView* pdfView;
     NSImage *thumbnail;
     id <SKSnapshotWindowControllerDelegate> delegate;
@@ -65,6 +66,7 @@ typedef NS_ENUM(NSInteger, SKSnapshotOpenType) {
 @property (nonatomic, retain) IBOutlet SKSnapshotPDFView *pdfView;
 @property (nonatomic, assign) id <SKSnapshotWindowControllerDelegate> delegate;
 @property (nonatomic, retain) NSImage *thumbnail;
+@property (nonatomic, readonly) NSRect bounds;
 @property (nonatomic, readonly) NSUInteger pageIndex;
 @property (nonatomic, readonly, copy) NSString *pageLabel;
 @property (nonatomic, copy) NSString *string;
@@ -111,5 +113,6 @@ typedef NS_ENUM(NSInteger, SKSnapshotOpenType) {
 - (void)snapshotControllerDidChange:(SKSnapshotWindowController *)controller;
 - (void)snapshotControllerDidMove:(SKSnapshotWindowController *)controller;
 - (NSRect)snapshotController:(SKSnapshotWindowController *)controller miniaturizedRect:(BOOL)isMiniaturize;
+- (void)snapshotController:(SKSnapshotWindowController *)controller goToDestination:(PDFDestination *)destination;
 
 @end

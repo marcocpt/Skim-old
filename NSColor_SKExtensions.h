@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 6/17/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -66,14 +66,15 @@ enum {
     SKScriptingColorGray = 'Gray',
     SKScriptingColorLightGray = 'LGry',
     SKScriptingColorDarkGray = 'DGry',
-    SKScriptingColorClear = 'Clea'
+    SKScriptingColorClear = 'Clea',
+    SKScriptingColorUnderPageBackground = 'UPgB',
+    SKScriptingColorWindowBackground = 'WinB',
+    SKScriptingColorControlBackground = 'CtrB',
 };
 
 @interface NSColor (SKExtensions)
 
-+ (NSColor *)colorWithAquaColor:(NSColor *)aAquaColor darkAquaColor:(NSColor *)aDarkAquaColor;
-+ (NSColor *)colorWithCalibratedAquaWhite:(CGFloat)aquaWhite alpha:(CGFloat)aquaAlpha darkAquaWhite:(CGFloat)darkAquaWhite alpha:(CGFloat)darkAquaAlpha;
-+ (NSColor *)colorWithCalibratedAquaRed:(CGFloat)aquaRed green:(CGFloat)aquaGreen blue:(CGFloat)aquaBlue alpha:(CGFloat)aquaAlpha darkAquaRed:(CGFloat)darkAquaRed green:(CGFloat)darkAquaGreen blue:(CGFloat)darkAquaBlue alpha:(CGFloat)darkAquaAlpha;
++ (void)makeHighlightColors;
 
 + (NSColor *)keySourceListHighlightColor;
 + (NSColor *)mainSourceListHighlightColor;
@@ -83,13 +84,19 @@ enum {
 + (NSColor *)selectionHighlightColor:(BOOL)active;
 + (NSColor *)selectionHighlightInteriorColor:(BOOL)active;
 
++ (NSColor *)searchHighlightColor;
+
 + (NSColor *)pdfControlBackgroundColor;
+
++ (NSArray *)favoriteColors;
 
 - (NSComparisonResult)colorCompare:(NSColor *)aColor;
 
 - (CGFloat)luminance;
 
 - (void)drawSwatchInRoundedRect:(NSRect)rect;
+
+- (NSColor *)opaqueColor;
 
 + (id)scriptingRgbaColorWithDescriptor:(NSAppleEventDescriptor *)descriptor;
 - (id)scriptingRgbaColorDescriptor;
@@ -100,8 +107,9 @@ enum {
 
 @end
 
-#if SDK_BEFORE(10_8)
-@interface NSColor (SKMountainLionDeclarations)
-- (CGColorRef)CGColor;
+#if SDK_BEFORE(10_13)
+@interface NSColor (SKHighSierraDeclarations)
++ (NSColor *)findHighlightColor;
++ (NSColor *)separatorColor;
 @end
 #endif

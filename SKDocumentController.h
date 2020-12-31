@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 5/21/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,9 @@ extern NSString *SKArchiveDocumentType;
 extern NSString *SKFolderDocumentType;
 
 extern NSString *SKDocumentSetupAliasKey;
+extern NSString *SKDocumentSetupBookmarkKey;
 extern NSString *SKDocumentSetupFileNameKey;
+extern NSString *SKDocumentSetupWindowFrameKey;
 extern NSString *SKDocumentSetupTabsKey;
 
 extern NSString *SKDocumentControllerWillRemoveDocumentNotification;

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/22/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,28 @@
     if (nonWhitespaceAndNewlineCharacterSet == nil)
         nonWhitespaceAndNewlineCharacterSet = [[[NSCharacterSet whitespaceAndNewlineCharacterSet] invertedSet] copy];
     return nonWhitespaceAndNewlineCharacterSet;
+}
+
++ (id)URLBookmarkNameAllowedCharacterSet {
+    static NSCharacterSet *URLBookmarkNameAllowedCharacterSet = nil;
+    if (URLBookmarkNameAllowedCharacterSet == nil) {
+        NSMutableCharacterSet *tmpSet = [[self URLPathAllowedCharacterSet] mutableCopy];
+        [tmpSet removeCharactersInString:@"/"];
+        URLBookmarkNameAllowedCharacterSet = [tmpSet copy];
+        [tmpSet release];
+    }
+    return URLBookmarkNameAllowedCharacterSet;
+}
+
++ (id)URLGenericAllowedCharacterSet {
+    static NSCharacterSet *URLGenericAllowedCharacterSet = nil;
+    if (URLGenericAllowedCharacterSet == nil) {
+        NSMutableCharacterSet *tmpSet = [[self URLPathAllowedCharacterSet] mutableCopy];
+        [tmpSet addCharactersInString:@":;?#%"];
+        URLGenericAllowedCharacterSet = [tmpSet copy];
+        [tmpSet release];
+    }
+    return URLGenericAllowedCharacterSet;
 }
 
 @end

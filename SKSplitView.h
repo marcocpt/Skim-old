@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/10/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,11 +38,16 @@
 
 #import <Cocoa/Cocoa.h>
 
-extern NSString *SKSplitViewAnimationDidEndNotification;
 
 @interface SKSplitView : NSSplitView {
     BOOL animating;
+    NSMutableArray *queue;
 }
+
 @property (nonatomic, readonly, getter=isAnimating) BOOL animating;
+
 - (void)setPosition:(CGFloat)position ofDividerAtIndex:(NSInteger)dividerIndex animate:(BOOL)animate;
+
+- (void)enqueueOperation:(void(^)(void))block;
+
 @end

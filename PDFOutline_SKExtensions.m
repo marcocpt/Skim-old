@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/4/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,8 @@
 
 #import "PDFOutline_SKExtensions.h"
 #import "PDFPage_SKExtensions.h"
+#import "PDFDocument_SKExtensions.h"
+#import "NSDocument_SKExtensions.h"
 
 
 @interface PDFOutline (SKPrivateDeclarations)
@@ -63,14 +65,89 @@
         return nil;
 }
 
+- (NSInteger)deepestLevel {
+    NSInteger level = 0;
+    NSInteger i, iMax = [self numberOfChildren];
+    for (i = 0; i < iMax; i++)
+        level = MAX(level, 1 + [[self childAtIndex:i] deepestLevel]);
+    return level;
+}
+
 // on 10.12 the document is not weakly linked, so we need to clear it to avoid a retain cycle
 - (void)clearDocument {
-    if ([self respondsToSelector:@selector(setDocument:)] == NO || RUNNING(10_12))
+    if ([self respondsToSelector:@selector(setDocument:)] == NO || RUNNING(10_12) == NO)
         return;
     NSUInteger i, iMax = [self numberOfChildren];
     for (i = 0; i < iMax; i++)
          [[self childAtIndex:i] clearDocument];
     [self setDocument:nil];
+}
+
+- (id)objectSpecifier {
+    NSUInteger idx = [self index];
+    if (idx != NSNotFound) {
+        NSScriptObjectSpecifier *containerRef = nil;
+        PDFOutline *parent = [self parent];
+        if ([parent parent])
+            containerRef = [parent objectSpecifier];
+        else
+            containerRef = [[[self document] containingDocument] objectSpecifier];
+        return [[[NSIndexSpecifier allocWithZone:[self zone]] initWithContainerClassDescription:[containerRef keyClassDescription] containerSpecifier:containerRef key:@"outlines" index:idx] autorelease];
+    } else {
+        return nil;
+    }
+}
+
+- (PDFOutline *)scriptingParent {
+    PDFOutline *parent = [self parent];
+    return [parent parent] == nil ? nil : parent;
+}
+
+- (NSArray *)entireContents {
+    NSMutableArray *contents = [NSMutableArray array];
+    NSUInteger i, iMax = [self numberOfChildren];
+    for (i = 0; i < iMax; i++) {
+        PDFOutline *outline = [self childAtIndex:i];
+        [contents addObject:outline];
+        [contents addObjectsFromArray:[outline entireContents]];
+    }
+    return contents;
+}
+
+- (NSUInteger)countOfOutlines {
+    return [self numberOfChildren];
+}
+
+- (PDFOutline *)objectInOutlinesAtIndex:(NSUInteger)idx {
+    return [self childAtIndex:idx];
+}
+
+- (NSString *)scriptingURL {
+    if ([[self action] respondsToSelector:@selector(URL)]) {
+        NSURL *url = [(PDFActionURL *)[self action] URL];
+        if ([url isFileURL] == NO)
+            return [url absoluteString];
+    }
+    return nil;
+}
+
+- (NSURL *)scriptingFile {
+    if ([[self action] respondsToSelector:@selector(URL)]) {
+        NSURL *url = [(PDFActionRemoteGoTo *)[self action] URL];
+        if ([url isFileURL])
+            return url;
+    }
+    return nil;
+}
+
+- (BOOL)isExpanded {
+    if ([self numberOfChildren] == 0)
+        return NO;
+    return [[[self document] containingDocument] isOutlineExpanded:self];
+}
+
+- (void)setExpanded:(BOOL)flag {
+    [[[self document] containingDocument] setExpanded:flag forOutline:self];
 }
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 10/5/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -59,6 +59,13 @@
     [coder encodeBool:shouldFill forKey:@"shouldFill"];
 }
 
+- (id)copyWithZone:(NSZone *)zone {
+    SKColorCell *copy = [super copyWithZone:zone];
+    copy->color = [color retain];
+    copy->shouldFill = shouldFill;
+    return copy;
+}
+
 - (void)dealloc {
     SKDESTROY(color);
     [super dealloc];
@@ -104,6 +111,18 @@
 
 - (id)accessibilityValueAttribute {
     return [color accessibilityValue];
+}
+
+@end
+
+#pragma mark
+
+@implementation SKColorView
+
+// for some reason NSImageView does not redraw when resized with NSImageFrameNone
+- (void)setFrame:(NSRect)frame {
+    [super setFrame:frame];
+    [self setNeedsDisplay:YES];
 }
 
 @end

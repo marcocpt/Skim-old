@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 6/15/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -55,6 +55,11 @@ static inline void drawIconInsert(CGContextRef context, NSRect bounds);
 #if !defined(MAC_OS_X_VERSION_10_13) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_13
 #ifndef NSAppKitVersionNumber10_12
 #define NSAppKitVersionNumber10_12 1504
+#endif
+#endif
+#if !defined(MAC_OS_X_VERSION_10_15) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_15
+#ifndef NSAppKitVersionNumber10_14
+#define NSAppKitVersionNumber10_14 1671
 #endif
 #endif
 
@@ -108,12 +113,14 @@ static inline void drawIconInsert(CGContextRef context, NSRect bounds);
         NSImage *anImage = [dict objectForKey:SKNPDFAnnotationImageKey];
         if ([anImage isKindOfClass:imageClass])
             image = [anImage retain];
-        if ([anImage isKindOfClass:dataClass])
+        else if ([anImage isKindOfClass:dataClass])
             image = [[NSImage alloc] initWithData:(NSData *)anImage];
+        if ([aText isKindOfClass:stringClass])
+            aText = [[[NSAttributedString alloc] initWithString:(NSString *)aText] autorelease];
+        else if ([aText isKindOfClass:dataClass])
+            aText = [[[NSAttributedString alloc] initWithData:(NSData *)aText options:[NSDictionary dictionary] documentAttributes:NULL error:NULL] autorelease];
         if ([aText isKindOfClass:attrStringClass])
             [self setText:aText];
-        else if ([aText isKindOfClass:stringClass])
-            [self setText:[[[NSAttributedString alloc] initWithString:(NSString *)aText] autorelease]];
         [self updateContents];
     }
     return self;
@@ -203,7 +210,7 @@ static inline void drawIconInsert(CGContextRef context, NSRect bounds);
 
 // private method called by -drawWithBox: before to 10.12, made public on 10.12, now calling -drawWithBox:
 - (void)drawWithBox:(PDFDisplayBox)box inContext:(CGContextRef)context {
-    if (floor(NSAppKitVersionNumber) < NSAppKitVersionNumber10_12 || [self hasAppearanceStream]) {
+    if (floor(NSAppKitVersionNumber) < NSAppKitVersionNumber10_12 || floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_14 || [self hasAppearanceStream]) {
         [super drawWithBox:box inContext:context];
     } else {
         // on 10.12 draws based on the type rather than the (super)class

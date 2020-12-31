@@ -1,11 +1,11 @@
 //
-//  NSAlert_SKExtensions.m
+//  SKTopBarView.h
 //  Skim
 //
-//  Created by Christiaan Hofman on 23/07/2019.
+//  Created by Adam Maxwell on 10/26/05.
 /*
- This software is Copyright (c) 2019
- Christiaan Hofman. All rights reserved.
+ This software is Copyright (c) 2005-2020
+ Adam Maxwell. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
@@ -19,7 +19,7 @@
  the documentation and/or other materials provided with the
  distribution.
  
- - Neither the name of Christiaan Hofman nor the names of any
+ - Neither the name of Adam Maxwell nor the names of any
  contributors may be used to endorse or promote products derived
  from this software without specific prior written permission.
  
@@ -36,28 +36,30 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "NSAlert_SKExtensions.h"
-#import "SKRuntime.h"
+#import <Cocoa/Cocoa.h>
 
-@implementation NSAlert (SKExtensions)
-
-- (void)didEndAlert:(NSAlert *)alert returnCode:(NSInteger)returnCode completionHandler:(void *)contextInfo {
-    if (contextInfo != NULL) {
-        void (^handler)(NSInteger) = (void(^)(NSInteger))contextInfo;
-        handler(returnCode);
-        Block_release(handler);
-    }
+@interface SKTopBarView : NSView {
+	NSView *contentView;
+    NSView *backgroundView;
+    NSArray *backgroundColors;
+    NSArray *alternateBackgroundColors;
+    NSColor *separatorColor;
+    NSSize minSize;
+    NSSize maxSize;
+    BOOL hasSeparator;
+	NSRectEdge overflowEdge;
+    BOOL drawsBackground;
+    BOOL wantsSubviews;
 }
 
-- (void)fallback_beginSheetModalForWindow:(NSWindow *)window completionHandler:(void (^)(NSInteger result))handler {
-    [self beginSheetModalForWindow:window
-                     modalDelegate:handler ? self : nil
-                    didEndSelector:handler ? @selector(didEndAlert:returnCode:completionHandler:) : NULL
-                       contextInfo:handler ? Block_copy(handler) : NULL];
-}
+@property (nonatomic, readonly) NSView *contentView;
+@property (nonatomic, copy) NSArray *backgroundColors, *alternateBackgroundColors;
+@property (nonatomic, retain) NSColor *separatorColor;
+@property (nonatomic, readonly) NSRect contentRect, interiorRect;
+@property (nonatomic) NSSize minSize, maxSize;
+@property (nonatomic) NSRectEdge overflowEdge;
+@property (nonatomic) BOOL hasSeparator, drawsBackground;
 
-+ (void)load {
-    SKAddInstanceMethodImplementationFromSelector(self, @selector(beginSheetModalForWindow:completionHandler:), @selector(fallback_beginSheetModalForWindow:completionHandler:));
-}
+- (void)reflectView:(NSView *)view animate:(BOOL)animate;
 
 @end

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="16097.3" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14490.70"/>
+        <development version="8000" identifier="xcode"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="16097.3"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
@@ -128,10 +129,13 @@
                             <menuItem isSeparatorItem="YES" id="74">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
-                            <menuItem title="Mail Archive…" tag="2" id="947">
-                                <connections>
-                                    <action selector="emailArchive:" target="-1" id="7AZ-ez-uGh"/>
-                                </connections>
+                            <menuItem title="Share" id="CBW-F8-shX">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="Share" id="tNw-MC-SQs">
+                                    <connections>
+                                        <outlet property="delegate" destination="TTl-QH-K00" id="oYK-9r-A8t"/>
+                                    </connections>
+                                </menu>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="946">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
@@ -250,6 +254,12 @@
                                                 <action selector="searchPDF:" target="-1" id="734"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Filter" tag="1" keyEquivalent="F" id="xaO-n6-VVH">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <connections>
+                                                <action selector="filterNotes:" target="-1" id="WcA-aF-DIc"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="733">
                                             <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                                         </menuItem>
@@ -310,13 +320,13 @@
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="976"/>
                                         <menuItem title="Bigger" tag="3" keyEquivalent="+" id="977">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
                                                 <action selector="modifyFont:" target="457" id="1003"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Smaller" tag="4" keyEquivalent="-" id="978">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
                                                 <action selector="modifyFont:" target="457" id="1005"/>
                                             </connections>
@@ -635,6 +645,33 @@
                             <menuItem isSeparatorItem="YES" id="717">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
+                            <menuItem title="Notes Columns" id="nDJ-uN-pZt">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="Notes Columns" id="6cj-Yc-0uC">
+                                    <connections>
+                                        <outlet property="delegate" destination="210" id="74u-nn-uhD"/>
+                                    </connections>
+                                </menu>
+                            </menuItem>
+                            <menuItem title="Note Types" id="pmO-YO-lgm">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="Note Types" id="BqJ-CD-FTu">
+                                    <connections>
+                                        <outlet property="delegate" destination="210" id="R8D-Iy-P2J"/>
+                                    </connections>
+                                </menu>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="Hov-Cu-rh7">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                            </menuItem>
+                            <menuItem title="Toggle Overview" keyEquivalent="O" id="XiM-be-8EU">
+                                <connections>
+                                    <action selector="toggleOverview:" target="-1" id="jMu-az-GyH"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="aEQ-Rh-DAB">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                            </menuItem>
                             <menuItem title="Toggle Split PDF" keyEquivalent="p" id="794">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
@@ -691,12 +728,22 @@
                                                 <action selector="changeDisplayMode:" target="-1" id="1044"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem isSeparatorItem="YES" id="879">
+                                        <menuItem title="Horizontal Continuous" tag="4" id="AP8-7f-7ew">
+                                            <connections>
+                                                <action selector="changeDisplayMode:" target="-1" id="ZCY-c5-D3Y"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem isSeparatorItem="YES" id="BoR-ls-3Z6">
                                             <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                                         </menuItem>
                                         <menuItem title="Book Mode" id="882">
                                             <connections>
-                                                <action selector="toggleDisplayAsBook:" target="-1" id="909"/>
+                                                <action selector="toggleDisplaysAsBook:" target="-1" id="909"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Right to Left" id="FyF-XN-fE5">
+                                            <connections>
+                                                <action selector="toggleDisplaysRTL:" target="-1" id="goF-Wz-GO6"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Page Breaks" id="877">
@@ -837,6 +884,94 @@
                                 <connections>
                                     <action selector="doGoForward:" target="-1" id="279"/>
                                 </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="aOG-8u-VV2">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                            </menuItem>
+                            <menuItem title="Start Pacer" keyEquivalent="/" id="1FC-d2-8KS">
+                                <connections>
+                                    <action selector="togglePacer:" target="-1" id="8Wr-Nz-vZo"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Pacer Speed" id="0x4-dR-77N">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="Pacer Speed" id="Isc-ao-HG9">
+                                    <items>
+                                        <menuItem title="Faster" keyEquivalent="/" id="raF-vU-PBC">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="eEE-gT-68w"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Slower" tag="-1" keyEquivalent="/" id="v0G-7N-SA1">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="vYB-US-LBd"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem isSeparatorItem="YES" id="xUD-fJ-gHP"/>
+                                        <menuItem title="1" tag="1" id="0Ph-PK-rM9">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="3Wy-FF-7kU"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="2" tag="2" id="j5j-HG-spc">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="eI6-wd-P2U"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="3" tag="3" id="AHB-BP-8zE">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="6pG-lM-1GW"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="4" tag="4" id="oJx-hl-alQ">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="3XR-f4-CXd"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="5" tag="5" id="UXf-Vi-CQd">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="fgz-Ci-FYe"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="6" tag="6" id="eFH-bz-a1e">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="yId-Ix-IFL"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="7" tag="7" id="JeZ-ye-h8I">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="e6e-09-E2G"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="8" tag="8" id="IuH-fx-O2b">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="h9i-dt-9Uf"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="9" tag="9" id="8Or-Ie-PCq">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="h3I-ka-1eI"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="10" tag="10" id="TjV-lD-8kb">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="changePacerSpeed:" target="-1" id="ihS-6L-Z0m"/>
+                                            </connections>
+                                        </menuItem>
+                                    </items>
+                                </menu>
                             </menuItem>
                         </items>
                     </menu>
@@ -1115,8 +1250,14 @@
                     </menu>
                 </menuItem>
             </items>
+            <point key="canvasLocation" x="140" y="152"/>
         </menu>
-        <customObject id="210" userLabel="ApplicationController" customClass="SKApplicationController"/>
+        <customObject id="210" userLabel="ApplicationController" customClass="SKApplicationController">
+            <connections>
+                <outlet property="noteColumnsMenu" destination="6cj-Yc-0uC" id="0s3-5d-oVV"/>
+                <outlet property="noteTypeMenu" destination="BqJ-CD-FTu" id="pDX-uM-we6"/>
+            </connections>
+        </customObject>
         <customObject id="457" userLabel="Font Manager" customClass="NSFontManager"/>
         <customObject id="518" userLabel="SKDocumentController" customClass="SKDocumentController"/>
         <customObject id="728" userLabel="SUUpdater" customClass="SUUpdater">
@@ -1125,5 +1266,6 @@
             </connections>
         </customObject>
         <customObject id="1086" customClass="SKBookmarkController"/>
+        <customObject id="TTl-QH-K00" customClass="SKShareMenuController"/>
     </objects>
 </document>

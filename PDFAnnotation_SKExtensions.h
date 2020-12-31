@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/1/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Quartz/Quartz.h>
+#import <SkimNotes/SkimNotes.h>
 #import "NSGeometry_SKExtensions.h"
 
 
@@ -75,6 +76,8 @@ extern NSString *SKPasteboardTypeSkimNote;
 - (id)objectValue;
 - (void)setObjectValue:(id)newObjectValue;
 
+- (SKNPDFWidgetType)widgetType;
+
 - (NSString *)textString;
 
 - (PDFDestination *)linkDestination;
@@ -85,10 +88,12 @@ extern NSString *SKPasteboardTypeSkimNote;
 - (BOOL)isText;
 - (BOOL)isLine;
 - (BOOL)isLink;
+- (BOOL)isWidget;
 - (BOOL)isResizable;
 - (BOOL)isMovable;
 - (BOOL)isEditable;
 - (BOOL)hasBorder;
+- (BOOL)hasInteriorColor;
 
 - (BOOL)isConvertibleAnnotation;
 
@@ -101,7 +106,7 @@ extern NSString *SKPasteboardTypeSkimNote;
 
 - (SKRectEdges)resizeHandleForPoint:(NSPoint)point scaleFactor:(CGFloat)scaleFactor;
 
-- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context;
+- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context active:(BOOL)active;
 
 - (void)registerUserName;
 
@@ -150,4 +155,6 @@ extern NSString *SKPasteboardTypeSkimNote;
 
 @interface PDFAnnotation (SKDefaultExtensions)
 - (PDFTextAnnotationIconType)iconType;
+- (NSColor *)interiorColor;
+- (NSString *)fieldName;
 @end

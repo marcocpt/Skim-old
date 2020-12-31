@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/9/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,20 +38,30 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define SDK_BEFORE(_version) (!defined(MAC_OS_X_VERSION_ ## _version) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_ ## _version)
-#define DEPLOYMENT_BEFORE(_version) (!defined(MAC_OS_X_VERSION_ ## _version) || MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_ ## _version)
+#define SDK_BEFORE(_version) (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_ ## _version)
+#define DEPLOYMENT_BEFORE(_version) (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_ ## _version)
+
+#ifndef MAC_OS_X_VERSION_10_11
+    #define MAC_OS_X_VERSION_10_11 101100
+#endif
+#ifndef MAC_OS_X_VERSION_10_12
+    #define MAC_OS_X_VERSION_10_12 101200
+#endif
+#ifndef MAC_OS_X_VERSION_10_13
+    #define MAC_OS_X_VERSION_10_13 101300
+#endif
+#ifndef MAC_OS_X_VERSION_10_14
+    #define MAC_OS_X_VERSION_10_14 101400
+#endif
+#ifndef MAC_OS_X_VERSION_10_15
+    #define MAC_OS_X_VERSION_10_15 101500
+#endif
+#ifndef MAC_OS_X_VERSION_10_16
+    #define MAC_OS_X_VERSION_10_16 101600
+#endif
 
 #if SDK_BEFORE(10_13)
 
-#ifndef NSAppKitVersionNumber10_7
-    #define NSAppKitVersionNumber10_7 1138
-#endif
-#ifndef NSAppKitVersionNumber10_8
-    #define NSAppKitVersionNumber10_8 1187
-#endif
-#ifndef NSAppKitVersionNumber10_9
-    #define NSAppKitVersionNumber10_9 1265
-#endif
 #ifndef NSAppKitVersionNumber10_10
     #define NSAppKitVersionNumber10_10 1343
 #endif
@@ -70,15 +80,24 @@
 #ifndef NSAppKitVersionNumber10_14
     #define NSAppKitVersionNumber10_14 1671
 #endif
+#ifndef NSAppKitVersionNumber10_15
+    #define NSAppKitVersionNumber10_15 1894
+#endif
 
 #elif SDK_BEFORE(10_14)
 
 static const NSAppKitVersion NSAppKitVersionNumber10_13 = 1561;
 static const NSAppKitVersion NSAppKitVersionNumber10_14 = 1671;
+static const NSAppKitVersion NSAppKitVersionNumber10_15 = 1894;
 
 #elif SDK_BEFORE(10_15)
 
 static const NSAppKitVersion NSAppKitVersionNumber10_14 = 1671;
+static const NSAppKitVersion NSAppKitVersionNumber10_15 = 1894;
+
+#elif SDK_BEFORE(10_16)
+
+static const NSAppKitVersion NSAppKitVersionNumber10_15 = 1894;
 
 #endif
 
@@ -88,25 +107,6 @@ static const NSAppKitVersion NSAppKitVersionNumber10_14 = 1671;
 
 #ifndef NS_OPTIONS
 #define NS_OPTIONS(_type, _name) enum _name : _type _name; enum _name : _type
-#endif
-
-#if SDK_BEFORE(10_10)
-
-enum {
-    NSFullSizeContentViewWindowMask = 1 << 15;
-};
-
-typedef NS_ENUM(NSInteger, NSWindowTitleVisibility) {
-    NSWindowTitleVisible = 0,
-    NSWindowTitleHidden = 1,
-};
-
-@interface NSWindow (SKYosemiteDeclarations)
-- (NSRect)contentLayoutRect;
-- (NSWindowTitleVisibility)titleVisibility;
-- (void)setTitleVisibility:(NSWindowTitleVisibility)flag;
-@end
-
 #endif
 
 #if SDK_BEFORE(10_12)
@@ -158,8 +158,28 @@ typedef NS_ENUM(NSInteger, NSWindowTabbingMode) {
 
 #endif
 
-#if SDK_BEFORE(10_13)
+#if SDK_BEFORE(10_11)
 
-@protocol PDFDocumentDelegate <NSObject> @end
+enum {
+    NSVisualEffectMaterialMenu = 5,
+    NSVisualEffectMaterialPopover = 6,
+    NSVisualEffectMaterialSidebar = 7,
+};
+
+#endif
+
+#if SDK_BEFORE(10_14)
+
+enum {
+    NSVisualEffectMaterialHeaderView = 10,
+    NSVisualEffectMaterialSheet = 11,
+    NSVisualEffectMaterialWindowBackground = 12,
+    NSVisualEffectMaterialHUDWindow = 13,
+    NSVisualEffectMaterialFullScreenUI = 15,
+    NSVisualEffectMaterialToolTip = 17,
+    NSVisualEffectMaterialContentBackground = 18,
+    NSVisualEffectMaterialUnderWindowBackground = 21,
+    NSVisualEffectMaterialUnderPageBackground = 22
+};
 
 #endif

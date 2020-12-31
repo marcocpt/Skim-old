@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,7 @@
 #import "NSView_SKExtensions.h"
 #import "NSError_SKExtensions.h"
 #import "SKDocumentController.h"
+#import "SKRecentDocumentInfo.h"
 
 #define SKPasteboardTypeBookmarkRow @"net.sourceforge.skim-app.pasteboard.bookmarkrow"
 
@@ -79,17 +80,13 @@
 #define RECENTDOCUMENTS_KEY @"recentDocuments"
 
 #define PAGEINDEX_KEY @"pageIndex"
-#define ALIAS_KEY     @"alias"
-#define ALIASDATA_KEY @"_BDAlias"
-#define SNAPSHOTS_KEY @"snapshots"
-
 #define CHILDREN_KEY @"children"
 #define LABEL_KEY    @"label"
 
 #define SAVE_DELAY 10.0
-/// KVO 中做 context
+
 static char SKBookmarkPropertiesObservationContext;
-/// 书签 id, 用在 NSUserDefaults 中
+
 static NSString *SKBookmarksIdentifier = nil;
 
 static NSArray *minimumCoverForBookmarks(NSArray *items);
@@ -97,12 +94,9 @@ static NSArray *minimumCoverForBookmarks(NSArray *items);
 @interface SKBookmarkController (SKPrivate)
 - (void)setupToolbar;
 - (void)saveBookmarksData;
-/// NSApplicationWillTerminateNotification 通知时执行
 - (void)handleApplicationWillTerminateNotification:(NSNotification *)notification;
 - (void)endEditing;
-/// ✅ 开始 KVO 书签
 - (void)startObservingBookmarks:(NSArray *)newBookmarks;
-/// ✅ 停止 KVO 书签
 - (void)stopObservingBookmarks:(NSArray *)oldBookmarks;
 @end
 
@@ -115,9 +109,9 @@ static NSArray *minimumCoverForBookmarks(NSArray *items);
 @synthesize outlineView, statusBar, bookmarkRoot, previousSession, undoManager;
 
 static SKBookmarkController *sharedBookmarkController = nil;
-/// 最大的“最近的文档”数
+
 static NSUInteger maxRecentDocumentsCount = 0;
-/// ✅ 设置 最大文档数，bookmarks 的 id
+
 + (void)initialize {
     SKINITIALIZE;
     
@@ -133,7 +127,7 @@ static NSUInteger maxRecentDocumentsCount = 0;
         [[[self alloc] init] release];
     return sharedBookmarkController;
 }
-/// ✅ This method exists for historical reasons; memory zones are no longer used by Objective-C.
+
 + (id)allocWithZone:(NSZone *)zone {
     return [sharedBookmarkController retain] ?: [super allocWithZone:zone];
 }
@@ -147,10 +141,10 @@ static NSUInteger maxRecentDocumentsCount = 0;
             bookmarksCache = [[bookmarkDictionary objectForKey:BOOKMARKS_KEY] retain];
             
             recentDocuments = [[NSMutableArray alloc] init];
-            for (NSDictionary *info in [bookmarkDictionary objectForKey:RECENTDOCUMENTS_KEY]) {
-                NSMutableDictionary *mutableInfo = [info mutableCopy];
-                [recentDocuments addObject:mutableInfo];
-                [mutableInfo release];
+            for (NSDictionary *dict in [bookmarkDictionary objectForKey:RECENTDOCUMENTS_KEY]) {
+                SKRecentDocumentInfo *info = [[SKRecentDocumentInfo alloc] initWithProperties:dict];
+                [recentDocuments addObject:info];
+                [info release];
             }
             
             bookmarkRoot = [[SKBookmark alloc] initRootWithChildrenProperties:bookmarksCache];
@@ -212,6 +206,9 @@ static NSUInteger maxRecentDocumentsCount = 0;
     [outlineView setDoubleAction:@selector(doubleClickBookmark:)];
     
     [outlineView setSupportsQuickLook:YES];
+    
+    NSArray *sendTypes = [NSArray arrayWithObject:(NSString *)kUTTypeFileURL];
+    [NSApp registerServicesMenuSendTypes:sendTypes returnTypes:[NSArray array]];
 }
 
 - (void)updateStatus {
@@ -230,30 +227,18 @@ static NSUInteger maxRecentDocumentsCount = 0;
 }
 
 - (void)saveBookmarksData {
-    NSMutableArray *recents = [NSMutableArray array];
-    for (NSDictionary *info in recentDocuments) {
-        NSMutableDictionary *infoCopy = [info mutableCopy];
-        [infoCopy removeObjectForKey:ALIAS_KEY];
-        [recents addObject:infoCopy];
-        [infoCopy release];
-    }
     if (bookmarksCache == nil)
         bookmarksCache = [[[bookmarkRoot children] valueForKey:@"properties"] retain];
-    NSDictionary *bookmarksDictionary = [NSDictionary dictionaryWithObjectsAndKeys:bookmarksCache, BOOKMARKS_KEY, recents, RECENTDOCUMENTS_KEY, nil];
+    NSDictionary *bookmarksDictionary = [NSDictionary dictionaryWithObjectsAndKeys:bookmarksCache, BOOKMARKS_KEY, [recentDocuments valueForKey:@"properties"], RECENTDOCUMENTS_KEY, nil];
     [[NSUserDefaults standardUserDefaults] setPersistentDomain:bookmarksDictionary forName:SKBookmarksIdentifier];
 }
 
 #pragma mark Recent Documents
 
-- (NSDictionary *)recentDocumentInfoAtURL:(NSURL *)fileURL {
+- (SKRecentDocumentInfo *)recentDocumentInfoAtURL:(NSURL *)fileURL {
     NSString *path = [fileURL path];
-    for (NSMutableDictionary *info in recentDocuments) {
-        SKAlias *alias = [info valueForKey:ALIAS_KEY];
-        if (alias == nil) {
-            alias = [SKAlias aliasWithData:[info valueForKey:ALIASDATA_KEY]];
-            [info setValue:alias forKey:ALIAS_KEY];
-        }
-        if ([[[alias fileURLNoUI] path] isCaseInsensitiveEqual:path])
+    for (SKRecentDocumentInfo *info in recentDocuments) {
+        if ([[[info fileURL] path] isCaseInsensitiveEqual:path])
             return info;
     }
     return nil;
@@ -263,14 +248,13 @@ static NSUInteger maxRecentDocumentsCount = 0;
     if (fileURL == nil)
         return;
     
-    NSDictionary *info = [self recentDocumentInfoAtURL:fileURL];
-    if (info)
-        [recentDocuments removeObjectIdenticalTo:info];
-    
-    SKAlias *alias = [SKAlias aliasWithURL:fileURL];
-    if (alias) {
-        NSMutableDictionary *bm = [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInteger:pageIndex], PAGEINDEX_KEY, [alias data], ALIASDATA_KEY, alias, ALIAS_KEY, [setups count] ? setups : nil, SNAPSHOTS_KEY, nil];
-        [recentDocuments insertObject:bm atIndex:0];
+    SKRecentDocumentInfo *info = [[SKRecentDocumentInfo alloc] initWithURL:fileURL pageIndex:pageIndex snapshots:setups];
+    if (info) {
+        SKRecentDocumentInfo *oldInfo = [self recentDocumentInfoAtURL:fileURL];
+        if (oldInfo)
+            [recentDocuments removeObjectIdenticalTo:oldInfo];
+        [recentDocuments insertObject:info atIndex:0];
+        [info release];
         if ([recentDocuments count] > maxRecentDocumentsCount)
             [recentDocuments removeLastObject];
     }
@@ -280,17 +264,12 @@ static NSUInteger maxRecentDocumentsCount = 0;
 }
 
 - (NSUInteger)pageIndexForRecentDocumentAtURL:(NSURL *)fileURL {
-    if (fileURL == nil)
-        return NSNotFound;
-    NSNumber *pageIndex = [[self recentDocumentInfoAtURL:fileURL] objectForKey:PAGEINDEX_KEY];
-    return pageIndex == nil ? NSNotFound : [pageIndex unsignedIntegerValue];
+    SKRecentDocumentInfo *info = fileURL ? [self recentDocumentInfoAtURL:fileURL] : nil;
+    return info ? [info pageIndex] : NSNotFound;
 }
 
 - (NSArray *)snapshotsForRecentDocumentAtURL:(NSURL *)fileURL {
-    if (fileURL == nil)
-        return nil;
-    NSArray *setups = [[self recentDocumentInfoAtURL:fileURL] objectForKey:SNAPSHOTS_KEY];
-    return [setups count] ? setups : nil;
+    return fileURL ? [[self recentDocumentInfoAtURL:fileURL] snapshots] : nil;
 }
 
 #pragma mark Bookmarks support
@@ -303,7 +282,7 @@ static NSUInteger maxRecentDocumentsCount = 0;
         for (NSString *component in components) {
             if ([component length] == 0)
                 continue;
-            component = [component stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            component = [component stringByRemovingPercentEncoding];
             NSArray *children = [bookmark children];
             bookmark = nil;
             for (SKBookmark *child in children) {
@@ -360,6 +339,21 @@ static NSUInteger maxRecentDocumentsCount = 0;
         [outlineView endUpdates];
 }
 
+- (void)replaceBookmarksAtIndexes:(NSIndexSet *)indexes withBookmarks:(NSArray *)newBookmarks ofBookmark:(SKBookmark *)parent partial:(BOOL)isPartial {
+    NSTableViewAnimationOptions options = NSTableViewAnimationEffectGap | NSTableViewAnimationSlideUp;
+    if ([self isWindowLoaded] == NO || [[self window] isVisible] == NO || [[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey])
+        options = NSTableViewAnimationEffectNone;
+    if (isPartial == NO)
+        [outlineView beginUpdates];
+    [outlineView removeItemsAtIndexes:indexes inParent:OV_ITEM(parent) withAnimation:options];
+    [parent removeChildrenAtIndexes:indexes];
+    indexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange([indexes firstIndex], [newBookmarks count])];
+    [outlineView insertItemsAtIndexes:indexes inParent:OV_ITEM(parent) withAnimation:options];
+    [parent insertChildren:newBookmarks atIndexes:indexes];
+    if (isPartial == NO)
+        [outlineView endUpdates];
+}
+
 - (void)moveBookmarkAtIndex:(NSUInteger)fromIndex ofBookmark:(SKBookmark *)fromParent toIndex:(NSUInteger)toIndex ofBookmark:(SKBookmark *)toParent partial:(BOOL)isPartial {
     if (isPartial == NO)
         [outlineView beginUpdates];
@@ -370,6 +364,25 @@ static NSUInteger maxRecentDocumentsCount = 0;
     [bookmark release];
     if (isPartial == NO)
         [outlineView endUpdates];
+}
+
+- (BOOL)isBookmarkExpanded:(SKBookmark *)bookmark {
+    if (-1 != [outlineView rowForItem:bookmark])
+        return NO;
+    return [outlineView isItemExpanded:bookmark];
+}
+
+- (void)setExpanded:(BOOL)flag forBookmark:(SKBookmark *)bookmark {
+    if ([bookmark bookmarkType] != SKBookmarkTypeFolder || [self isBookmarkExpanded:bookmark] == flag)
+        return;
+    if (flag) {
+        SKBookmark *parent = [bookmark parent];
+        if ([parent parent])
+            [self setExpanded:YES forBookmark:parent];
+        [outlineView expandItem:bookmark];
+    } else {
+        [outlineView collapseItem:bookmark];
+    }
 }
 
 - (void)getInsertionFolder:(SKBookmark **)bookmarkPtr childIndex:(NSUInteger *)indexPtr {
@@ -566,6 +579,14 @@ static NSUInteger maxRecentDocumentsCount = 0;
     }
 }
 
+static inline BOOL containsFolders(SKBookmark *bookmark) {
+    for (SKBookmark *bm in [bookmark children]) {
+        if ([bm bookmarkType] == SKBookmarkTypeFolder)
+            return YES;
+    }
+    return NO;
+}
+
 - (void)menuNeedsUpdate:(NSMenu *)menu {
     if (menu == [outlineView menu]) {
         NSInteger row = [outlineView clickedRow];
@@ -623,7 +644,8 @@ static NSUInteger maxRecentDocumentsCount = 0;
                 switch ([bm bookmarkType]) {
                     case SKBookmarkTypeFolder:
                         [self addItemForBookmark:bm toMenu:menu isFolder:YES isAlternate:NO];
-                        [self addItemForBookmark:bm toMenu:menu isFolder:NO isAlternate:YES];
+                        if (containsFolders(bm) == NO)
+                            [self addItemForBookmark:bm toMenu:menu isFolder:NO isAlternate:YES];
                         break;
                     case SKBookmarkTypeSession:
                         [self addItemForBookmark:bm toMenu:menu isFolder:NO isAlternate:NO];
@@ -816,7 +838,7 @@ static NSArray *minimumCoverForBookmarks(NSArray *items) {
         id item = [ov itemAtRow:row];
         if ([item bookmarkType] == SKBookmarkTypeSeparator) {
             NSRect frame = [draggingItem draggingFrame];
-            NSImage *image = [NSImage imageWithSize:frame.size drawingHandler:^(NSRect rect){
+            NSImage *image = [NSImage imageWithSize:frame.size flipped:NO drawingHandler:^(NSRect rect){
                 [SKSeparatorView drawSeparatorInRect:rect];
                 return YES;
             }];
@@ -835,11 +857,10 @@ static NSArray *minimumCoverForBookmarks(NSArray *items) {
         NSDictionary *searchOptions = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSPasteboardURLReadingFileURLsOnlyKey, nil];
         NSTableColumn *tableColumn = [ov outlineTableColumn];
         NSTableCellView *view = [ov makeViewWithIdentifier:[tableColumn identifier] owner:self];
-        CGFloat rowHeight = [ov rowHeight];
         __block NSInteger validCount = 0;
-        __block NSRect frame = NSMakeRect(0.0, 0.0, [tableColumn width] - 16.0, rowHeight);
+        NSRect frame = NSMakeRect(0.0, 0.0, [tableColumn width] - 16.0, [ov rowHeight]);
         [view setFrame:frame];
-        rowHeight += [ov intercellSpacing].height;
+        frame.origin = [draggingInfo draggingLocation];
         
         [draggingInfo enumerateDraggingItemsWithOptions:NSDraggingItemEnumerationClearNonenumeratedImages forView:ov classes:classes searchOptions:searchOptions usingBlock:^(NSDraggingItem *draggingItem, NSInteger idx, BOOL *stop){
             SKBookmark *bookmark = [[SKBookmark bookmarksForURLs:[NSArray arrayWithObjects:[draggingItem item], nil]] firstObject];
@@ -848,10 +869,6 @@ static NSArray *minimumCoverForBookmarks(NSArray *items) {
                     [view setObjectValue:bookmark];
                     return [view draggingImageComponents];
                 }];
-                if (NSEqualPoints(frame.origin, NSZeroPoint))
-                    frame.origin = [draggingItem draggingFrame].origin;
-                else
-                    frame.origin.y += rowHeight;
                 [draggingItem setDraggingFrame:frame];
                 validCount++;
             } else {
@@ -859,6 +876,7 @@ static NSArray *minimumCoverForBookmarks(NSArray *items) {
             }
         }];
         [draggingInfo setNumberOfValidItemsForDrop:validCount];
+        [draggingInfo setDraggingFormation:NSDraggingFormationList];
     }
 }
 
@@ -1286,6 +1304,32 @@ static void addBookmarkURLsToArray(NSArray *items, NSMutableArray *array) {
         return YES;
     }
     return NO;
+}
+
+#pragma mark Services
+
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pboard types:(NSArray *)types {
+    if ([types containsObject:(NSString *)kUTTypeFileURL] && [outlineView selectedRow] != -1) {
+        NSArray *allBookmarks = minimumCoverForBookmarks([outlineView selectedItems]);
+        allBookmarks = [allBookmarks valueForKeyPath:@"@distinctUnionOfArrays.containingBookmarks.fileURL"];
+        if ([allBookmarks containsObject:[NSNull null]]) {
+            NSMutableArray *bms = [allBookmarks mutableCopy];
+            [bms removeObject:[NSNull null]];
+            allBookmarks = [bms autorelease];
+        }
+        if ([allBookmarks count] > 0) {
+            [pboard clearContents];
+            [pboard writeObjects:allBookmarks];
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (id)validRequestorForSendType:(NSString *)sendType returnType:(NSString *)returnType {
+    if ([sendType isEqualToString:(NSString *)kUTTypeFileURL] && returnType == nil)
+        return [outlineView selectedRow] != -1 ? self : nil;
+    return [super validRequestorForSendType:sendType returnType:returnType];
 }
 
 @end

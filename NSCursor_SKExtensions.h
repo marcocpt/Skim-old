@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -58,5 +58,7 @@
 + (NSCursor *)lineNoteCursor;
 + (NSCursor *)inkNoteCursor;
 + (NSCursor *)emptyCursor;
+
++ (NSCursor *)laserPointerCursorWithColor:(NSInteger)color;
 
 @end

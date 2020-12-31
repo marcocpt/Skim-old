@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/28/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -72,6 +72,11 @@
     return @"RightSideView";
 }
 
+- (void)handleSnapshotViewFrameChanged:(NSNotification *)notification {
+    NSView *view = [notification object];
+    [[[view subviews] firstObject] setFrame:[view bounds]];
+}
+
 - (void)loadView {
     [super loadView];
     
@@ -79,9 +84,9 @@
     [button setHelp:NSLocalizedString(@"View Snapshots", @"Tool tip message") forSegment:SKSidePaneStateSnapshot];
     
     NSMenu *menu = [NSMenu menu];
-    [menu addItemWithTitle:NSLocalizedString(@"Ignore Case", @"Menu item title") action:@selector(toggleCaseInsensitiveNoteSearch:) target:mainController];
+    [menu addItemWithTitle:NSLocalizedString(@"Ignore Case", @"Menu item title") action:@selector(toggleCaseInsensitiveFilter:) target:mainController];
     [[searchField cell] setSearchMenuTemplate:menu];
-    [[searchField cell] setPlaceholderString:NSLocalizedString(@"Search", @"placeholder")];
+    [[searchField cell] setPlaceholderString:NSLocalizedString(@"Filter", @"placeholder")];
     
     [searchField setAction:@selector(searchNotes:)];
     [searchField setTarget:mainController];
@@ -104,8 +109,6 @@
     [snapshotTableView setTarget:mainController];
     
     [noteOutlineView setTypeSelectHelper:[SKTypeSelectHelper typeSelectHelperWithMatchOption:SKSubstringMatch]];
-    
-    [snapshotTableView setBackgroundColor:[NSColor mainSourceListBackgroundColor]];
     
     NSSortDescriptor *pageIndexSortDescriptor = [[[NSSortDescriptor alloc] initWithKey:SKNPDFAnnotationPageIndexKey ascending:YES] autorelease];
     NSSortDescriptor *boundsSortDescriptor = [[[NSSortDescriptor alloc] initWithKey:SKPDFAnnotationBoundsOrderKey ascending:YES selector:@selector(compare:)] autorelease];

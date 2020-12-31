@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -156,20 +156,17 @@ static BOOL usesSequentialPageNumbering = NO;
     return NSIntersectionRect(NSInsetRect(foregroundBox, -marginWidth, -marginHeight), bounds);
 }
 
-- (NSImage *)pageImage {
-    return [self thumbnailWithSize:0.0 forBox:kPDFDisplayBoxCropBox shadowBlurRadius:0.0 readingBar:nil];
-}
-
 - (NSImage *)thumbnailWithSize:(CGFloat)aSize forBox:(PDFDisplayBox)box {
     return  [self thumbnailWithSize:aSize forBox:box readingBar:nil];
 }
 
 - (NSImage *)thumbnailWithSize:(CGFloat)aSize forBox:(PDFDisplayBox)box readingBar:(SKReadingBar *)readingBar {
     CGFloat shadowBlurRadius = round(aSize / 32.0);
-    return  [self thumbnailWithSize:aSize forBox:box shadowBlurRadius:shadowBlurRadius readingBar:readingBar];
+    NSArray *highlights = readingBar ? [NSArray arrayWithObject:readingBar] : nil;
+    return  [self thumbnailWithSize:aSize forBox:box shadowBlurRadius:shadowBlurRadius highlights:highlights];
 }
 
-- (NSImage *)thumbnailWithSize:(CGFloat)aSize forBox:(PDFDisplayBox)box shadowBlurRadius:(CGFloat)shadowBlurRadius readingBar:(SKReadingBar *)readingBar {
+- (NSImage *)thumbnailWithSize:(CGFloat)aSize forBox:(PDFDisplayBox)box shadowBlurRadius:(CGFloat)shadowBlurRadius highlights:(NSArray *)highlights {
     NSRect bounds = [self boundsForBox:box];
     NSSize pageSize = bounds.size;
     CGFloat scale = 1.0;
@@ -202,12 +199,12 @@ static BOOL usesSequentialPageNumbering = NO;
     
     [image lockFocus];
     
-    [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationHigh];
+    [[NSGraphicsContext currentContext] setImageInterpolation:[[NSUserDefaults standardUserDefaults] integerForKey:SKInterpolationQualityKey] + 1];
     
     [NSGraphicsContext saveGraphicsState];
     [[PDFView defaultPageBackgroundColor] setFill];
     if (shadowBlurRadius > 0.0)
-        [NSShadow setShadowWithColor:[NSColor colorWithCalibratedWhite:0.0 alpha:0.5] blurRadius:shadowBlurRadius yOffset:shadowOffset];
+        [NSShadow setShadowWithWhite:0.0 alpha:0.5 blurRadius:shadowBlurRadius yOffset:shadowOffset];
     NSRectFill(pageRect);
     [NSGraphicsContext restoreGraphicsState];
     
@@ -221,9 +218,10 @@ static BOOL usesSequentialPageNumbering = NO;
     
     [self drawWithBox:box]; 
     
-    if (readingBar) {
-        [self transformContextForBox:box];
-        [readingBar drawForPage:self withBox:box inContext:[[NSGraphicsContext currentContext] graphicsPort]];
+    for (id highlight in highlights) {
+        // highlight should be a PDFSelection or SKReadingBar
+        if ([highlight respondsToSelector:@selector(drawForPage:withBox:active:)])
+            [highlight drawForPage:self withBox:box active:YES];
     }
     
     [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationDefault];
@@ -288,7 +286,7 @@ static BOOL usesSequentialPageNumbering = NO;
 
 - (NSData *)TIFFDataForRect:(NSRect)rect {
     PDFDisplayBox box = NSEqualRects(rect, [self boundsForBox:kPDFDisplayBoxCropBox]) ? kPDFDisplayBoxCropBox : kPDFDisplayBoxMediaBox;
-    NSImage *pageImage = [self thumbnailWithSize:0.0 forBox:box shadowBlurRadius:0.0 readingBar:nil];
+    NSImage *pageImage = [self thumbnailWithSize:0.0 forBox:box shadowBlurRadius:0.0 highlights:nil];
     NSRect bounds = [self boundsForBox:box];
     
     if (NSEqualRects(rect, NSZeroRect) || NSEqualRects(rect, bounds))
@@ -309,12 +307,12 @@ static BOOL usesSequentialPageNumbering = NO;
     return [image TIFFRepresentation];
 }
 
-// the page is set as owner in -[NSMainWindowController(UI) tableView:writeRowsWithIndexestoPasteboard:]
+// the page is set as owner in -filePromise
 - (void)pasteboard:(NSPasteboard *)pboard item:(NSPasteboardItem *)item provideDataForType:(NSString *)type {
     if ([type isEqualToString:(NSString *)kPasteboardTypeFileURLPromise]) {
         NSURL *dropDestination = [pboard pasteLocationURL];
         NSString *filename = [NSString stringWithFormat:@"%@ %c %@", ([[[self containingDocument] displayName] stringByDeletingPathExtension] ?: @"PDF"), '-', [NSString stringWithFormat:NSLocalizedString(@"Page %@", @""), [self displayLabel]]];
-        NSURL *fileURL = [dropDestination URLByAppendingPathComponent:filename];
+        NSURL *fileURL = [dropDestination URLByAppendingPathComponent:filename isDirectory:NO];
         NSString *pathExt = nil;
         NSData *data = nil;
         
@@ -331,13 +329,14 @@ static BOOL usesSequentialPageNumbering = NO;
             [item setString:[fileURL absoluteString] forType:type];
     } else if ([type isEqualToString:NSPasteboardTypePDF]) {
         [item setData:[self dataRepresentation] forType:type];
-    } else if ([type isEqualToString:NSPasteboardTypePDF]) {
+    } else if ([type isEqualToString:NSPasteboardTypeTIFF]) {
         [item setData:[self TIFFDataForRect:[self boundsForBox:kPDFDisplayBoxCropBox]] forType:type];
     }
 }
 
 #pragma mark NSFilePromiseProviderDelegate protocol
 
+// the page is set as delegate in -filePromise
 - (NSString *)filePromiseProvider:(NSFilePromiseProvider *)filePromiseProvider fileNameForType:(NSString *)fileType {
     NSString *filename = [NSString stringWithFormat:@"%@ %c %@", ([[[self containingDocument] displayName] stringByDeletingPathExtension] ?: @"PDF"), '-', [NSString stringWithFormat:NSLocalizedString(@"Page %@", @""), [self displayLabel]]];
     NSString *pathExt = [[self document] allowsPrinting] ? @"pdf" : @"tiff";
@@ -355,12 +354,46 @@ static BOOL usesSequentialPageNumbering = NO;
     completionHandler(error);
 }
 
+- (id<NSPasteboardWriting>)filePromise {
+    if ([[self document] isLocked] == NO) {
+        NSString *fileUTI = [[self document] allowsPrinting] ? (NSString *)kUTTypePDF : (NSString *)kUTTypeTIFF;
+        Class promiseClass = NSClassFromString(@"NSFilePromiseProvider");
+        if (promiseClass) {
+            return [[[promiseClass alloc] initWithFileType:fileUTI delegate:self] autorelease];
+        } else {
+            NSString *pdfType = [[self document] allowsPrinting] ? NSPasteboardTypePDF : nil;
+            NSPasteboardItem *item = [[[NSPasteboardItem alloc] init] autorelease];
+            [item setString:fileUTI forType:(NSString *)kPasteboardTypeFilePromiseContent];
+            [item setDataProvider:self forTypes:[NSArray arrayWithObjects:(NSString *)kPasteboardTypeFileURLPromise, NSPasteboardTypeTIFF, pdfType, nil]];
+            return item;
+        }
+    }
+    return nil;
+}
+
+- (void)writeToClipboard {
+    if ([[self document] isLocked] == NO) {
+        NSData *tiffData = [self TIFFDataForRect:[self boundsForBox:kPDFDisplayBoxCropBox]];
+        NSPasteboardItem *pboardItem = [[[NSPasteboardItem alloc] init] autorelease];
+        if ([[self document] allowsPrinting])
+            [pboardItem setData:[self dataRepresentation] forType:NSPasteboardTypePDF];
+        [pboardItem setData:tiffData forType:NSPasteboardTypeTIFF];
+        NSPasteboard *pboard = [NSPasteboard generalPasteboard];
+        [pboard clearContents];
+        [pboard writeObjects:[NSArray arrayWithObjects:pboardItem, nil]];
+    }
+}
+
 - (NSURL *)skimURL {
     NSURL *fileURL = [[self containingDocument] fileURL];
     if (fileURL == nil)
         return nil;
-    NSString *skimURLString = [NSString stringWithFormat:@"skim%@#page=%lu", [[[fileURL filePathURL] absoluteString] substringFromIndex:4], (unsigned long)([self pageIndex] + 1)];
-    return [NSURL URLWithString:skimURLString];
+    NSURLComponents *components = [[NSURLComponents alloc] initWithURL:fileURL resolvingAgainstBaseURL:NO];
+    [components setScheme:@"skim"];
+    [components setFragment:[NSString stringWithFormat:@"page=%lu", (unsigned long)([self pageIndex] + 1)]];
+    NSURL *skimURL = [components URL];
+    [components release];
+    return skimURL;
 }
 
 static inline BOOL lineRectsOverlap(NSRect r1, NSRect r2, BOOL rotated) {

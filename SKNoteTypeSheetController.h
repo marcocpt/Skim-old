@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/25/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,12 +42,10 @@
 @protocol SKNoteTypeSheetControllerDelegate;
 
 @interface SKNoteTypeSheetController : SKWindowController {
-    NSMatrix *matrix;
     NSMenu *noteTypeMenu;
     id <SKNoteTypeSheetControllerDelegate> delegate;
 }
 
-@property (nonatomic, retain) IBOutlet NSMatrix *matrix;
 @property (nonatomic, assign) id <SKNoteTypeSheetControllerDelegate> delegate;
 @property (nonatomic, readonly) NSArray *noteTypes;
 @property (nonatomic, readonly) NSMenu *noteTypeMenu;

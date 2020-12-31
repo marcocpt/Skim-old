@@ -146,6 +146,8 @@ If you open a PostScript (PS) or EPS file in Skim, it is converted to a PDF file
 
 You can change your view of a page in a PDF file in several ways. 
 
+You can, for instance, zoom in to better view an image, or zoom out to view a larger part of an image.
+
 @task
 @itemize
 @item To zoom in or out, choose PDF > Zoom In or PDF > Zoom Out.
@@ -166,7 +168,7 @@ You can change your view of a page in a PDF file in several ways.
 @item You can also zoom to a selection by dragging the mouse while holding the Apple and Option key.
 @end itemize
 @itemize
-@item To view a page at a size you specify, resize the window to the size you want, then choose PDF > Size To Fit. The page resizes to fit the window size.
+@item To view a page at a size you specify, resize the window to the size you want, then choose PDF > Zoom To Fit. The page resizes to fit the window size.
 @end itemize
 @itemize
 @item To see a page at a specific percentage of its original size, type a percentage in the Scale field in the toolbar. If you don't see the Scale field, choose View > Customize Toolbar.
@@ -310,11 +312,6 @@ You can search a PDF file for a word or any set of characters.
 @item Type some text in the search field, and press Enter or hit Next. 
 @end enumerate
 @endtask
-
-@heading See also
-@menu
-* Changing the highlighting of Find results::
-@end menu
 
 @c ======================================================================================
 
@@ -632,6 +629,7 @@ You can edit or delete the line. To move the line or its end points, choose Tool
 * Adding notes to a PDF document::
 * Highlighting sections of a PDF document::
 * Changing the color for notes and highlights::
+* Changing the font of text notes::
 * Changing the line or border style for notes::
 @end menu
 
@@ -658,6 +656,7 @@ Skim allows you to change the color of a note, highlight or line you have added 
 * Highlighting sections of a PDF document::
 * Adding lines to a PDF document::
 * Changing the font of text notes::
+* Changing the line or border style for notes::
 @end menu
 
 @c ======================================================================================
@@ -801,13 +800,13 @@ If the Password command is disabled, this document does not require you to enter
 
 @topic I don't see line art in my PDF document
 
-When you view a PDF file in Skim, some line art images may disappear if anti-aliasing is turned on.
+When you view a PDF file in Skim, some line art images may disappear if images are smoothed.
 
 @task
-@heading To turn anti-aliasing on or off:
+@heading To change image smoothing:
 @enumerate
 @item Choose Skim > Preferences, and click Display.
-@item Select or deselect the "Anti-alias text and line art" checkbox.
+@item Select a different value for "Image Smoothing".
 @end enumerate
 @endtask
 
@@ -828,11 +827,11 @@ When viewing a PDF file in Skim, larger text may look jagged. You can turn on an
 @heading To turn on anti-aliasing:
 @enumerate
 @item Choose Skim > Preferences, and click Display.
-@item Select the "Anti-alias text and line art" checkbox.
+@item Select the "Anti-alias text" checkbox.
 @end enumerate
 @endtask
 
-If you turn on the "Anti-alias text and line art" option, large characters and line art are smoothed out and do not appear to be so jagged. Skim may take longer to display your document when smoothing out characters and line art.
+If you turn on the "Anti-alias text" option, large characters and line art are smoothed out and do not appear to be so jagged. Skim may take longer to display your document when smoothing out characters and line art.
 
 @heading See also
 @menu
@@ -851,14 +850,14 @@ When you view a PDF file in Skim, small text may look fuzzy or illegible. You ca
 @heading To make small text more readable:
 @enumerate
 @item Choose Skim > Preferences, and click Display.
-@item Deselect the "Anti-alias text and line art" checkbox.
+@item Deselect the "Anti-alias text" checkbox.
 @item Enter a smaller number in the "Greeking threshold" field.
 @end enumerate
 @endtask
 
 Text in a point size smaller than the greeking threshold appears as a gray blur. The blurred text fits the outline of what the text would actually look like, but is illegible. Displaying blurred text takes less time because Skim doesn't need to render each character individually.
 
-If you turn off the "Anti-alias text and line art" option, large characters and line art may appear jagged instead of smooth. Smoothing out the characters and art takes more time.
+If you turn off the "Anti-alias text and line art" option, large characters may appear jagged instead of smooth. Smoothing out the characters takes more time.
 
 @heading See also
 @menu
@@ -878,13 +877,13 @@ If the text in a PDF document takes a long time to appear, you can change a few 
 @enumerate
 @item Choose Skim > Preferences, and click Display.
 @item Enter a larger number in the "Greeking threshold" field.
-@item Deselect the "Anti-alias text and line art" checkbox.
+@item Deselect the "Anti-alias text" checkbox.
 @end enumerate
 @endtask
 
 Text in a point size smaller than the greeking threshold appears as a gray blur. The blurred text fits the outline of what the text would actually look like, but is illegible. Legible text may take longer to display because Skim must render each character individually.
 
-If you turn off the "Anti-alias text and line art" option, small characters may appear fuzzy, and large characters and line art may appear jagged instead of smooth.
+If you turn off the "Anti-alias text" option, small characters may appear fuzzy, and large characters may appear jagged instead of smooth.
 
 @heading See also
 @menu
@@ -1022,24 +1021,6 @@ Skim allows you to change the size of thumbnails for pages and for snapshots.
 @endtask
 
 If you select the "Discrete sizes" button, you can restrict the sizes to certain discrete sizes. This may lead to sharper thumbnails. 
-
-@c ======================================================================================
-
-@topic Changing the highlighting of Find results
-
-You can set whether Skim should circle highlight results of a text searches well as the color used for these highlights.
-
-@task
-@itemize
-@item To highlight Find results using a circle, choose Skim > Preferences, click Display, and select "Highlight search results with color".
-@item To change the color used for the Find highlights, click the color.
-@end itemize
-@endtask
-
-@heading See also
-@menu
-* Finding text in a PDF file::
-@end menu
 
 @c ======================================================================================
 
@@ -1217,17 +1198,6 @@ Normally, Notes and highlights you add to a PDF document are not saved in the PD
 
 @c ======================================================================================
 
-@topic PDF with fillable forms loses edits to the forms
-
-Even though you can edit forms in PDF document that have them, those edits will not be saved. However, Skim allows you to save a copy of your PDF file that does contain the filled forms in the PDF data, by exporting it with embedded notes. This will also allow you to see the filled forms in other PDF viewers. However, after saving these edits, the forms will not be editable anymore.
-
-@heading See also
-@menu
-* Saving PDF files with the notes and highlights included::
-@end menu
-
-@c ======================================================================================
-
 @topic Saving PDF files with the notes and highlights included
 
 Normally, Notes and highlights you add to a PDF document are not saved in the PDF data, but are added to the file as extended attributes. However, Skim allows you to save a copy of your PDF file that does contain the notes in the PDF data. This allows you to see the notes also in other PDF viewers. 
@@ -1349,8 +1319,8 @@ Check the Skim Wiki for more details, in particular about how to set up various 
 
 If your questions aren't answered in this help file, the
 @uref{https://lists.sourceforge.net/lists/listinfo/skim-app-users, skim-users mailing list} 
-may have an answer. Your question
-may have been answered already, so you can check the 
+may have an answer.
+Your question may have been answered already, so you can check the
 @uref{https://sourceforge.net/mailarchive/forum.php?forum=skim-app-users,list archives} 
 to get instant gratification.
 
@@ -1359,14 +1329,10 @@ to get instant gratification.
 You can submit a bug report to the bug tracker at 
 @uref{https://sourceforge.net/projects/skim-app}.
 
-The reports are most useful if they provide a clear description of
-what went wrong, what you expected, and how to reproduce the problem
-at a different computer without you there helping us.
+The reports are most useful if they provide a clear description of what went wrong, what you expected, and how to reproduce the problem at a different computer without you there helping us.
 
-If you're submitting a problem with how it handled a certain file, it
-would help if you sent that file too. Crash reports are also useful and can
-be obtained from the Console application (in `Applications/Utilities`).
-
+If you're submitting a problem with how it handled a certain file, it would help if you sent that file too.
+Crash reports are also useful and can be obtained from the Console application (in `Applications/Utilities`).
 
 @c ======================================================================================
 @c INDEXES

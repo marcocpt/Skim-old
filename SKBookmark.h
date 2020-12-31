@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/15/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -40,12 +40,9 @@
 #import <Quartz/Quartz.h>
 
 typedef NS_ENUM(NSInteger, SKBookmarkType) {
-    /// 书签
     SKBookmarkTypeBookmark,
-    /// 文件夹
     SKBookmarkTypeFolder,
     SKBookmarkTypeSession,
-    /// 分割符
     SKBookmarkTypeSeparator
 };
 
@@ -62,16 +59,12 @@ typedef NS_ENUM(NSInteger, SKBookmarkType) {
 + (NSArray *)bookmarksForURLs:(NSArray *)urls;
 
 - (id)initWithURL:(NSURL *)aURL pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel;
-/// ✅ 初始化上次关闭应用前的文档的书签
 - (id)initWithSetup:(NSDictionary *)aSetupDict label:(NSString *)aLabel;
-/// ✅ 初始化书签中的文件夹
 - (id)initFolderWithChildren:(NSArray *)aChildren label:(NSString *)aLabel;
 - (id)initFolderWithLabel:(NSString *)aLabel;
-/// 初始化书签的根结点
 - (id)initRootWithChildrenProperties:(NSArray *)childrenProperties;
 - (id)initSessionWithSetups:(NSArray *)aSetupDicts label:(NSString *)aLabel;
 - (id)initSeparator;
-/// ✅ 使用字典属性初始化
 - (id)initWithProperties:(NSDictionary *)dictionary;
 
 @property (nonatomic, readonly) NSDictionary *properties;
@@ -86,7 +79,6 @@ typedef NS_ENUM(NSInteger, SKBookmarkType) {
 @property (nonatomic, retain) NSNumber *pageNumber;
 @property (nonatomic, readonly) BOOL hasSetup;
 @property (nonatomic, readonly) NSString *tabs;
-/// 父节点
 @property (nonatomic, assign) SKBookmark *parent;
 @property (nonatomic, readonly) NSArray *containingBookmarks;
 
@@ -105,6 +97,8 @@ typedef NS_ENUM(NSInteger, SKBookmarkType) {
 - (NSArray *)bookmarks;
 - (void)insertObject:(SKBookmark *)bookmark inBookmarksAtIndex:(NSUInteger)anIndex;
 - (void)removeObjectFromBookmarksAtIndex:(NSUInteger)anIndex;
+
+@property (nonatomic, getter=isExpanded) BOOL expanded;
 
 - (BOOL)isDescendantOf:(SKBookmark *)bookmark;
 - (BOOL)isDescendantOfArray:(NSArray *)bookmarks;

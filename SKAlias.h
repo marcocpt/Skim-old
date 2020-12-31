@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 1/21/13.
 /*
- This software is Copyright (c)2013-2019
+ This software is Copyright (c)2013-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -40,17 +40,17 @@
 
 
 @interface SKAlias : NSObject {
+    NSData *data;
     AliasHandle aliasHandle;
 }
 
 @property (nonatomic, readonly) NSData *data;
+@property (nonatomic, readonly) BOOL isBookmark;
 @property (nonatomic, readonly) NSURL *fileURL;
 @property (nonatomic, readonly) NSURL *fileURLNoUI;
 
-+ (id)aliasWithData:(NSData *)data;
-+ (id)aliasWithURL:(NSURL *)fileURL;
-/// ✅ 使用 NSData 初始化
-- (id)initWithData:(NSData *)data;
+- (id)initWithAliasData:(NSData *)data;
+- (id)initWithBookmarkData:(NSData *)data;
 - (id)initWithURL:(NSURL *)fileURL;
 
 @end

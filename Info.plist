@@ -286,7 +286,7 @@
 	<key>CFBundleIconFile</key>
 	<string>Skim</string>
 	<key>CFBundleIdentifier</key>
-	<string>net.sourceforge.skim-app.skim</string>
+	<string>${PRODUCT_BUNDLE_IDENTIFIER}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -294,7 +294,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.4</string>
+	<string>1.5.13</string>
 	<key>CFBundleSignature</key>
 	<string>SKim</string>
 	<key>CFBundleURLTypes</key>
@@ -315,9 +315,11 @@
 	<key>CFBundleVersion</key>
 	<string>${CURRENT_PROJECT_VERSION}</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.6.0</string>
+	<string>${MACOSX_DEPLOYMENT_TARGET}</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Skim uses AppleScript to compse e-mail messages, open text editors, and run user AppleScripts from the menu.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Skim places downloaded files in your Downloads folder.</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSMainNibFile</key>
@@ -503,9 +505,95 @@
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>PDF</string>
+			<key>UTTypeIconFile</key>
+			<string>PDFDocument</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.adobe.pdf</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.nspboard-type</key>
+				<array>
+					<string>Apple PDF pasteboard type</string>
+				</array>
+				<key>com.apple.ostype</key>
+				<array>
+					<string>PDF </string>
+				</array>
+				<key>public.filename-extension</key>
+				<array>
+					<string>pdf</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/pdf</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>PostScript</string>
+			<key>UTTypeIconFile</key>
+			<string>PSDocument</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.adobe.postscript</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ps</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/postscript</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.adobe.postscript</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Encapsulated PostScript</string>
+			<key>UTTypeIconFile</key>
+			<string>PSDocument</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.adobe.encapsulated-postscript</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.nspboard-type</key>
+				<array>
+					<string>NeXT Encapsulated PostScript v1.2 pasteboard type</string>
+					<string>NSPostScriptPboardType</string>
+				</array>
+				<key>com.apple.ostype</key>
+				<array>
+					<string>EPSF</string>
+				</array>
+				<key>public.filename-extension</key>
+				<array>
+					<string>eps</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>DVI</string>
+			<key>UTTypeIconFile</key>
+			<string>DVIDocument</string>
 			<key>UTTypeIdentifier</key>
 			<string>org.tug.tex.dvi</string>
 			<key>UTTypeTagSpecification</key>
@@ -523,6 +611,8 @@
 			</array>
 			<key>UTTypeDescription</key>
 			<string>XDV</string>
+			<key>UTTypeIconFile</key>
+			<string>XDVDocument</string>
 			<key>UTTypeIdentifier</key>
 			<string>org.tug.tex.xdv</string>
 			<key>UTTypeTagSpecification</key>

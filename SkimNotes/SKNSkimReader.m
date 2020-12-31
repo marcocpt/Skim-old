@@ -4,7 +4,7 @@
 //
 //  Created by Adam Maxwell on 04/09/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Adam Maxwell. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -197,7 +197,7 @@
     return NO;
 }
 
-- (NSArray *)SkimNotesAtURL:(NSURL *)fileURL {   
+- (NSData *)SkimNotesAtURL:(NSURL *)fileURL {
     NSData *data = nil;
     if ([self connectAndCheckTypeOfFile:fileURL]) {
         @try{
@@ -209,7 +209,7 @@
             [self destroyConnection];
         }
     }
-    return data ? [NSKeyedUnarchiver unarchiveObjectWithData:data] : nil;
+    return data;
 }
 
 - (NSData *)RTFNotesAtURL:(NSURL *)fileURL {   

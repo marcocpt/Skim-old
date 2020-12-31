@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/10/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -44,19 +44,23 @@ extern NSString *SKPasteboardTypeTransition;
 @class SKThumbnail;
 
 @interface SKTransitionInfo : NSObject <NSPasteboardReading, NSPasteboardWriting> {
-    SKAnimationTransitionStyle transitionStyle;
+    SKTransitionStyle transitionStyle;
     CGFloat duration;
     BOOL shouldRestrict;
     SKThumbnail *thumbnail;
-    NSString *label;
+    SKThumbnail *toThumbnail;
 }
 
 @property (nonatomic, copy) NSDictionary *properties;
-@property (nonatomic) SKAnimationTransitionStyle transitionStyle;
+
+@property (nonatomic) SKTransitionStyle transitionStyle;
 @property (nonatomic) CGFloat duration;
 @property (nonatomic) BOOL shouldRestrict;
-@property (nonatomic, retain) SKThumbnail *thumbnail;
-@property (nonatomic, copy) NSString *label;
+
+@property (nonatomic, retain) SKThumbnail *thumbnail, *toThumbnail;
+
+@property (nonatomic, readonly) NSString *label;
 @property (nonatomic, readonly) NSString *title;
+@property (nonatomic, readonly) NSString *transitionName;
 
 @end

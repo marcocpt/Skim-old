@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/3/11.
 /*
- This software is Copyright (c) 2011-2019
+ This software is Copyright (c) 2011-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,12 +43,13 @@
 
 @property (nonatomic) CGFloat physicalScaleFactor;
 @property (nonatomic, readonly) NSScrollView *scrollView;
-@property (nonatomic, readonly) NSRange displayedPageIndexRange;
 @property (nonatomic, readonly) NSArray *displayedPages;
 @property (nonatomic, readonly) CGFloat minimumScaleFactor;
 @property (nonatomic, readonly) CGFloat maximumScaleFactor;
 
 + (NSColor *)defaultPageBackgroundColor;
+
+- (BOOL)isPageAtIndexDisplayed:(NSUInteger)pageIndex;
 
 - (void)setNeedsDisplayInRect:(NSRect)rect ofPage:(PDFPage *)page;
 - (void)setNeedsDisplayForAnnotation:(PDFAnnotation *)annotation onPage:(PDFPage *)page;
@@ -64,15 +65,14 @@
 - (NSUInteger)currentPageIndexAndPoint:(NSPoint *)point rotated:(BOOL *)rotated;
 - (void)goToPageAtIndex:(NSUInteger)pageIndex point:(NSPoint)point;
 
-- (NSRect)integralRect:(NSRect)rect onPage:(PDFPage *)page;
 - (CGFloat)unitWidthOnPage:(PDFPage *)page;
+- (NSRect)backingAlignedRect:(NSRect)rect onPage:(PDFPage *)page;
 
 + (NSColor *)defaultBackgroundColor;
 + (NSColor *)defaultFullScreenBackgroundColor;
 + (NSColor *)defaultPageBackgroundColor;
 
 - (void)applyDefaultPageBackgroundColor;
-- (void)applyDefaultInterpolationQuality;
 
 @end
 

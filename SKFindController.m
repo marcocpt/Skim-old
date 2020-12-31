@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 16/2/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@
 
 #import "SKFindController.h"
 #import "SKStringConstants.h"
-#import "SKGradientView.h"
+#import "SKTopBarView.h"
 #import "NSGeometry_SKExtensions.h"
 #import "NSGraphics_SKExtensions.h"
 #import "NSSegmentedControl_SKExtensions.h"
@@ -67,7 +67,7 @@
 - (void)loadView {
     [super loadView];
     
-    SKGradientView *gradientView = (SKGradientView *)[self view];
+    SKTopBarView *topBar = (SKTopBarView *)[self view];
     NSSize size;
     NSPoint point;
     CGFloat dx1 = NSWidth([doneButton frame]);
@@ -76,14 +76,14 @@
     [messageField sizeToFit];
     dx1 -= NSWidth([doneButton frame]);
     dx2 -= NSWidth([messageField frame]);
-    size = [gradientView frame].size;
+    size = [topBar frame].size;
     size.width -= dx1 + dx2;
-    [gradientView setFrameSize:size];
+    [topBar setFrameSize:size];
     point = [doneButton frame].origin;
     point.x += dx1;
     [doneButton setFrameOrigin:point];
     point = [navigationButton frame].origin;
-    point.x -= dx2;
+    point.x += dx1;
     [navigationButton setFrameOrigin:point];
     point = [findField frame].origin;
     point.x -= dx2;
@@ -92,19 +92,20 @@
     size.width += dx1 + dx2;
     [findField setFrameSize:size];
     
-    [gradientView setEdges:SKMinYEdgeMask];
-    [gradientView setClipEdges:SKMinXEdgeMask | SKMaxYEdgeMask];
-    size = [gradientView contentRect].size;
-    [gradientView setMinSize:size];
-    size.width = 500.0;
-    [gradientView setMaxSize:size];
-    if (RUNNING_BEFORE(10_10)) {
-        [gradientView setBackgroundColors:[NSArray arrayWithObjects:[NSColor colorWithCalibratedWhite:0.82 alpha:1.0], [NSColor colorWithCalibratedWhite:0.914 alpha:1.0], nil]];
-    }
+    [topBar setHasSeparator:YES];
+    [topBar setOverflowEdge:NSMinXEdge];
+    size = [topBar contentRect].size;
+    [topBar setMinSize:size];
+    size.width = 750.0;
+    [topBar setMaxSize:size];
     
     NSMenu *menu = [NSMenu menu];
     [menu addItemWithTitle:NSLocalizedString(@"Ignore Case", @"Menu item title") action:@selector(toggleCaseInsensitiveFind:) target:self];
     [[findField cell] setSearchMenuTemplate:menu];
+    [[findField cell] setPlaceholderString:NSLocalizedString(@"Find", @"placeholder")];
+
+    [navigationButton setHelp:NSLocalizedString(@"Find previous", @"Tool tip message") forSegment:0];
+    [navigationButton setHelp:NSLocalizedString(@"Find next", @"Tool tip message") forSegment:1];
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
@@ -190,6 +191,8 @@
         barRect.origin.y += barHeight;
     }
     [messageField setHidden:YES];
+    if (visible == NO)
+        [(SKTopBarView *)[self view] reflectView:nil animate:NO];
     if (animate) {
         animating = YES;
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
@@ -199,24 +202,30 @@
             } 
             completionHandler:^{
                 NSWindow *window = [[self view] window];
-                if (visible == NO)
+                if (visible)
+                    [(SKTopBarView *)[self view] reflectView:view animate:NO];
+                else
                     [[self view] removeFromSuperview];
                 [window recalculateKeyViewLoop];
                 animating = NO;
         }];
     } else {
         [view setFrame:viewFrame];
-        if (visible)
+        if (visible) {
             [findBar setFrame:barRect];
-        else
+            [(SKTopBarView *)[self view] reflectView:view animate:NO];
+        } else {
             [findBar removeFromSuperview];
+        }
         [[contentView window] recalculateKeyViewLoop];
     }
 }
 
 - (void)setDelegate:(id <SKFindControllerDelegate>)newDelegate {
-    if (delegate && newDelegate == nil)
+    if (delegate && newDelegate == nil) {
         [ownerController setContent:nil];
+        [(SKTopBarView *)[self view] reflectView:nil animate:NO];
+    }
     delegate = newDelegate;
 }
 

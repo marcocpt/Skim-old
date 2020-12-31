@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/1/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,6 @@
 #import "PDFAnnotationFreeText_SKExtensions.h"
 #import "PDFAnnotationText_SKExtensions.h"
 #import "PDFAnnotationInk_SKExtensions.h"
-#import <SkimNotes/SkimNotes.h>
 #import "SKNPDFAnnotationNote_SKExtensions.h"
 #import "SKStringConstants.h"
 #import "SKFDFParser.h"
@@ -92,8 +91,14 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
 
 - (PDFTextAnnotationIconType)fallback_iconType { return kPDFTextAnnotationIconNote; }
 
+- (NSColor *)fallback_interiorColor { return nil; }
+
+- (NSString *)fallback_fieldName { return nil; }
+
 + (void)load {
     SKAddInstanceMethodImplementationFromSelector(self, @selector(iconType), @selector(fallback_iconType));
+    SKAddInstanceMethodImplementationFromSelector(self, @selector(interiorColor), @selector(fallback_interiorColor));
+    SKAddInstanceMethodImplementationFromSelector(self, @selector(fieldName), @selector(fallback_fieldName));
 }
 
 + (NSArray *)readableTypesForPasteboard:(NSPasteboard *)pasteboard {
@@ -348,9 +353,9 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
         [self setString:newObjectValue];
 }
 
-- (NSString *)textString { return nil; }
+- (SKNPDFWidgetType)widgetType { return kSKNPDFWidgetTypeUnknown; }
 
-- (NSColor *)interiorColor { return nil; }
+- (NSString *)textString { return nil; }
 
 - (BOOL)isMarkup { return NO; }
 
@@ -362,6 +367,8 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
 
 - (BOOL)isLink { return [[self type] isEqualToString:@"Link"]; }
 
+- (BOOL)isWidget { return NO; }
+
 - (BOOL)isResizable { return NO; }
 
 - (BOOL)isMovable { return NO; }
@@ -369,6 +376,8 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
 - (BOOL)isEditable { return [self isSkimNote] && ([self page] == nil || [[self page] isEditable]); }
 
 - (BOOL)hasBorder { return [self isSkimNote]; }
+
+- (BOOL)hasInteriorColor { return NO; }
 
 - (BOOL)isConvertibleAnnotation {
     static NSSet *convertibleTypes = nil;
@@ -397,12 +406,11 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
     return [self isResizable] ? SKResizeHandleForPointFromRect(point, [self bounds], 4.0 / scaleFactor) : 0;
 }
 
-- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context {
+- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context active:(BOOL)active {
     if (NSIsEmptyRect([self bounds]))
         return;
     if ([self isSkimNote]) {
-        BOOL active = RUNNING_AFTER(10_12) ? YES : [[pdfView window] isKeyWindow] && [[[pdfView window] firstResponder] isDescendantOf:pdfView];
-        NSRect rect = [pdfView integralRect:[self bounds] onPage:[self page]];
+        NSRect rect = [pdfView backingAlignedRect:[self bounds] onPage:[self page]];
         CGFloat lineWidth = [pdfView unitWidthOnPage:[self page]];
         CGContextSaveGState(context);
         CGColorRef color = [[NSColor selectionHighlightColor:active] CGColor];
@@ -411,7 +419,7 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
         if ([self isResizable])
             SKDrawResizeHandles(context, rect, 4.0 * lineWidth, active);
         CGContextRestoreGState(context);
-    } else if ([self isLink] && [self respondsToSelector:@selector(setHighlighted:)] == NO) {
+    } else if ([self isLink]) {
         CGContextSaveGState(context);
         CGColorRef color = CGColorCreateGenericGray(0.0, 0.2);
         CGContextSetFillColorWithColor(context, color);
@@ -437,8 +445,8 @@ NSString *SKPasteboardTypeSkimNote = @"net.sourceforge.skim-app.pasteboard.skimn
 - (NSString *)alternateColorDefaultKey { return nil; }
 
 - (void)setColor:(NSColor *)color alternate:(BOOL)alternate updateDefaults:(BOOL)update {
-    BOOL isFill = alternate && [self respondsToSelector:@selector(setInteriorColor:)];
-    BOOL isText = alternate && [self respondsToSelector:@selector(setFontColor:)];
+    BOOL isFill = alternate && [self hasInteriorColor];
+    BOOL isText = alternate && [self isText];
     NSColor *oldColor = (isFill ? [(id)self interiorColor] : (isText ? [(id)self fontColor] : [self color])) ?: [NSColor clearColor];
     if ([oldColor isEqual:color] == NO) {
         if (isFill)

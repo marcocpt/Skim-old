@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -98,13 +98,17 @@
 #import "NSScreen_SKExtensions.h"
 #import "PDFView_SKExtensions.h"
 #import "NSScanner_SKExtensions.h"
-#import "SKCenteredTextFieldCell.h"
 #import "SKScroller.h"
 #import "SKMainWindow.h"
 #import "PDFOutline_SKExtensions.h"
 #import "NSGraphics_SKExtensions.h"
 #import "NSWindow_SKExtensions.h"
 #import "SKMainTouchBarController.h"
+#import "SKOverviewView.h"
+#import "SKThumbnailItem.h"
+#import "SKThumbnailView.h"
+#import "SKDocumentController.h"
+#import "NSColor_SKExtensions.h"
 
 #define MULTIPLICATION_SIGN_CHARACTER (unichar)0x00d7
 
@@ -115,12 +119,12 @@
 #define FUDGE_SIZE 0.1
 
 #define MAX_PAGE_COLUMN_WIDTH 100.0
+#define MAX_MIN_COLUMN_WIDTH 100.0
 
 #define PAGELABELS_KEY              @"pageLabels"
 #define SEARCHRESULTS_KEY           @"searchResults"
 #define GROUPEDSEARCHRESULTS_KEY    @"groupedSearchResults"
 #define NOTES_KEY                   @"notes"
-#define THUMBNAILS_KEY              @"thumbnails"
 #define SNAPSHOTS_KEY               @"snapshots"
 
 #define PAGE_COLUMNID   @"page"
@@ -146,10 +150,13 @@
 #define DISPLAYSPAGEBREAKS_KEY      @"displaysPageBreaks"
 #define DISPLAYSASBOOK_KEY          @"displaysAsBook" 
 #define DISPLAYMODE_KEY             @"displayMode"
+#define DISPLAYDIRECTION_KEY        @"displayDirection"
+#define DISPLAYSRTL_KEY             @"displaysRTL"
 #define DISPLAYBOX_KEY              @"displayBox"
 #define HASHORIZONTALSCROLLER_KEY   @"hasHorizontalScroller"
 #define HASVERTICALSCROLLER_KEY     @"hasVerticalScroller"
 #define AUTOHIDESSCROLLERS_KEY      @"autoHidesScrollers"
+#define DRAWSBACKGROUND_KEY         @"drawsBackground"
 #define PAGEINDEX_KEY               @"pageIndex"
 #define SCROLLPOINT_KEY             @"scrollPoint"
 #define LOCKED_KEY                  @"locked"
@@ -168,10 +175,21 @@ static char SKMainWindowDefaultsObservationContext;
 
 static char SKMainWindowContentLayoutRectObservationContext;
 
+static char SKMainWindowThumbnailSelectionObservationContext;
+
 #define SKLeftSidePaneWidthKey @"SKLeftSidePaneWidth"
 #define SKRightSidePaneWidthKey @"SKRightSidePaneWidth"
 
 #define SKUseSettingsFromPDFKey @"SKUseSettingsFromPDF"
+
+#if SDK_BEFORE(10_11)
+@interface NSCollectionView (SKElCapitanExtensions)
+- (BOOL)allowsEmptySelection;
+- (void)setAllowsEmptySelection:(BOOL)flag;
+@end
+#endif
+
+#pragma mark -
 
 @interface SKMainWindowController (SKPrivate)
 
@@ -200,9 +218,9 @@ static char SKMainWindowContentLayoutRectObservationContext;
 
 - (void)observeUndoManagerCheckpoint:(NSNotification *)notification;
 
-+ (void)defineFullScreenGlobalVariables;
+- (void)clearWidgets;
 
-- (BOOL)useNativeFullScreen;
++ (void)defineFullScreenGlobalVariables;
 
 @end
 
@@ -210,7 +228,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
 @implementation SKMainWindowController
 
 @synthesize mainWindow, splitView, centerContentView, pdfSplitView, pdfContentView, statusBar, pdfView, secondaryPdfView, leftSideController, rightSideController, toolbarController, leftSideContentView, rightSideContentView, presentationNotesDocument, presentationNotesOffset, tags, rating, pageNumber, pageLabel, interactionMode, placeholderPdfDocument;
-@dynamic pdfDocument, presentationOptions, selectedNotes, autoScales, leftSidePaneState, rightSidePaneState, findPaneState, leftSidePaneIsOpen, rightSidePaneIsOpen, recentInfoNeedsUpdate;
+@dynamic pdfDocument, presentationOptions, selectedNotes, widgetProperties, autoScales, leftSidePaneState, rightSidePaneState, findPaneState, leftSidePaneIsOpen, rightSidePaneIsOpen, recentInfoNeedsUpdate, searchString, hasOverview, notesMenu;
 
 + (void)initialize {
     SKINITIALIZE;
@@ -233,7 +251,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
         memset(&mwcFlags, 0, sizeof(mwcFlags));
         mwcFlags.caseInsensitiveSearch = [[NSUserDefaults standardUserDefaults] boolForKey:SKCaseInsensitiveSearchKey];
         mwcFlags.wholeWordSearch = [[NSUserDefaults standardUserDefaults] boolForKey:SKWholeWordSearchKey];
-        mwcFlags.caseInsensitiveNoteSearch = [[NSUserDefaults standardUserDefaults] boolForKey:SKCaseInsensitiveNoteSearchKey];
+        mwcFlags.caseInsensitiveFilter = [[NSUserDefaults standardUserDefaults] boolForKey:SKCaseInsensitiveFilterKey];
         groupedSearchResults = [[NSMutableArray alloc] init];
         thumbnails = [[NSMutableArray alloc] init];
         notes = [[NSMutableArray alloc] init];
@@ -254,7 +272,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
         markedPagePoint = NSZeroPoint;
         beforeMarkedPageIndex = NSNotFound;
         beforeMarkedPagePoint = NSZeroPoint;
-        activityAssertionID = kIOPMNullAssertionID;
+        activity = nil;
         presentationNotesDocument = nil;
         presentationNotesOffset = 0;
     }
@@ -265,20 +283,22 @@ static char SKMainWindowContentLayoutRectObservationContext;
     if ([self isWindowLoaded] && [[self window] delegate])
         SKENSURE_MAIN_THREAD( [self cleanup]; );
     SKDESTROY(placeholderPdfDocument);
+    SKDESTROY(placeholderWidgetProperties);
     SKDESTROY(undoGroupOldPropertiesPerNote);
     SKDESTROY(dirtySnapshots);
 	SKDESTROY(searchResults);
 	SKDESTROY(groupedSearchResults);
 	SKDESTROY(thumbnails);
-	SKDESTROY(notes);
+    SKDESTROY(notes);
+    SKDESTROY(widgets);
+    SKDESTROY(widgetValues);
 	SKDESTROY(snapshots);
 	SKDESTROY(tags);
     SKDESTROY(pageLabels);
     SKDESTROY(pageLabel);
 	SKDESTROY(rowHeights);
     SKDESTROY(lastViewedPages);
-	SKDESTROY(leftSideWindow);
-	SKDESTROY(rightSideWindow);
+	SKDESTROY(sideWindow);
     SKDESTROY(mainWindow);
     SKDESTROY(statusBar);
     SKDESTROY(findController);
@@ -299,6 +319,8 @@ static char SKMainWindowContentLayoutRectObservationContext;
     SKDESTROY(toolbarController);
     SKDESTROY(leftSideContentView);
     SKDESTROY(rightSideContentView);
+    SKDESTROY(overviewView);
+    SKDESTROY(overviewContentView);
     SKDESTROY(fieldEditor);
     SKDESTROY(presentationNotesDocument);
     [super dealloc];
@@ -306,10 +328,15 @@ static char SKMainWindowContentLayoutRectObservationContext;
 
 // this is called from windowWillClose:
 - (void)cleanup {
-    if (RUNNING_AFTER(10_9))
-        [mainWindow removeObserver:self forKeyPath:CONTENTLAYOUTRECT_KEY];
+    if (activity) {
+        [[NSProcessInfo processInfo] endActivity:activity];
+        SKDESTROY(activity);
+    }
+    [mainWindow removeObserver:self forKeyPath:CONTENTLAYOUTRECT_KEY];
+    [overviewView removeObserver:self forKeyPath:@"selectionIndexes"];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self stopObservingNotes:[self notes]];
+    [self clearWidgets];
     [self unregisterAsObserver];
     [[self window] setDelegate:nil];
     [splitView setDelegate:nil];
@@ -326,7 +353,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [[[pdfView document] outlineRoot] clearDocument];
     [[pdfView document] setContainingDocument:nil];
     // Yosemite and El Capitan have a retain cycle when we leave the PDFView with a document
-    if (RUNNING_AFTER(10_9) && RUNNING_BEFORE(10_12)) {
+    if (RUNNING_BEFORE(10_12)) {
         [pdfView setDocument:nil];
         [secondaryPdfView setDocument:nil];
     }
@@ -350,9 +377,9 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [pdfContentView setAutoresizesSubviews:YES];
     
     // make sure the first thing we call on the side view controllers is its view so their nib is loaded
-    [leftSideController.view setFrame:SKShrinkRect(NSInsetRect([leftSideContentView bounds], -1.0, -1.0), 1.0, NSMaxYEdge)];
+    [leftSideController.view setFrame:[leftSideContentView bounds]];
     [leftSideContentView addSubview:leftSideController.view];
-    [rightSideController.view setFrame:SKShrinkRect(NSInsetRect([rightSideContentView bounds], -1.0, -1.0), 1.0, NSMaxYEdge)];
+    [rightSideController.view setFrame:[rightSideContentView bounds]];
     [rightSideContentView addSubview:rightSideController.view];
     
     [self updateTableFont];
@@ -371,14 +398,11 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [toolbarController setupToolbar];
     
     // Set up the window
-    if ([self useNativeFullScreen])
-        [window setCollectionBehavior:[window collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary];
+    [window setCollectionBehavior:[window collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary];
     
-    if (RUNNING_AFTER(10_9)) {
-        [window setStyleMask:[window styleMask] | NSFullSizeContentViewWindowMask];
-        [[splitView superview] setFrame:[window contentLayoutRect]];
-        [window addObserver:self forKeyPath:CONTENTLAYOUTRECT_KEY options:0 context:&SKMainWindowContentLayoutRectObservationContext];
-    }
+    [window setStyleMask:[window styleMask] | NSFullSizeContentViewWindowMask];
+    [[splitView superview] setFrame:[window contentLayoutRect]];
+    [window addObserver:self forKeyPath:CONTENTLAYOUTRECT_KEY options:0 context:&SKMainWindowContentLayoutRectObservationContext];
     
     [self setWindowFrameAutosaveNameOrCascade:SKMainWindowFrameAutosaveName];
     
@@ -403,10 +427,10 @@ static char SKMainWindowContentLayoutRectObservationContext;
     
     // Set up the PDF
     [pdfView setShouldAntiAlias:[sud boolForKey:SKShouldAntiAliasKey]];
+    [pdfView setInterpolationQuality:[sud integerForKey:SKInterpolationQualityKey]];
     [pdfView setGreekingThreshold:[sud floatForKey:SKGreekingThresholdKey]];
     [pdfView setBackgroundColor:[PDFView defaultBackgroundColor]];
     [pdfView applyDefaultPageBackgroundColor];
-    [pdfView applyDefaultInterpolationQuality];
     
     [self applyPDFSettings:hasWindowSetup ? savedNormalSetup : [sud dictionaryForKey:SKDefaultPDFDisplaySettingsKey] rewind:NO];
     
@@ -442,7 +466,9 @@ static char SKMainWindowContentLayoutRectObservationContext;
         // PDFView has the annoying habit for the password view to force a full window display
         CGFloat leftWidth = [self leftSideWidth];
         CGFloat rightWidth = [self rightSideWidth];
+        [self applyLeftSideWidth:0.0 rightSideWidth:0.0];
         [pdfContentView addSubview:pdfView];
+        [pdfView setFrame:[pdfContentView bounds]];
         [self applyLeftSideWidth:leftWidth rightSideWidth:rightWidth];
     } else {
         [pdfContentView addSubview:pdfView];
@@ -519,7 +545,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [self registerAsObserver];
     
     if ([[pdfView document] isLocked]) {
-        [window makeFirstResponder:[pdfView subviewOfClass:[NSSecureTextField class]]];
+        [window makeFirstResponder:[pdfView descendantOfClass:[NSSecureTextField class]]];
         [savedNormalSetup setObject:[NSNumber numberWithBool:YES] forKey:LOCKED_KEY];
     } else {
         [savedNormalSetup removeAllObjects];
@@ -528,13 +554,6 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [self setRecentInfoNeedsUpdate:YES];
     
     mwcFlags.settingUpWindow = 0;
-}
-
-- (void)synchronizeWindowTitleWithDocumentName {
-    // as the fullscreen window has no title we have to do this manually
-    if ([self interactionMode] == SKLegacyFullScreenMode)
-        [NSApp changeWindowsItem:[self window] title:[self windowTitleForDocumentDisplayName:[[self document] displayName]] filename:NO];
-    [super synchronizeWindowTitleWithDocumentName];
 }
 
 - (void)applyLeftSideWidth:(CGFloat)leftSideWidth rightSideWidth:(CGFloat)rightSideWidth {
@@ -595,7 +614,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
         [setup addEntriesFromDictionary:[self currentPDFSettings]];
     } else {
         [setup addEntriesFromDictionary:savedNormalSetup];
-        [setup removeObjectsForKeys:[NSArray arrayWithObjects:HASHORIZONTALSCROLLER_KEY, HASVERTICALSCROLLER_KEY, AUTOHIDESSCROLLERS_KEY, LOCKED_KEY, nil]];
+        [setup removeObjectsForKeys:[NSArray arrayWithObjects:HASHORIZONTALSCROLLER_KEY, HASVERTICALSCROLLER_KEY, AUTOHIDESSCROLLERS_KEY, DRAWSBACKGROUND_KEY, LOCKED_KEY, nil]];
     }
     
     return setup;
@@ -615,6 +634,10 @@ static char SKMainWindowContentLayoutRectObservationContext;
         [pdfView setDisplaysAsBook:[number boolValue]];
     if ((number = [setup objectForKey:DISPLAYMODE_KEY]))
         [pdfView setDisplayMode:[number integerValue]];
+    if ((number = [setup objectForKey:DISPLAYDIRECTION_KEY]))
+        [pdfView setDisplaysHorizontally:[number boolValue]];
+    if ((number = [setup objectForKey:DISPLAYSRTL_KEY]))
+        [pdfView setDisplaysRightToLeft:[number boolValue]];
     if ((number = [setup objectForKey:DISPLAYBOX_KEY]))
         [pdfView setDisplayBox:[number integerValue]];
 }
@@ -628,7 +651,11 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [setup setObject:[NSNumber numberWithDouble:[pdfView scaleFactor]] forKey:SCALEFACTOR_KEY];
     [setup setObject:[NSNumber numberWithBool:[pdfView autoScales]] forKey:AUTOSCALES_KEY];
     [setup setObject:[NSNumber numberWithInteger:[pdfView displayMode]] forKey:DISPLAYMODE_KEY];
-    
+    if (RUNNING_AFTER(10_12)) {
+        [setup setObject:[NSNumber numberWithInteger:[pdfView displaysHorizontally] ? 1 : 0] forKey:DISPLAYDIRECTION_KEY];
+        [setup setObject:[NSNumber numberWithBool:[pdfView displaysRightToLeft]] forKey:DISPLAYSRTL_KEY];
+    }
+
     return setup;
 }
 
@@ -670,21 +697,35 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [statusBar setRightStringValue:message];
 }
 
-- (void)updatePageColumnWidthForTableView:(NSTableView *)tv {
+- (void)updatePageColumnWidthForTableViews:(NSArray *)tvs {
+    NSTableView *tv = [tvs firstObject];
     NSTableColumn *tableColumn = [tv tableColumnWithIdentifier:PAGE_COLUMNID];
     id cell = [tableColumn dataCell];
-    CGFloat labelWidth = [tv headerView] ? [[tableColumn headerCell] cellSize].width : 0.0;
+    CGFloat labelWidth = 0.0;
+    NSString *label = nil;
     
-    for (NSString *label in pageLabels) {
-        [cell setStringValue:label];
-        labelWidth = fmax(labelWidth, [cell cellSize].width + 0.0);
+    for (NSString *aLabel in pageLabels) {
+        [cell setStringValue:aLabel];
+        CGFloat aLabelWidth = [cell cellSize].width;
+        if (aLabelWidth > labelWidth) {
+            labelWidth = aLabelWidth;
+            label = aLabel;
+        }
     }
     
-    labelWidth = fmin(ceil(labelWidth), MAX_PAGE_COLUMN_WIDTH);
-    [tableColumn setMinWidth:labelWidth];
-    [tableColumn setMaxWidth:labelWidth];
-    [tableColumn setWidth:labelWidth];
-    [tv sizeToFit];
+    for (tv in tvs) {
+        tableColumn = [tv tableColumnWithIdentifier:PAGE_COLUMNID];
+        cell = [tableColumn dataCell];
+        [cell setStringValue:label];
+        labelWidth = [cell cellSize].width;
+        if ([tv headerView])
+            labelWidth = fmax(labelWidth, [[tableColumn headerCell] cellSize].width);
+        labelWidth = fmin(ceil(labelWidth), MAX_PAGE_COLUMN_WIDTH);
+        [tableColumn setMinWidth:labelWidth];
+        [tableColumn setMaxWidth:labelWidth];
+        [tableColumn setWidth:labelWidth];
+        [tv sizeToFit];
+    }
 }
 
 #define LABEL_KEY @"label"
@@ -751,18 +792,21 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [self allSnapshotsNeedUpdate];
     [rightSideController.noteOutlineView reloadData];
     
-    [self updatePageColumnWidthForTableView:leftSideController.thumbnailTableView];
-    [self updatePageColumnWidthForTableView:rightSideController.snapshotTableView];
-    [self updatePageColumnWidthForTableView:leftSideController.tocOutlineView];
-    [self updatePageColumnWidthForTableView:rightSideController.noteOutlineView];
-    [self updatePageColumnWidthForTableView:leftSideController.findTableView];
-    [self updatePageColumnWidthForTableView:leftSideController.groupedFindTableView];
+    [self updatePageColumnWidthForTableViews:[NSArray arrayWithObjects:leftSideController.thumbnailTableView, rightSideController.snapshotTableView, leftSideController.tocOutlineView, rightSideController.noteOutlineView, leftSideController.findTableView, leftSideController.groupedFindTableView, nil]];
     
     PDFOutline *outlineRoot = [[pdfView document] outlineRoot];
     
+    // layout of cellview in column: |-(18+(level-1)*indentation)-[label]-(10 or 2)-|
+    // layout of textfield in cellview (leading/trailing!): |-(2)-[NSTextField]-(2)-|
+    // column width = width of column - intercellspacing (??)
+    NSOutlineView *ov = leftSideController.tocOutlineView;
+    CGFloat minWidth = fmin(MAX_MIN_COLUMN_WIDTH, 7.0 + [ov indentationPerLevel] * [outlineRoot deepestLevel]);
+    [[ov tableColumnWithIdentifier:@"label"] setMinWidth:minWidth];
+    
     mwcFlags.updatingOutlineSelection = 1;
+    
     // If this is a reload following a TeX run and the user just killed the outline for some reason, we get a crash if the outlineView isn't reloaded, so no longer make it conditional on pdfOutline != nil
-    [leftSideController.tocOutlineView reloadData];
+    [ov reloadData];
     if (outlineRoot)
         [self expandOutline:outlineRoot forExpansionState:info];
     mwcFlags.updatingOutlineSelection = 0;
@@ -775,129 +819,115 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [leftSideController.button setEnabled:outlineRoot != nil forSegment:SKSidePaneStateOutline];
 }
 
-#pragma mark Accessors
+#pragma mark Notes and Widgets
 
-- (PDFDocument *)pdfDocument{
-    return [pdfView document];
+- (void)makeWidgets {
+    widgets = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSObjectMapValueCallBacks, 0);
+    PDFDocument *pdfDoc = [self pdfDocument];
+    NSUInteger i, iMax = [pdfDoc pageCount];
+    for (i = 0; i < iMax; i++) {
+        PDFPage *page = [pdfDoc pageAtIndex:i];
+        NSMutableArray *array = nil;
+        for (PDFAnnotation *annotation in [page annotations]) {
+            if ([annotation isWidget]) {
+                if (array == nil)
+                    array = [NSMutableArray array];
+                [array addObject:annotation];
+            }
+        }
+        if (array) {
+            NSMapInsert(widgets, (const void *)i, (const void *)array);
+            [self startObservingNotes:array];
+        }
+    }
+    [self registerWidgetValues];
 }
 
-- (void)setPdfDocument:(PDFDocument *)document{
-
-    if ([pdfView document] != document) {
-        
-        NSUInteger pageIndex = NSNotFound, secondaryPageIndex = NSNotFound;
-        NSPoint point = NSZeroPoint, secondaryPoint = NSZeroPoint;
-        BOOL rotated = NO, secondaryRotated = NO;
-        NSArray *snapshotDicts = nil;
-        NSDictionary *openState = nil;
-        
-        if ([pdfView document]) {
-            pageIndex = [pdfView currentPageIndexAndPoint:&point rotated:&rotated];
-            if (secondaryPdfView)
-                secondaryPageIndex = [secondaryPdfView currentPageIndexAndPoint:&secondaryPoint rotated:&secondaryRotated];
-            openState = [self expansionStateForOutline:[[pdfView document] outlineRoot]];
-            
-            [[pdfView document] cancelFindString];
-            
-            // make sure these will not be activated, or they can lead to a crash
-            [pdfView removePDFToolTipRects];
-            [pdfView setActiveAnnotation:nil];
-            
-            // these will be invalid. If needed, the document will restore them
-            [self setSearchResults:nil];
-            [self setGroupedSearchResults:nil];
-            [self removeAllObjectsFromNotes];
-            [self removeAllObjectsFromThumbnails];
-            SKDESTROY(placeholderPdfDocument);
-            
-            // remmeber snapshots and close them, without animation
-            snapshotDicts = [snapshots valueForKey:SKSnapshotCurrentSetupKey];
-            [snapshots setValue:nil forKey:@"delegate"];
-            [snapshots makeObjectsPerformSelector:@selector(close)];
-            [self removeAllObjectsFromSnapshots];
-            [rightSideController.snapshotTableView reloadData];
-            
-            [lastViewedPages setCount:0];
-            
-            [self unregisterForDocumentNotifications];
-            
-            [[pdfView document] setDelegate:nil];
-            
-            [[[pdfView document] outlineRoot] clearDocument];
-            
-            [[pdfView document] setContainingDocument:nil];
-        }
-        
-        if ([document isLocked] && [pdfView window]) {
-            // PDFView has the annoying habit for the password view to force a full window display
-            CGFloat leftWidth = [self leftSideWidth];
-            CGFloat rightWidth = [self rightSideWidth];
-            [pdfView setDocument:document];
-            [self applyLeftSideWidth:leftWidth rightSideWidth:rightWidth];
-        } else {
-            [pdfView setDocument:document];
-        }
-        [[pdfView document] setDelegate:self];
-        
-        [secondaryPdfView setDocument:document];
-        
-        [[pdfView document] setContainingDocument:[self document]];
-
-        [self registerForDocumentNotifications];
-        
-        [self updatePageLabelsAndOutlineForExpansionState:openState];
-        [self updateNoteSelection];
-        
-        if ([snapshotDicts count]) {
-            if ([document isLocked] && ([self interactionMode] == SKNormalMode || [self interactionMode] == SKFullScreenMode))
-                [savedNormalSetup setObject:snapshotDicts forKey:SNAPSHOTS_KEY];
-            else
-                [self showSnapshotsWithSetups:snapshotDicts];
-        }
-        
-        if ([document pageCount] && (pageIndex != NSNotFound || secondaryPageIndex != NSNotFound)) {
-            if (pageIndex != NSNotFound) {
-                if (pageIndex >= [document pageCount])
-                    pageIndex = [document pageCount] - 1;
-                if ([document isLocked] && ([self interactionMode] == SKNormalMode || [self interactionMode] == SKFullScreenMode)) {
-                    [savedNormalSetup setObject:[NSNumber numberWithUnsignedInteger:pageIndex] forKey:PAGEINDEX_KEY];
-                } else {
-                    if (rotated)
-                        [pdfView goToPage:[document pageAtIndex:pageIndex]];
-                    else
-                        [pdfView goToPageAtIndex:pageIndex point:point];
-                }
-            }
-            if (secondaryPageIndex != NSNotFound) {
-                if (secondaryPageIndex >= [document pageCount])
-                    secondaryPageIndex = [document pageCount] - 1;
-                if (secondaryRotated)
-                    [secondaryPdfView goToPage:[document pageAtIndex:secondaryPageIndex]];
-                else
-                    [secondaryPdfView goToPageAtIndex:secondaryPageIndex point:secondaryPoint];
-            }
-            [pdfView resetHistory];
-        }
-        
-        // the number of pages may have changed
-        [toolbarController handleChangedHistoryNotification:nil];
-        [toolbarController handlePageChangedNotification:nil];
-        [self handlePageChangedNotification:nil];
-        [self updateLeftStatus];
-        [self updateRightStatus];
+- (void)clearWidgets {
+    if (widgets) {
+        NSMapEnumerator enumerator = NSEnumerateMapTable(widgets);
+        NSArray *array;
+        while (NSNextMapEnumeratorPair(&enumerator, NULL, (void **)&array))
+            [self stopObservingNotes:array];
+        NSEndMapTableEnumeration(&enumerator);
+        SKDESTROY(widgets);
     }
+}
+
+- (void)setWidgetValues:(NSMapTable *)newWidgetValues {
+    if (newWidgetValues != widgetValues) {
+        if (widgetValues)
+            [[[self document] undoManager] registerUndoWithTarget:self selector:@selector(setWidgetValues:) object:widgetValues];
+        [widgetValues release];
+        widgetValues = [newWidgetValues retain];
+    }
+}
+
+- (void)registerWidgetValues {
+    NSMapTable *values = [[[NSMapTable alloc] initWithKeyOptions:NSMapTableStrongMemory | NSMapTableObjectPointerPersonality valueOptions:NSMapTableStrongMemory | NSMapTableObjectPointerPersonality capacity:0] autorelease];
+    if (widgets) {
+        NSMapEnumerator enumerator = NSEnumerateMapTable(widgets);
+        NSArray *array;
+        while (NSNextMapEnumeratorPair(&enumerator, NULL, (void **)&array)) {
+            for (PDFAnnotation *widget in array) {
+                id value = [widget objectValue];
+                if (value)
+                    [values setObject:value forKey:widget];
+            }
+        }
+        NSEndMapTableEnumeration(&enumerator);
+    }
+    [self setWidgetValues:values];
+}
+
+- (void)changeWidgetsFromDictionaries:(NSArray *)widgetDicts {
+    for (NSDictionary *dict in widgetDicts) {
+        NSRect bounds = NSIntegralRect(NSRectFromString([dict objectForKey:SKNPDFAnnotationBoundsKey]));
+        NSUInteger pageIndex = [[dict objectForKey:SKNPDFAnnotationPageIndexKey] unsignedIntegerValue];
+        SKNPDFWidgetType widgetType = [[dict objectForKey:SKNPDFAnnotationWidgetTypeKey] integerValue];
+        NSString *fieldName = [dict objectForKey:SKNPDFAnnotationFieldNameKey] ?: @"";
+        for (PDFAnnotation *widget in (NSArray *)NSMapGet(widgets, (const void *)pageIndex)) {
+            if ([widget widgetType] == widgetType &&
+                [([widget fieldName] ?: @"") isEqualToString:fieldName] &&
+                NSEqualRects(NSIntegralRect([widget bounds]), bounds)) {
+                id value = [dict objectForKey:widgetType == kSKNPDFWidgetTypeButton ? SKNPDFAnnotationStateKey : SKNPDFAnnotationStringValueKey];
+                if ([([widget objectValue] ?: @"") isEqual:(value ?: @"")] == NO)
+                    [(PDFAnnotationTextWidget *)widget setObjectValue:value];
+                break;
+            }
+        }
+    }
+}
+
+- (NSArray *)widgetProperties {
+    if (placeholderWidgetProperties)
+        return placeholderWidgetProperties;
+    NSMutableArray *properties = [NSMutableArray array];
+    if (widgets) {
+        NSMapEnumerator enumerator = NSEnumerateMapTable(widgets);
+        NSArray *array;
+        while (NSNextMapEnumeratorPair(&enumerator, NULL, (void **)&array)) {
+            for (PDFAnnotation *widget in array) {
+                id value = [widget objectValue];
+                id origValue = [widgetValues objectForKey:widget];
+                if ([(value ?: @"") isEqual:(origValue ?: @"")] == NO)
+                    [properties addObject:[widget SkimNoteProperties]];
+            }
+        }
+        NSEndMapTableEnumeration(&enumerator);
+    }
+    return properties;
 }
 
 - (void)addAnnotationsFromDictionaries:(NSArray *)noteDicts removeAnnotations:(NSArray *)notesToRemove autoUpdate:(BOOL)autoUpdate {
     PDFAnnotation *annotation;
     PDFDocument *pdfDoc = [pdfView document];
     NSMutableArray *notesToAdd = [NSMutableArray array];
+    NSMutableArray *widgetProperties = [NSMutableArray array];
     NSMutableIndexSet *pageIndexes = [NSMutableIndexSet indexSet];
     
     if ([pdfDoc allowsNotes] == NO && [noteDicts count] > 0) {
         // there should not be any notesToRemove at this point
-        if ([noteDicts count])
-            tmpNoteProperties = [noteDicts retain];
         NSUInteger i, pageCount = MIN([pdfDoc pageCount], [[noteDicts valueForKeyPath:@"@max.pageIndex"] unsignedIntegerValue]);
         SKDESTROY(placeholderPdfDocument);
         pdfDoc = placeholderPdfDocument = [[SKPDFDocument alloc] init];
@@ -950,11 +980,24 @@ static char SKMainWindowContentLayoutRectObservationContext;
                 [annotation autoUpdateString];
             [notesToAdd addObject:annotation];
             [annotation release];
+        } else if ([[dict objectForKey:SKNPDFAnnotationTypeKey] isEqualToString:SKNWidgetString]) {
+            [widgetProperties addObject:dict];
         }
         [pool release];
     }
     if ([notesToAdd count] > 0)
         [self insertNotes:notesToAdd atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange([notes count], [notesToAdd count])]];
+    
+    if ([[self pdfDocument] isLocked]) {
+        [placeholderWidgetProperties release];
+        placeholderWidgetProperties = [widgetProperties count] ? [widgetProperties copy] : nil;
+    } else {
+        if (widgets == nil)
+            [self makeWidgets];
+        if ([widgetProperties count])
+            [self changeWidgetsFromDictionaries:widgetProperties];
+    }
+    
     // make sure we clear the undo handling
     [self observeUndoManagerCheckpoint:nil];
     [rightSideController.noteOutlineView reloadData];
@@ -962,6 +1005,130 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [pdfView resetPDFToolTipRects];
     
     mwcFlags.addOrRemoveNotesInBulk = 0;
+}
+
+#pragma mark Accessors
+
+- (PDFDocument *)pdfDocument{
+    return [pdfView document];
+}
+
+- (void)setPdfDocument:(PDFDocument *)document{
+
+    if ([pdfView document] != document) {
+        
+        NSUInteger pageIndex = NSNotFound, secondaryPageIndex = NSNotFound;
+        NSPoint point = NSZeroPoint, secondaryPoint = NSZeroPoint;
+        BOOL rotated = NO, secondaryRotated = NO;
+        NSArray *snapshotDicts = nil;
+        NSDictionary *openState = nil;
+        
+        if ([pdfView document]) {
+            pageIndex = [pdfView currentPageIndexAndPoint:&point rotated:&rotated];
+            if (secondaryPdfView)
+                secondaryPageIndex = [secondaryPdfView currentPageIndexAndPoint:&secondaryPoint rotated:&secondaryRotated];
+            openState = [self expansionStateForOutline:[[pdfView document] outlineRoot]];
+            
+            [[pdfView document] cancelFindString];
+            
+            // make sure these will not be activated, or they can lead to a crash
+            [pdfView removePDFToolTipRects];
+            [pdfView setActiveAnnotation:nil];
+            
+            // these will be invalid. If needed, the document will restore them
+            [self setSearchResults:nil];
+            [self setGroupedSearchResults:nil];
+            [self removeAllObjectsFromNotes];
+            [self setThumbnails:nil];
+            [self clearWidgets];
+            SKDESTROY(widgetValues);
+            SKDESTROY(placeholderPdfDocument);
+            SKDESTROY(placeholderWidgetProperties);
+
+            // remmeber snapshots and close them, without animation
+            snapshotDicts = [snapshots valueForKey:SKSnapshotCurrentSetupKey];
+            [snapshots setValue:nil forKey:@"delegate"];
+            [snapshots makeObjectsPerformSelector:@selector(close)];
+            [self removeAllObjectsFromSnapshots];
+            [rightSideController.snapshotTableView reloadData];
+            
+            [lastViewedPages setCount:0];
+            
+            [self unregisterForDocumentNotifications];
+            
+            [[pdfView document] setDelegate:nil];
+            
+            [[[pdfView document] outlineRoot] clearDocument];
+            
+            [[pdfView document] setContainingDocument:nil];
+        }
+        
+        if ([document isLocked] && [pdfView window]) {
+            // PDFView has the annoying habit for the password view to force a full window display
+            CGFloat leftWidth = [self leftSideWidth];
+            CGFloat rightWidth = [self rightSideWidth];
+            [pdfView setDocument:document];
+            [pdfView setFrame:[pdfContentView bounds]];
+            [self applyLeftSideWidth:leftWidth rightSideWidth:rightWidth];
+        } else {
+            [pdfView setDocument:document];
+        }
+        [[pdfView document] setDelegate:self];
+        
+        [secondaryPdfView setDocument:document];
+        
+        [[pdfView document] setContainingDocument:[self document]];
+
+        [self registerForDocumentNotifications];
+        
+        [self updatePageLabelsAndOutlineForExpansionState:openState];
+        [self updateNoteSelection];
+        
+        if ([snapshotDicts count]) {
+            if ([document isLocked] && ([self interactionMode] == SKNormalMode || [self interactionMode] == SKFullScreenMode))
+                [savedNormalSetup setObject:snapshotDicts forKey:SNAPSHOTS_KEY];
+            else
+                [self showSnapshotsWithSetups:snapshotDicts];
+        }
+        
+        if ([document pageCount] && (pageIndex != NSNotFound || secondaryPageIndex != NSNotFound)) {
+            if (pageIndex != NSNotFound) {
+                if (pageIndex >= [document pageCount])
+                    pageIndex = [document pageCount] - 1;
+                if ([document isLocked] && ([self interactionMode] == SKNormalMode || [self interactionMode] == SKFullScreenMode)) {
+                    [savedNormalSetup setObject:[NSNumber numberWithUnsignedInteger:pageIndex] forKey:PAGEINDEX_KEY];
+                } else {
+                    if (rotated)
+                        [pdfView goToPage:[document pageAtIndex:pageIndex]];
+                    else
+                        [pdfView goToPageAtIndex:pageIndex point:point];
+                }
+            }
+            if (secondaryPageIndex != NSNotFound) {
+                if (secondaryPageIndex >= [document pageCount])
+                    secondaryPageIndex = [document pageCount] - 1;
+                if (secondaryRotated)
+                    [secondaryPdfView goToPage:[document pageAtIndex:secondaryPageIndex]];
+                else
+                    [secondaryPdfView goToPageAtIndex:secondaryPageIndex point:secondaryPoint];
+            }
+            [pdfView resetHistory];
+        }
+        
+        if (markedPageIndex >= [document pageCount]) {
+            markedPageIndex = NSNotFound;
+            beforeMarkedPageIndex = NSNotFound;
+        } else if (beforeMarkedPageIndex >= [document pageCount]) {
+            beforeMarkedPageIndex = NSNotFound;
+        }
+        
+        // the number of pages may have changed
+        [toolbarController handleChangedHistoryNotification:nil];
+        [toolbarController handlePageChangedNotification:nil];
+        [self handlePageChangedNotification:nil];
+        [self updateLeftStatus];
+        [self updateRightStatus];
+    }
 }
 
 - (void)updatePageNumber {
@@ -1075,25 +1242,17 @@ static char SKMainWindowContentLayoutRectObservationContext;
 }
 
 - (BOOL)leftSidePaneIsOpen {
-    NSInteger state;
-    if ([self interactionMode] == SKLegacyFullScreenMode)
-        state = [leftSideWindow state];
-    else if ([self interactionMode] == SKPresentationMode)
-        state = [leftSideWindow isVisible] ? NSDrawerOpenState : NSDrawerClosedState;
+    if ([self interactionMode] == SKPresentationMode)
+        return NO == [sideWindow isVisible];
     else
-        state = [splitView isSubviewCollapsed:leftSideContentView] ? NSDrawerClosedState : NSDrawerOpenState;
-    return state == NSDrawerOpenState || state == NSDrawerOpeningState;
+        return NO == [splitView isSubviewCollapsed:leftSideContentView];
 }
 
 - (BOOL)rightSidePaneIsOpen {
-    NSInteger state;
-    if ([self interactionMode] == SKLegacyFullScreenMode)
-        state = [rightSideWindow state];
-    else if ([self interactionMode] == SKPresentationMode)
-        state = [rightSideWindow isVisible] ? NSDrawerOpenState : NSDrawerClosedState;
+    if ([self interactionMode] == SKPresentationMode)
+        return NO;
     else
-        state = [splitView isSubviewCollapsed:rightSideContentView] ? NSDrawerClosedState : NSDrawerOpenState;;
-    return state == NSDrawerOpenState || state == NSDrawerOpeningState;
+        return NO == [splitView isSubviewCollapsed:rightSideContentView];
 }
 
 - (CGFloat)leftSideWidth {
@@ -1171,29 +1330,8 @@ static char SKMainWindowContentLayoutRectObservationContext;
     return thumbnails;
 }
 
-- (NSUInteger)countOfThumbnails {
-    return [thumbnails count];
-}
-
-- (SKThumbnail *)objectInThumbnailsAtIndex:(NSUInteger)theIndex {
-    return [thumbnails objectAtIndex:theIndex];
-}
-
-- (void)insertObject:(SKThumbnail *)thumbnail inThumbnailsAtIndex:(NSUInteger)theIndex {
-    [thumbnails insertObject:thumbnail atIndex:theIndex];
-}
-
-- (void)removeObjectFromThumbnailsAtIndex:(NSUInteger)theIndex {
-    [thumbnails removeObjectAtIndex:theIndex];
-}
-
-- (void)removeAllObjectsFromThumbnails {
-    if ([thumbnails count]) {
-        NSIndexSet *indexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [thumbnails count])];
-        [self willChange:NSKeyValueChangeRemoval valuesAtIndexes:indexes forKey:THUMBNAILS_KEY];
-        [thumbnails removeAllObjects];
-        [self didChange:NSKeyValueChangeRemoval valuesAtIndexes:indexes forKey:THUMBNAILS_KEY];
-    }
+- (void)setThumbnails:(NSArray *)newThumbnails {
+    [thumbnails setArray:newThumbnails];
 }
 
 - (NSArray *)snapshots {
@@ -1303,7 +1441,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
 
 - (NSDictionary *)presentationOptions {
     SKTransitionController *transitions = [pdfView transitionController];
-    SKAnimationTransitionStyle style = [transitions transitionStyle];
+    SKTransitionStyle style = [transitions transitionStyle];
     NSString *styleName = [SKTransitionController nameForStyle:style];
     NSArray *pageTransitions = [transitions pageTransitions];
     NSMutableDictionary *options = nil;
@@ -1341,11 +1479,15 @@ static char SKMainWindowContentLayoutRectObservationContext;
 }
 
 - (BOOL)recentInfoNeedsUpdate {
-    return mwcFlags.recentInfoNeedsUpdate;
+    return mwcFlags.recentInfoNeedsUpdate && [self isWindowLoaded] && [[self window] delegate];
 }
 
 - (void)setRecentInfoNeedsUpdate:(BOOL)flag {
     mwcFlags.recentInfoNeedsUpdate = flag;
+}
+
+- (NSMenu *)notesMenu {
+    return [[rightSideController.noteOutlineView headerView] menu];
 }
 
 #pragma mark Swapping tables
@@ -1377,6 +1519,171 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [self updateSnapshotsIfNeeded];
 }
 
+#pragma mark Overview
+
+- (BOOL)hasOverview {
+    return [overviewView window] != nil;
+}
+
+- (void)hideOverview:(id)sender {
+    [self hideOverviewAnimating:YES];
+}
+
+- (void)updateOverviewItemSize {
+    NSSize size;
+    CGFloat width = 0.0;
+    CGFloat height = 0.0;
+    for (SKThumbnail *thumbnail in [self thumbnails]) {
+        size = [thumbnail size];
+        if (size.width < size.height) {
+            height = 1.0;
+            if (width >= 1.0)
+                break;
+            width = fmax(width, size.width / size.height);
+        } else if (size.height < size.width) {
+            width = 1.0;
+            if (height >= 1.0)
+                break;
+            height = fmax(height, size.height / size.width);
+        } else {
+            width = height = 1.0;
+            break;
+        }
+    }
+    size = [SKThumbnailView sizeForImageSize:NSMakeSize(ceil(width * roundedThumbnailSize), ceil(height * roundedThumbnailSize))];
+    if (NSEqualSizes(size, [overviewView minItemSize]) == NO) {
+        [overviewView setMinItemSize:size];
+        [overviewView setMaxItemSize:size];
+    }
+}
+
+- (void)showOverviewAnimating:(BOOL)animate {
+    if ([overviewView window])
+        return;
+    
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey])
+        animate = NO;
+    
+    if (overviewView == nil) {
+        overviewView  = [[SKOverviewView alloc] init];
+        NSScrollView *scrollView = [[NSScrollView alloc] init];
+        [scrollView setHasVerticalScroller:YES];
+        [scrollView setAutohidesScrollers:YES];
+        [scrollView setDocumentView:overviewView];
+        [scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [overviewView setBackgroundColors:[NSArray arrayWithObjects:[NSColor clearColor], nil]];
+        [scrollView setDrawsBackground:NO];
+        overviewContentView = [[NSVisualEffectView alloc] init];
+        [overviewContentView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [overviewContentView addSubview:scrollView];
+        [scrollView release];
+        [overviewView setItemPrototype:[[[SKThumbnailItem alloc] init] autorelease]];
+        [overviewView setSelectable:YES];
+        [self updateOverviewItemSize];
+        [overviewView setContent:[self thumbnails]];
+        [overviewView setSelectionIndexes:[NSIndexSet indexSetWithIndex:[[pdfView currentPage] pageIndex]]];
+        [overviewView setTypeSelectHelper:[leftSideController.thumbnailTableView typeSelectHelper]];
+        [overviewView setDoubleClickAction:@selector(hideOverview:)  ];
+        [overviewView addObserver:self forKeyPath:@"selectionIndexes" options:0 context:&SKMainWindowThumbnailSelectionObservationContext];
+        NSInteger i, iMax = [[overviewView content] count];
+        for (i = 0; i < iMax; i++)
+            [(SKThumbnailItem *)[overviewView itemAtIndex:i] setHighlightLevel:[self thumbnailHighlightLevelForRow:i]];
+        if (markedPageIndex != NSNotFound)
+            [(SKThumbnailItem *)[overviewView itemAtIndex:markedPageIndex] setMarked:YES];
+    }
+    
+    BOOL isPresentation = [self interactionMode] == SKPresentationMode;
+    NSView *oldView = isPresentation ? pdfView : splitView;
+    NSView *contentView = [oldView superview];
+    [overviewContentView setFrame:[oldView frame]];
+    [overviewView scrollRectToVisible:[overviewView frameForItemAtIndex:[[pdfView currentPage] pageIndex]]];
+    
+    if (RUNNING_BEFORE(10_14)) {
+        [overviewContentView setMaterial:isPresentation ? NSVisualEffectMaterialDark : RUNNING_BEFORE(10_11) ? NSVisualEffectMaterialAppearanceBased : NSVisualEffectMaterialSidebar];
+        NSBackgroundStyle style = isPresentation ? NSBackgroundStyleDark : NSBackgroundStyleLight;
+        NSUInteger i, iMax = [[overviewView content] count];
+        for (i = 0; i < iMax; i++)
+            [(SKThumbnailItem *)[overviewView itemAtIndex:i] setBackgroundStyle:style];
+    } else if (isPresentation) {
+        SKSetHasDarkAppearance(overviewContentView);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+        [overviewContentView setMaterial:NSVisualEffectMaterialUnderPageBackground];
+#pragma clang diagnostic pop
+    } else {
+        SKSetHasDefaultAppearance(overviewContentView);
+        [overviewContentView setMaterial:NSVisualEffectMaterialSidebar];
+    }
+    [overviewView setSingleClickAction:isPresentation ? @selector(hideOverview:) : NULL];
+    
+    if (animate) {
+        BOOL hasLayer = [contentView wantsLayer] || [contentView layer] != nil;
+        if (hasLayer == NO) {
+            [contentView setWantsLayer:YES];
+            [contentView displayIfNeeded];
+        }
+        [NSAnimationContext runAnimationGroup:^(NSAnimationContext * context){
+                [[contentView animator] replaceSubview:oldView with:overviewContentView];
+            }
+            completionHandler:^{
+                [touchBarController overviewChanged];
+                if (hasLayer == NO)
+                    [contentView setWantsLayer:NO];
+            }];
+    } else {
+        [contentView replaceSubview:oldView with:overviewContentView];
+    }
+    [[self window] makeFirstResponder:overviewView];
+    if (isPresentation)
+        [NSCursor setHiddenUntilMouseMoves:NO];
+    [touchBarController overviewChanged];
+}
+
+- (void)hideOverviewAnimating:(BOOL)animate completionHandler:(void (^)(void))handler {
+    if ([overviewView window] == nil) {
+        if (handler)
+            handler();
+        return;
+    }
+    
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey])
+        animate = NO;
+    
+    NSView *newView = [self interactionMode] == SKPresentationMode ? pdfView : splitView;
+    NSView *contentView = [overviewContentView superview];
+    [newView setFrame:[overviewContentView frame]];
+    
+    if (animate) {
+        BOOL hasLayer = [contentView wantsLayer] || [contentView layer] != nil;
+        if (hasLayer == NO) {
+            [contentView setWantsLayer:YES];
+            [contentView displayIfNeeded];
+        }
+        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
+                [[contentView animator] replaceSubview:overviewContentView with:newView];
+            }
+            completionHandler:^{
+                [touchBarController overviewChanged];
+                [[self window] makeFirstResponder:pdfView];
+                if (hasLayer == NO)
+                    [contentView setWantsLayer:NO];
+                if (handler)
+                    handler();
+            }];
+    } else {
+        [contentView replaceSubview:overviewContentView with:newView];
+        [touchBarController overviewChanged];
+        [[self window] makeFirstResponder:pdfView];
+        if (handler)
+            handler();
+    }
+}
+
+    
+- (void)hideOverviewAnimating:(BOOL)animate {
+    [self hideOverviewAnimating:(BOOL)animate completionHandler:NULL];
+}
+
 #pragma mark Searching
 
 - (void)displaySearchResultsForString:(NSString *)string {
@@ -1386,12 +1693,24 @@ static char SKMainWindowContentLayoutRectObservationContext;
     [self performSelector:@selector(search:) withObject:leftSideController.searchField afterDelay:0.0];
 }
 
+- (NSString *)searchString {
+    return [leftSideController.searchField stringValue];
+}
+
 - (BOOL)findString:(NSString *)string forward:(BOOL)forward {
     PDFDocument *pdfDoc = [pdfView document];
     if ([pdfDoc isFinding]) {
         NSBeep();
         return NO;
     }
+    
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES completionHandler:^{
+            [self findString:string forward:forward];
+        }];
+        return YES;
+    }
+    
     PDFSelection *sel = [pdfView currentSelection];
     NSUInteger pageIndex = [[pdfView currentPage] pageIndex];
     NSInteger options = 0;
@@ -1423,7 +1742,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
 
 - (void)findControllerWillBeRemoved:(SKFindController *)aFindController {
     if ([[[self window] firstResponder] isDescendantOf:[aFindController view]])
-        [[self window] makeFirstResponder:[self pdfView]];
+        [[self window] makeFirstResponder:[self hasOverview] ? overviewView : [self pdfView]];
 }
 
 - (void)showFindBar {
@@ -1431,8 +1750,9 @@ static char SKMainWindowContentLayoutRectObservationContext;
         findController = [[SKFindController alloc] init];
         [findController setDelegate:self];
     }
-    if ([[findController view] window] == nil)
-        [findController toggleAboveView:([self interactionMode] == SKLegacyFullScreenMode ? pdfSplitView : splitView) animate:YES];
+    if ([[findController view] window] == nil) {
+        [findController toggleAboveView:pdfSplitView animate:YES];
+    }
     [[findController findField] selectText:nil];
 }
 
@@ -1441,7 +1761,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
 - (void)selectFindResultHighlight:(NSSelectionDirection)direction {
     [self updateFindResultHighlightsForDirection:direction];
     if (direction == NSDirectSelection && [self interactionMode] == SKPresentationMode && [[NSUserDefaults standardUserDefaults] boolForKey:SKAutoHidePresentationContentsKey])
-        [self hideLeftSideWindow];
+        [self hideSideWindow];
 }
 
 - (void)updateFindResultHighlightsForDirection:(NSSelectionDirection)direction {
@@ -1484,10 +1804,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
         }
         
         NSArray *highlights = [[NSArray alloc] initWithArray:findResults copyItems:YES];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
-        [highlights setValue:[NSColor respondsToSelector:@selector(findHighlightColor)] ? [NSColor findHighlightColor] : [NSColor yellowColor] forKey:@"color"];
-#pragma clang diagnostic pop
+        [highlights setValue:[NSColor searchHighlightColor] forKey:@"color"];
         [pdfView setHighlightedSelections:highlights];
         [highlights release];
         
@@ -1614,6 +1931,10 @@ static char SKMainWindowContentLayoutRectObservationContext;
     
     if ([self interactionMode] == SKNormalMode)
         [savedNormalSetup removeAllObjects];
+    
+    // somehow the password field remains first responder after it has been removed
+    if ([[[self window] firstResponder] isKindOfClass:[NSTextView class]] && [[(NSTextView *)[[self window] firstResponder] delegate] isKindOfClass:[NSSecureTextField class]] )
+        [[self window] makeFirstResponder:[self pdfView]];
 }
 
 - (void)documentDidUnlock:(NSNotification *)notification {
@@ -1638,6 +1959,15 @@ static char SKMainWindowContentLayoutRectObservationContext;
         }
     }
     
+    if (widgets == nil)
+        [self makeWidgets];
+    if (placeholderWidgetProperties) {
+        [[[self document] undoManager] disableUndoRegistration];
+        [self changeWidgetsFromDictionaries:placeholderWidgetProperties];
+        [[[self document] undoManager] enableUndoRegistration];
+        SKDESTROY(placeholderWidgetProperties);
+    }
+    
     if ([[savedNormalSetup objectForKey:LOCKED_KEY] boolValue]) {
         [self updatePageLabelsAndOutlineForExpansionState:nil];
         
@@ -1647,8 +1977,30 @@ static char SKMainWindowContentLayoutRectObservationContext;
     }
 }
 
+enum { SKOptionAsk = -1, SKOptionNever = 0, SKOptionAlways = 1 };
+
 - (void)document:(PDFDocument *)aDocument didUnlockWithPassword:(NSString *)password {
-    [[self document] savePasswordInKeychain:password];
+    if ([aDocument isLocked])
+        return;
+    
+    NSInteger saveOption = [[NSUserDefaults standardUserDefaults] integerForKey:SKSavePasswordOptionKey];
+    if (saveOption == SKOptionAlways) {
+        [[self document] savePasswordInKeychain:password];
+    } else if (saveOption == SKOptionAsk) {
+        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+        [alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"Remember Password?", @"Message in alert dialog"), nil]];
+        [alert setInformativeText:NSLocalizedString(@"Do you want to save this password in your Keychain?", @"Informative text in alert dialog")];
+        [alert addButtonWithTitle:NSLocalizedString(@"Yes", @"Button title")];
+        [alert addButtonWithTitle:NSLocalizedString(@"No", @"Button title")];
+        NSWindow *window = [self window];
+        if ([window attachedSheet] == nil)
+            [alert beginSheetModalForWindow:window completionHandler:^(NSInteger returnCode){
+                if (returnCode == NSAlertFirstButtonReturn)
+                    [[self document] savePasswordInKeychain:password];
+            }];
+        else if (NSAlertFirstButtonReturn == [alert runModal])
+            [[self document] savePasswordInKeychain:password];
+    }
 }
 
 #pragma mark PDFDocument notifications
@@ -1739,11 +2091,6 @@ static char SKMainWindowContentLayoutRectObservationContext;
 
 - (void)showSnapshotsWithSetups:(NSArray *)setups {
     NSUInteger i, iMax = [setups count];
-    NSMutableArray *tabInfos = 0;
-    NSMutableArray *swcs = nil;
-    
-    if (RUNNING_AFTER(10_11))
-        swcs = [NSMutableArray array];
     
     for (i = 0; i < iMax; i++) {
         NSDictionary *setup  = [setups objectAtIndex:i];
@@ -1758,22 +2105,8 @@ static char SKMainWindowContentLayoutRectObservationContext;
         
         [[self document] addWindowController:swc];
         
-        if (swcs) {
-            [swcs addObject:swc];
-            
-            NSString *tabs = [setup objectForKey:SKSnapshotTabsKey];
-            if (tabs) {
-                if (tabInfos == nil)
-                    tabInfos = [NSMutableArray array];
-                [tabInfos addObject:[NSArray arrayWithObjects:tabs, [NSNumber numberWithUnsignedInteger:i], nil]];
-            }
-        }
-        
         [swc release];
     }
-    
-    if (tabInfos && [swcs count] > 1)
-        [NSWindow addTabs:tabInfos forWindows:[swcs valueForKey:@"window"]];
 }
 
 - (void)snapshotController:(SKSnapshotWindowController *)controller didFinishSetup:(SKSnapshotOpenType)openType {
@@ -1837,36 +2170,44 @@ static char SKMainWindowContentLayoutRectObservationContext;
 - (NSRect)snapshotController:(SKSnapshotWindowController *)controller miniaturizedRect:(BOOL)isMiniaturize {
     if (controller == presentationPreview)
         return NSZeroRect;
-    NSUInteger row = [[rightSideController.snapshotArrayController arrangedObjects] indexOfObject:controller];
-    BOOL shouldReopenRightSidePane = NO;
-    if (isMiniaturize && [self interactionMode] != SKPresentationMode) {
-        if ([self interactionMode] != SKLegacyFullScreenMode && [self rightSidePaneIsOpen] == NO) {
-            [[self window] disableFlushWindow];
-            [self toggleRightSidePane:nil];
-            shouldReopenRightSidePane = YES;
-        } else if ([self interactionMode] == SKLegacyFullScreenMode && ([rightSideWindow state] == NSDrawerClosedState || [rightSideWindow state] == NSDrawerClosingState)) {
-            [rightSideWindow expand];
-            [rightSideWindow performSelector:@selector(collapse) withObject:nil afterDelay:1.0];
-        }
-        [self setRightSidePaneState:SKSidePaneStateSnapshot];
-        if (row != NSNotFound)
-            [rightSideController.snapshotTableView scrollRowToVisible:row];
-    }
     NSRect rect = NSZeroRect;
-    if (row != NSNotFound) {
-        rect = [rightSideController.snapshotTableView frameOfCellAtColumn:0 row:row];
-    } else {
-        rect.origin = SKBottomLeftPoint([rightSideController.snapshotTableView visibleRect]);
+    if ([self hasOverview]) {
+        rect = [[self window] frame];
+        rect.origin.x = NSMaxX(rect) - 1.0;
+        rect.origin.y = floor(NSMidY(rect));
         rect.size.width = rect.size.height = 1.0;
-    }
-    rect = [rightSideController.snapshotTableView convertRectToScreen:rect];
-    if (shouldReopenRightSidePane) {
-        [self toggleRightSidePane:nil];
-        [[self window] enableFlushWindow];
-        [self toggleRightSidePane:self];
+    } else {
+        NSUInteger row = [[rightSideController.snapshotArrayController arrangedObjects] indexOfObject:controller];
+        BOOL shouldReopenRightSidePane = NO;
+        if (isMiniaturize && [self interactionMode] != SKPresentationMode) {
+            if ([self rightSidePaneIsOpen] == NO) {
+                [[self window] disableFlushWindow];
+                [self toggleRightSidePane:nil];
+                shouldReopenRightSidePane = YES;
+            }
+            [self setRightSidePaneState:SKSidePaneStateSnapshot];
+            if (row != NSNotFound)
+                [rightSideController.snapshotTableView scrollRowToVisible:row];
+        }
+        if (row != NSNotFound) {
+            rect = [rightSideController.snapshotTableView frameOfCellAtColumn:0 row:row];
+        } else {
+            rect.origin = SKBottomLeftPoint([rightSideController.snapshotTableView visibleRect]);
+            rect.size.width = rect.size.height = 1.0;
+        }
+        rect = [rightSideController.snapshotTableView convertRectToScreen:rect];
+        if (shouldReopenRightSidePane) {
+            [self toggleRightSidePane:nil];
+            [[self window] enableFlushWindow];
+            [self toggleRightSidePane:self];
+        }
     }
     [self setRecentInfoNeedsUpdate:YES];
     return rect;
+}
+
+- (void)snapshotController:(SKSnapshotWindowController *)controller goToDestination:(PDFDestination *)destination {
+    [pdfView goToDestination:destination];
 }
 
 - (void)showNote:(PDFAnnotation *)annotation {
@@ -1896,7 +2237,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
                                   SKDarkBackgroundColorKey, SKDarkFullScreenBackgroundColorKey,
                                   SKPageBackgroundColorKey, 
                                   SKThumbnailSizeKey, SKSnapshotThumbnailSizeKey, 
-                                  SKShouldAntiAliasKey, SKGreekingThresholdKey, 
+                                  SKShouldAntiAliasKey, SKInterpolationQualityKey, SKGreekingThresholdKey,
                                   SKTableFontSizeKey, nil]
         context:&SKMainWindowDefaultsObservationContext];
 }
@@ -1908,7 +2249,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
                                    SKDarkBackgroundColorKey, SKDarkFullScreenBackgroundColorKey,
                                    SKPageBackgroundColorKey,
                                    SKThumbnailSizeKey, SKSnapshotThumbnailSizeKey,
-                                   SKShouldAntiAliasKey, SKGreekingThresholdKey,
+                                   SKShouldAntiAliasKey, SKInterpolationQualityKey, SKGreekingThresholdKey,
                                    SKTableFontSizeKey, nil]];
     }
     @catch (id e) {}
@@ -1968,23 +2309,15 @@ static char SKMainWindowContentLayoutRectObservationContext;
         NSString *key = [keyPath substringFromIndex:7];
         if ([key isEqualToString:SKBackgroundColorKey] || [key isEqualToString:SKDarkBackgroundColorKey]) {
             if ([self interactionMode] == SKNormalMode) {
-                [pdfView setBackgroundColor:[PDFView defaultBackgroundColor]];
-                [secondaryPdfView setBackgroundColor:[PDFView defaultBackgroundColor]];
+                NSColor *color = [PDFView defaultBackgroundColor];
+                [pdfView setBackgroundColor:color];
+                [secondaryPdfView setBackgroundColor:color];
             }
         } else if ([key isEqualToString:SKFullScreenBackgroundColorKey] || [key isEqualToString:SKDarkFullScreenBackgroundColorKey]) {
-            if ([self interactionMode] == SKFullScreenMode || [self interactionMode] == SKLegacyFullScreenMode) {
+            if ([self interactionMode] == SKFullScreenMode) {
                 NSColor *color = [PDFView defaultFullScreenBackgroundColor];
-                if (color) {
-                    [pdfView setBackgroundColor:color];
-                    [secondaryPdfView setBackgroundColor:color];
-                    [[self window] setBackgroundColor:color];
-                    [[[self window] contentView] setNeedsDisplay:YES];
-                    
-                    for (NSWindow *window in blankingWindows) {
-                        [window setBackgroundColor:color];
-                        [[window contentView] setNeedsDisplay:YES];
-                    }
-                }
+                [pdfView setBackgroundColor:color];
+                [secondaryPdfView setBackgroundColor:color];
             }
         } else if ([key isEqualToString:SKPageBackgroundColorKey]) {
             [pdfView applyDefaultPageBackgroundColor];
@@ -1993,30 +2326,45 @@ static char SKMainWindowContentLayoutRectObservationContext;
             [self allSnapshotsNeedUpdate];
         } else if ([key isEqualToString:SKThumbnailSizeKey]) {
             [self resetThumbnailSizeIfNeeded];
-            [leftSideController.thumbnailTableView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [self countOfThumbnails])]];
+            [leftSideController.thumbnailTableView noteHeightOfRowsChangedAnimating:YES];
         } else if ([key isEqualToString:SKSnapshotThumbnailSizeKey]) {
             [self resetSnapshotSizeIfNeeded];
-            [rightSideController.snapshotTableView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [self countOfSnapshots])]];
+            [rightSideController.snapshotTableView noteHeightOfRowsChangedAnimating:YES];
         } else if ([key isEqualToString:SKShouldAntiAliasKey]) {
             [pdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] boolForKey:SKShouldAntiAliasKey]];
-            [pdfView applyDefaultInterpolationQuality];
             [secondaryPdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] boolForKey:SKShouldAntiAliasKey]];
-            [secondaryPdfView applyDefaultInterpolationQuality];
+            [pdfView requiresDisplay];
+            [secondaryPdfView requiresDisplay];
+        } else if ([key isEqualToString:SKInterpolationQualityKey]) {
+            [pdfView setInterpolationQuality:[[NSUserDefaults standardUserDefaults] integerForKey:SKInterpolationQualityKey]];
+            [secondaryPdfView setInterpolationQuality:[[NSUserDefaults standardUserDefaults] integerForKey:SKInterpolationQualityKey]];
+            [pdfView requiresDisplay];
+            [secondaryPdfView requiresDisplay];
+            [self allThumbnailsNeedUpdate];
         } else if ([key isEqualToString:SKGreekingThresholdKey]) {
             [pdfView setGreekingThreshold:[[NSUserDefaults standardUserDefaults] floatForKey:SKGreekingThresholdKey]];
             [secondaryPdfView setGreekingThreshold:[[NSUserDefaults standardUserDefaults] floatForKey:SKGreekingThresholdKey]];
         } else if ([key isEqualToString:SKTableFontSizeKey]) {
             [self updateTableFont];
-            [self updatePageColumnWidthForTableView:leftSideController.tocOutlineView];
-            [self updatePageColumnWidthForTableView:rightSideController.noteOutlineView];
-            [self updatePageColumnWidthForTableView:leftSideController.findTableView];
-            [self updatePageColumnWidthForTableView:leftSideController.groupedFindTableView];
+            [self updatePageColumnWidthForTableViews:[NSArray arrayWithObjects:leftSideController.tocOutlineView, rightSideController.noteOutlineView, leftSideController.findTableView, leftSideController.groupedFindTableView, nil]];
         }
         
     } else if (context == &SKMainWindowContentLayoutRectObservationContext) {
         
-        if ([[splitView window] isEqual:mainWindow] && [mainWindow respondsToSelector:@selector(contentLayoutRect)])
-            [[splitView superview] setFrame:[mainWindow contentLayoutRect]];
+        NSView *view = [self hasOverview] ? overviewContentView : splitView;
+        if ([[view window] isEqual:mainWindow])
+            [[view superview] setFrame:[mainWindow contentLayoutRect]];
+        
+    } else if (context == &SKMainWindowThumbnailSelectionObservationContext) {
+        
+        NSIndexSet *indexes = [overviewView selectionIndexes];
+        if ([indexes count] == 1 && mwcFlags.updatingThumbnailSelection == 0) {
+            NSUInteger pageIndex = [indexes firstIndex];
+            if ([[pdfView currentPage] pageIndex] != pageIndex)
+                [pdfView goToPage:[[pdfView document] pageAtIndex:pageIndex]];
+        } else if ([indexes count] == 0) {
+            [overviewView setSelectionIndexes:[NSIndexSet indexSetWithIndex:[[pdfView currentPage] pageIndex]]];
+        }
         
     } else if (context == &SKPDFAnnotationPropertiesObservationContext) {
         
@@ -2034,9 +2382,13 @@ static char SKMainWindowContentLayoutRectObservationContext;
             // Is this the first observed note change in the current undo group?
             NSUndoManager *undoManager = [[self document] undoManager];
             BOOL isUndoOrRedo = ([undoManager isUndoing] || [undoManager isRedoing]);
+            
+            if ([undoManager isUndoRegistrationEnabled] == NO)
+                return;
+            
             if (undoGroupOldPropertiesPerNote == nil) {
                 // We haven't recorded changes for any notes at all since the last undo manager checkpoint. Get ready to start collecting them. We don't want to copy the PDFAnnotations though.
-                undoGroupOldPropertiesPerNote = [[NSMapTable alloc] initWithKeyOptions:NSMapTableZeroingWeakMemory | NSMapTableObjectPointerPersonality valueOptions:NSMapTableStrongMemory | NSMapTableObjectPointerPersonality capacity:0];
+                undoGroupOldPropertiesPerNote = [[NSMapTable alloc] initWithKeyOptions:NSMapTableWeakMemory | NSMapTableObjectPointerPersonality valueOptions:NSMapTableStrongMemory | NSMapTableObjectPointerPersonality capacity:0];
                 // Register an undo operation for any note property changes that are going to be coalesced between now and the next invocation of -observeUndoManagerCheckpoint:.
                 [undoManager registerUndoWithTarget:self selector:@selector(setNoteProperties:) object:undoGroupOldPropertiesPerNote];
                 // Don't set the undo action name during undoing and redoing
@@ -2053,13 +2405,16 @@ static char SKMainWindowContentLayoutRectObservationContext;
                 [undoGroupOldPropertiesPerNote setObject:oldNoteProperties forKey:note];
                 [oldNoteProperties release];
                 // set the mod date here, need to do that only once for each note for a real user action
-                if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableModificationDateKey] == NO && isUndoOrRedo == NO && [keyPath isEqualToString:SKNPDFAnnotationModificationDateKey] == NO)
+                if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableModificationDateKey] == NO && isUndoOrRedo == NO && [keyPath isEqualToString:SKNPDFAnnotationModificationDateKey] == NO && [note isSkimNote])
                     [note setModificationDate:[NSDate date]];
             }
             
             // Record the old value for the changed property, unless an older value has already been recorded for the current undo group. Here we're "casting" a KVC key path to a dictionary key, but that should be OK. -[NSMutableDictionary setObject:forKey:] doesn't know the difference.
             if ([oldNoteProperties objectForKey:keyPath] == nil)
                 [oldNoteProperties setObject:oldValue forKey:keyPath];
+            
+            if ([note isSkimNote] == NO)
+                return;
             
             // Update the UI, we should always do that unless the value did not really change or we're just changing the mod date or user name
             if ([keyPath isEqualToString:SKNPDFAnnotationModificationDateKey] == NO && [keyPath isEqualToString:SKNPDFAnnotationUserNameKey] == NO) {
@@ -2121,7 +2476,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
                 if (mwcFlags.autoResizeNoteRows) {
                     NSInteger row = [rightSideController.noteOutlineView rowForItem:[keyPath isEqualToString:SKNPDFAnnotationStringKey] ? note : [note noteText]];
                     if (row != -1)
-                        [rightSideController.noteOutlineView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndex:row]];
+                        [rightSideController.noteOutlineView noteHeightOfRowChanged:row animating:YES];
                 }
             }
             
@@ -2193,13 +2548,36 @@ static char SKMainWindowContentLayoutRectObservationContext;
     }
 }
 
+- (BOOL)isOutlineExpanded:(PDFOutline *)outline {
+    if (-1 == [leftSideController.tocOutlineView rowForItem:outline])
+        return NO;
+    return [leftSideController.tocOutlineView isItemExpanded:outline];
+}
+
+- (void)setExpanded:(BOOL)flag forOutline:(PDFOutline *)outline {
+    if ([self isOutlineExpanded:outline] == flag)
+        return;
+    if (flag) {
+        PDFOutline *parent = [outline parent];
+        if ([parent parent])
+            [self setExpanded:YES forOutline:parent];
+        [leftSideController.tocOutlineView expandItem:outline];
+    } else {
+        [leftSideController.tocOutlineView collapseItem:outline];
+    }
+}
+
 #pragma mark Thumbnails
+
+- (PDFPage *)pageForThumbnail:(SKThumbnail *)thumbnail {
+    return [[pdfView document] pageAtIndex:[thumbnail pageIndex]];
+}
 
 - (BOOL)generateImageForThumbnail:(SKThumbnail *)thumbnail {
     if ([(SKScroller *)[leftSideController.thumbnailTableView.enclosingScrollView verticalScroller] isScrolling] || [[pdfView document] isLocked] || [[presentationSheetController verticalScroller] isScrolling])
         return NO;
     
-    PDFPage *page = [[pdfView document] pageAtIndex:[thumbnail pageIndex]];
+    PDFPage *page = [self pageForThumbnail:thumbnail];
     SKReadingBar *readingBar = [[[pdfView readingBar] page] isEqual:page] ? [pdfView readingBar] : nil;
     PDFDisplayBox box = [pdfView displayBox];
     dispatch_queue_t queue = RUNNING_AFTER(10_11) ? dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0) : dispatch_get_main_queue();
@@ -2213,8 +2591,10 @@ static char SKMainWindowContentLayoutRectObservationContext;
             
             [thumbnail setImage:image];
             
-            if (sameSize == NO)
-                [leftSideController.thumbnailTableView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndex:pageIndex]];
+            if (sameSize == NO) {
+                [leftSideController.thumbnailTableView noteHeightOfRowChanged:pageIndex animating:YES];
+                [self updateOverviewItemSize];
+            }
         });
     });
     
@@ -2245,8 +2625,20 @@ static char SKMainWindowContentLayoutRectObservationContext;
         CGFloat width = 0.8 * fmin(NSWidth(rect), NSHeight(rect));
         rect = NSInsetRect(rect, 0.5 * (NSWidth(rect) - width), 0.5 * (NSHeight(rect) - width));
         
+        NSString *type = [[self document] fileType];
+        if ([type isEqualToString:SKPostScriptDocumentType])
+            type = @"PS";
+        else if ([type isEqualToString:SKEncapsulatedPostScriptDocumentType])
+            type = @"EPS";
+        else if ([type isEqualToString:SKDVIDocumentType])
+            type = @"DVI";
+        else if ([type isEqualToString:SKXDVDocumentType])
+            type = @"XDV";
+        else
+            type = @"PDF";
+
         [pageImage lockFocus];
-        [[NSImage imageNamed:NSImageNameApplicationIcon] drawInRect:rect fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:0.5];
+        [[NSImage stampForType:type] drawInRect:rect fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
         if (isLocked)
             [[[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kLockedBadgeIcon)] drawInRect:rect fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:0.5];
         [pageImage unlockFocus];
@@ -2261,8 +2653,13 @@ static char SKMainWindowContentLayoutRectObservationContext;
     }
     // reloadData resets the selection, so we have to ignore its notification and reset it
     mwcFlags.updatingThumbnailSelection = 1;
-    [[self mutableArrayValueForKey:THUMBNAILS_KEY] setArray:newThumbnails];
+    [self setThumbnails:newThumbnails];
     [self updateThumbnailSelection];
+    if (overviewView) {
+        [overviewView setContent:newThumbnails];
+        [overviewView setSelectionIndexes:[NSIndexSet indexSetWithIndex:[[pdfView currentPage] pageIndex]]];
+        [self updateOverviewItemSize];
+    }
     mwcFlags.updatingThumbnailSelection = 0;
 }
 
@@ -2275,13 +2672,16 @@ static char SKMainWindowContentLayoutRectObservationContext;
     if (fabs(thumbnailSize - thumbnailCacheSize) > FUDGE_SIZE) {
         thumbnailCacheSize = thumbnailSize;
         
-        if ([self countOfThumbnails])
+        if ([[self thumbnails] count])
             [self allThumbnailsNeedUpdate];
     }
+    
+    if (overviewView)
+        [self updateOverviewItemSize];
 }
 
 - (void)updateThumbnailAtPageIndex:(NSUInteger)anIndex {
-    [[self objectInThumbnailsAtIndex:anIndex] setDirty:YES];
+    [[thumbnails objectAtIndex:anIndex] setDirty:YES];
 }
 
 - (void)updateThumbnailsAtPageIndexes:(NSIndexSet *)indexSet {
@@ -2289,7 +2689,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
 }
 
 - (void)allThumbnailsNeedUpdate {
-    [self updateThumbnailsAtPageIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [self countOfThumbnails])]];
+    [self updateThumbnailsAtPageIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [[self thumbnails] count])]];
 }
 
 #pragma mark Notes
@@ -2337,7 +2737,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
 }
 
 - (void)updateNoteFilterPredicate {
-    [rightSideController.noteArrayController setFilterPredicate:[noteTypeSheetController filterPredicateForSearchString:[rightSideController.searchField stringValue] caseInsensitive:mwcFlags.caseInsensitiveNoteSearch]];
+    [rightSideController.noteArrayController setFilterPredicate:[noteTypeSheetController filterPredicateForSearchString:[rightSideController.searchField stringValue] caseInsensitive:mwcFlags.caseInsensitiveFilter]];
     [rightSideController.noteOutlineView reloadData];
 }
 
@@ -2391,7 +2791,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
         if (fabs(newSize.width - oldSize.width) > 1.0 || fabs(newSize.height - oldSize.height) > 1.0) {
             NSUInteger idx = [[rightSideController.snapshotArrayController arrangedObjects] indexOfObject:controller];
             if (idx != NSNotFound)
-                [rightSideController.snapshotTableView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndex:idx]];
+                [rightSideController.snapshotTableView noteHeightOfRowChanged:idx animating:YES];
         }
     }
     if ([dirtySnapshots count] == 0) {
@@ -2407,7 +2807,7 @@ static char SKMainWindowContentLayoutRectObservationContext;
         NSExpression *lhs = [NSExpression expressionForConstantValue:searchString];
         NSExpression *rhs = [NSExpression expressionForKeyPath:@"string"];
         NSUInteger options = NSDiacriticInsensitivePredicateOption;
-        if (mwcFlags.caseInsensitiveNoteSearch)
+        if (mwcFlags.caseInsensitiveFilter)
             options |= NSCaseInsensitivePredicateOption;
         filterPredicate = [NSComparisonPredicate predicateWithLeftExpression:lhs rightExpression:rhs modifier:NSDirectPredicateModifier type:NSInPredicateOperatorType options:options];
     }

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/22/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,7 @@
 - (void)dealloc {
     [typeSelectHelper setDelegate:nil];
     SKDESTROY(typeSelectHelper);
+    SKDESTROY(font);
     [super dealloc];
 }
 
@@ -141,6 +142,12 @@
     } else if ([typeSelectHelper handleEvent:theEvent] == NO) {
         [super keyDown:theEvent];
     }
+}
+
+- (void)mouseDown:(NSEvent *)theEvent {
+    if ([self hasImageToolTips])
+        [[SKImageToolTipWindow sharedToolTipWindow] remove];
+    [super mouseDown:theEvent];
 }
 
 - (void)scrollToBeginningOfDocument:(id)sender {
@@ -243,6 +250,28 @@
         [self setRowHeight:rowHeight];
         [self noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [self numberOfRows])]];
         [self reloadData];
+    }
+}
+
+- (void)noteHeightOfRowsChangedAnimating:(BOOL)animate {
+    if (animate == NO) {
+        [NSAnimationContext beginGrouping];
+        [[NSAnimationContext currentContext] setDuration:0.0];
+    }
+    [self noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [self numberOfRows])]];
+    if (animate == NO) {
+        [NSAnimationContext endGrouping];
+    }
+}
+
+- (void)noteHeightOfRowChanged:(NSInteger)row animating:(BOOL)animate {
+    if (animate == NO) {
+        [NSAnimationContext beginGrouping];
+        [[NSAnimationContext currentContext] setDuration:0.0];
+    }
+    [self noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndex:row]];
+    if (animate == NO) {
+        [NSAnimationContext endGrouping];
     }
 }
 

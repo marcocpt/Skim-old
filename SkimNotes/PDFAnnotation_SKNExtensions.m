@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 6/15/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,7 @@ NSString *SKNUnderlineString = @"Underline";
 NSString *SKNStrikeOutString = @"StrikeOut";
 NSString *SKNLineString = @"Line";
 NSString *SKNInkString = @"Ink";
+NSString *SKNWidgetString = @"Widget";
 
 NSString *SKNPDFAnnotationTypeKey = @"type";
 NSString *SKNPDFAnnotationBoundsKey = @"bounds";
@@ -87,6 +88,25 @@ NSString *SKNPDFAnnotationIconTypeKey = @"iconType";
 
 NSString *SKNPDFAnnotationPointListsKey = @"pointLists";
 
+NSString *SKNPDFAnnotationStringValueKey = @"stringValue";
+NSString *SKNPDFAnnotationStateKey = @"state";
+NSString *SKNPDFAnnotationWidgetTypeKey = @"widgetType";
+NSString *SKNPDFAnnotationFieldNameKey = @"fieldName";
+
+static inline NSColor *SKNColorFromArray(NSArray *array) {
+    CGFloat c[4] = {0.0, 0.0, 0.0, 1.0};
+    if ([array count] > 2) {
+        NSUInteger i;
+        for (i = 0; i < MAX([array count], 4); i++)
+            c[i] = [[array objectAtIndex:i] doubleValue];
+    } else if ([array count] > 0) {
+        c[0] = c[1] = c[2] = [[array objectAtIndex:0] doubleValue];
+        if ([array count] == 2)
+            c[3] = [[array objectAtIndex:1] doubleValue];
+    }
+    return [NSColor colorWithColorSpace:[NSColorSpace sRGBColorSpace] components:c count:4];
+}
+
 #if !defined(MAC_OS_X_VERSION_10_12) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12
 @interface PDFAnnotation (SKNSierraDeclarations)
 - (id)valueForAnnotationKey:(NSString *)key;
@@ -108,7 +128,11 @@ static void replacement_dealloc(id self, SEL _cmd) {
 
 + (void)load {
     NSAutoreleasePool *pool = [NSAutoreleasePool new];
+#if !defined(MAC_OS_X_VERSION_10_8) || MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8
     SkimNotes = [[NSHashTable alloc] initWithOptions:NSHashTableZeroingWeakMemory | NSHashTableObjectPointerPersonality capacity:0];
+#else
+    SkimNotes = [[NSHashTable alloc] initWithOptions:NSHashTableWeakMemory | NSHashTableObjectPointerPersonality capacity:0];
+#endif
     original_dealloc = (void(*)(id,SEL))method_setImplementation(class_getInstanceMethod(self, @selector(dealloc)), (IMP)replacement_dealloc);
     [pool release];
 }
@@ -173,6 +197,8 @@ static void replacement_dealloc(id self, SEL _cmd) {
                 [self setString:contents];
             if ([color isKindOfClass:colorClass])
                 [self setColor:color];
+            else if ([color isKindOfClass:arrayClass])
+                [self setColor:SKNColorFromArray((NSArray *)color)];
             if ([modificationDate isKindOfClass:dateClass] && [self respondsToSelector:@selector(setModificationDate:)])
                 [self setModificationDate:modificationDate];
             if ([userName isKindOfClass:stringClass] && [self respondsToSelector:@selector(setUserName:)])
@@ -463,9 +489,12 @@ static inline PDFLineStyle SKNPDFLineStyleFromAnnotationValue(id value) {
     self = [super initSkimNoteWithProperties:dict];
     if (self) {
         Class colorClass = [NSColor class];
+        Class arrayClass = [NSArray class];
         NSColor *interiorColor = [dict objectForKey:SKNPDFAnnotationInteriorColorKey];
         if ([interiorColor isKindOfClass:colorClass])
             [self setInteriorColor:interiorColor];
+        else if ([interiorColor isKindOfClass:arrayClass])
+            [self setInteriorColor:SKNColorFromArray((NSArray *)interiorColor)];
     }
     return self;
 }
@@ -486,9 +515,12 @@ static inline PDFLineStyle SKNPDFLineStyleFromAnnotationValue(id value) {
     self = [super initSkimNoteWithProperties:dict];
     if (self) {
         Class colorClass = [NSColor class];
+        Class arrayClass = [NSArray class];
         NSColor *interiorColor = [dict objectForKey:SKNPDFAnnotationInteriorColorKey];
         if ([interiorColor isKindOfClass:colorClass])
             [self setInteriorColor:interiorColor];
+        else if ([interiorColor isKindOfClass:arrayClass])
+            [self setInteriorColor:SKNColorFromArray((NSArray *)interiorColor)];
     }
     return self;
 }
@@ -510,6 +542,7 @@ static inline PDFLineStyle SKNPDFLineStyleFromAnnotationValue(id value) {
     if (self) {
         Class stringClass = [NSString class];
         Class colorClass = [NSColor class];
+        Class arrayClass = [NSArray class];
         NSString *startPoint = [dict objectForKey:SKNPDFAnnotationStartPointKey];
         NSString *endPoint = [dict objectForKey:SKNPDFAnnotationEndPointKey];
         NSNumber *startLineStyle = [dict objectForKey:SKNPDFAnnotationStartLineStyleKey];
@@ -523,8 +556,12 @@ static inline PDFLineStyle SKNPDFLineStyleFromAnnotationValue(id value) {
             [self setStartLineStyle:[startLineStyle integerValue]];
         if ([endLineStyle respondsToSelector:@selector(integerValue)])
             [self setEndLineStyle:[endLineStyle integerValue]];
-        if ([interiorColor isKindOfClass:colorClass] && [self respondsToSelector:@selector(setInteriorColor:)])
-            [self setInteriorColor:interiorColor];
+        if ([self respondsToSelector:@selector(setInteriorColor:)]) {
+            if ([interiorColor isKindOfClass:colorClass] && [self respondsToSelector:@selector(setInteriorColor:)])
+                [self setInteriorColor:interiorColor];
+            else if ([interiorColor isKindOfClass:arrayClass])
+                [self setInteriorColor:SKNColorFromArray((NSArray *)interiorColor)];
+        }
     }
     return self;
 }
@@ -559,14 +596,25 @@ static inline PDFLineStyle SKNPDFLineStyleFromAnnotationValue(id value) {
     if (self) {
         Class fontClass = [NSFont class];
         Class colorClass = [NSColor class];
+        Class arrayClass = [NSArray class];
         NSFont *font = [dict objectForKey:SKNPDFAnnotationFontKey];
         NSColor *fontColor = [dict objectForKey:SKNPDFAnnotationFontColorKey];
         NSNumber *alignment = [dict objectForKey:SKNPDFAnnotationAlignmentKey];
         NSNumber *rotation = [dict objectForKey:SKNPDFAnnotationRotationKey];
+        if (font == nil) {
+            NSString *fontName = [dict objectForKey:SKNPDFAnnotationFontNameKey];
+            NSNumber *fontSize = [dict objectForKey:SKNPDFAnnotationFontSizeKey];
+            if ([fontName isKindOfClass:[NSString class]])
+                font = [NSFont fontWithName:fontName size:[fontSize respondsToSelector:@selector(doubleValue)] ? [fontSize doubleValue] : 0.0];
+        }
         if ([font isKindOfClass:fontClass])
             [self setFont:font];
-        if ([fontColor isKindOfClass:colorClass] && [self respondsToSelector:@selector(setFontColor:)])
-            [self setFontColor:fontColor];
+        if ([self respondsToSelector:@selector(setFontColor:)]) {
+            if ([fontColor isKindOfClass:colorClass])
+                [self setFontColor:fontColor];
+            else if ([fontColor isKindOfClass:arrayClass])
+                [self setFontColor:SKNColorFromArray((NSArray *)fontColor)];
+        }
         if ([alignment respondsToSelector:@selector(integerValue)])
             [self setAlignment:[alignment integerValue]];
         if ([rotation respondsToSelector:@selector(integerValue)] && [self respondsToSelector:@selector(setRotation:)])
@@ -805,6 +853,54 @@ static inline void swapPoints(NSPoint p[4], NSUInteger i, NSUInteger j) {
         [dict setValue:pointLists forKey:SKNPDFAnnotationPointListsKey];
         [pointLists release];
     }
+    return dict;
+}
+
+@end
+
+#pragma mark -
+
+@implementation PDFAnnotationTextWidget (SKNExtensions)
+
+- (NSDictionary *)SkimNoteProperties {
+    NSMutableDictionary *dict = [self genericSkimNoteProperties];
+    [dict setValue:[self type] forKey:SKNPDFAnnotationTypeKey];
+    [dict setValue:NSStringFromRect([self bounds]) forKey:SKNPDFAnnotationBoundsKey];
+    [dict setValue:[NSNumber numberWithInteger:kSKNPDFWidgetTypeText] forKey:SKNPDFAnnotationWidgetTypeKey];
+    [dict setValue:[self fieldName] forKey:SKNPDFAnnotationFieldNameKey];
+    [dict setValue:[self stringValue] forKey:SKNPDFAnnotationStringValueKey];
+    return dict;
+}
+
+@end
+
+#pragma mark -
+
+@implementation PDFAnnotationButtonWidget (SKNExtensions)
+
+- (NSDictionary *)SkimNoteProperties {
+    NSMutableDictionary *dict = [self genericSkimNoteProperties];
+    [dict setValue:[self type] forKey:SKNPDFAnnotationTypeKey];
+    [dict setValue:NSStringFromRect([self bounds]) forKey:SKNPDFAnnotationBoundsKey];
+    [dict setValue:[NSNumber numberWithInteger:kSKNPDFWidgetTypeButton] forKey:SKNPDFAnnotationWidgetTypeKey];
+    [dict setValue:[self fieldName] forKey:SKNPDFAnnotationFieldNameKey];
+    [dict setValue:[NSNumber numberWithInteger:[self state]] forKey:SKNPDFAnnotationStateKey];
+    return dict;
+}
+
+@end
+
+#pragma mark -
+
+@implementation PDFAnnotationChoiceWidget (SKNExtensions)
+
+- (NSDictionary *)SkimNoteProperties {
+    NSMutableDictionary *dict = [self genericSkimNoteProperties];
+    [dict setValue:[self type] forKey:SKNPDFAnnotationTypeKey];
+    [dict setValue:NSStringFromRect([self bounds]) forKey:SKNPDFAnnotationBoundsKey];
+    [dict setValue:[NSNumber numberWithInteger:kSKNPDFWidgetTypeChoice] forKey:SKNPDFAnnotationWidgetTypeKey];
+    [dict setValue:[self fieldName] forKey:SKNPDFAnnotationFieldNameKey];
+    [dict setValue:[self stringValue] forKey:SKNPDFAnnotationStringValueKey];
     return dict;
 }
 

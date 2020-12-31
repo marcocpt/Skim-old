@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/2/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,8 +38,10 @@
 
 #import <Cocoa/Cocoa.h>
 
-extern NSString *SKUnarchiveFromDataArrayTransformerName;
 extern NSString *SKTypeImageTransformerName;
+extern NSString *SKIsZeroTransformerName;
+extern NSString *SKIsOneTransformerName;
+extern NSString *SKIsTwoTransformerName;
 
 @interface NSValueTransformer (SKExtensions)
 + (void)registerCustomTransformers;

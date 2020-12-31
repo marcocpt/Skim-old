@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/10/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,6 @@
 #import "SKSplitView.h"
 #import "SKStringConstants.h"
 
-NSString *SKSplitViewAnimationDidEndNotification = @"SKSplitViewAnimationDidEndNotification";
 
 @implementation SKSplitView
 
@@ -50,6 +49,11 @@ NSString *SKSplitViewAnimationDidEndNotification = @"SKSplitViewAnimationDidEndN
         return [CABasicAnimation animation];
     else
         return [super defaultAnimationForKey:key];
+}
+
+- (void)dealloc {
+    SKDESTROY(queue);
+    [super dealloc];
 }
 
 - (CGFloat)firstSplitPosition {
@@ -80,14 +84,46 @@ NSString *SKSplitViewAnimationDidEndNotification = @"SKSplitViewAnimationDidEndN
     [self setPosition:position ofDividerAtIndex:1];
 }
 
+- (void)enqueueExternal:(BOOL)external operation:(void(^)(void))block {
+    if (queue == nil)
+        queue = [[NSMutableArray alloc] init];
+    void (^queuedBlock)(void);
+    if (external) {
+        queuedBlock = Block_copy(^{
+            block();
+            [self dequeNext];
+        });
+    } else {
+        queuedBlock = Block_copy(block);
+    }
+    [queue addObject:queuedBlock];
+    Block_release(queuedBlock);
+}
+
+- (void)enqueueOperation:(void(^)(void))block {
+    [self enqueueExternal:YES operation:block];
+}
+
+- (void)dequeNext {
+    if ([queue count] > 0) {
+        void (^block)(void) = [[queue firstObject] retain];
+        [queue removeObjectAtIndex:0];
+        block();
+        Block_release(block);
+    }
+}
+
 - (void)setPosition:(CGFloat)position ofDividerAtIndex:(NSInteger)dividerIndex animate:(BOOL)animate {
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey] || dividerIndex > 1)
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey] ||
+        [self window] == nil || dividerIndex > 1)
         animate = NO;
     
     if (animating) {
+        [self enqueueExternal:NO operation:^(void){ [self setPosition:position ofDividerAtIndex:dividerIndex animate:animate]; }];
         // do nothing
     } else if (animate == NO) {
         [self setPosition:position ofDividerAtIndex:dividerIndex];
+        [self dequeNext];
     } else {
         animating = YES;
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
@@ -100,7 +136,7 @@ NSString *SKSplitViewAnimationDidEndNotification = @"SKSplitViewAnimationDidEndN
             }
             completionHandler:^{
                 animating = NO;
-                [[NSNotificationCenter defaultCenter] postNotificationName:SKSplitViewAnimationDidEndNotification object:self];
+                [self dequeNext];
         }];
     }
 }

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/28/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,6 @@
     NSPopUpButton *notesDocumentPopUpButton;
     SKTableView *tableView;
     NSPopUpButton *stylePopUpButton;
-    NSMatrix *extentMatrix;
     NSButton *okButton;
     NSButton *cancelButton;
     NSLayoutConstraint *boxLeadingConstraint;
@@ -64,7 +63,6 @@
 @property (nonatomic, retain) IBOutlet NSPopUpButton *notesDocumentPopUpButton;
 @property (nonatomic, retain) IBOutlet SKTableView *tableView;
 @property (nonatomic, retain) IBOutlet NSPopUpButton *stylePopUpButton;
-@property (nonatomic, retain) IBOutlet NSMatrix *extentMatrix;
 @property (nonatomic, retain) IBOutlet NSButton *okButton, *cancelButton;
 @property (nonatomic, retain) IBOutlet NSLayoutConstraint *boxLeadingConstraint, *tableWidthConstraint;
 @property (nonatomic, retain) IBOutlet NSArrayController *arrayController;

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 10/20/11.
 /*
- This software is Copyright (c) 2011-2019
+ This software is Copyright (c) 2011-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,24 +41,7 @@
 #import "NSColor_SKExtensions.h"
 
 
-#if SDK_BEFORE(10_9)
-
-@interface NSAppearance : NSObject <NSCoding>
-+ (NSAppearance *)currentAppearance;
-+ (void)setCurrentAppearance:(NSAppearance *)appearance;
-+ (NSAppearance *)appearanceNamed:(NSString *)name;
-- (id)initWithAppearanceNamed:(NSString *)name bundle:(NSBundle *)bundle;
-- (NSString *)name;
-- (BOOL)allowsVibrancy;
-- (NSString *)bestMatchFromAppearancesWithNames:(NSArray *)names;
-@end
-
-@protocol NSAppearanceCustomization : NSObject
-@property (retain) NSAppearance *appearance;
-@property (readonly, retain) NSAppearance *effectiveAppearance;
-@end
-
-#elif SDK_BEFORE(10_14)
+#if SDK_BEFORE(10_14)
 
 @interface NSAppearance (SKMojaveExtensions)
 - (NSString *)bestMatchFromAppearancesWithNames:(NSArray *)names;
@@ -73,7 +56,7 @@ BOOL SKHasDarkAppearance(id object) {
     if (RUNNING_AFTER(10_13)) {
         id appearance = nil;
         if (object == nil)
-            appearance = [NSClassFromString(@"NSAppearance") currentAppearance];
+            appearance = [NSAppearance currentAppearance];
         else if ([object respondsToSelector:@selector(effectiveAppearance)])
             appearance = [(id<NSAppearanceCustomization>)object effectiveAppearance];
 #pragma clang diagnostic push
@@ -94,34 +77,34 @@ void SKSetHasLightAppearance(id object) {
         [(id<NSAppearanceCustomization>)object setAppearance:[NSAppearance appearanceNamed:@"NSAppearanceNameAqua"]];
 }
 
+void SKSetHasDefaultAppearance(id object) {
+    if (RUNNING_AFTER(10_13) && [object respondsToSelector:@selector(setAppearance:)])
+        [(id<NSAppearanceCustomization>)object setAppearance:nil];
+}
+
 void SKRunWithAppearance(id object, void (^code)(void)) {
-    Class appearanceClass = Nil;
     NSAppearance *appearance = nil;
     if ([object respondsToSelector:@selector(effectiveAppearance)]) {
-        appearanceClass = NSClassFromString(@"NSAppearance");
-        if (appearanceClass) {
-            appearance = [[[appearanceClass currentAppearance] retain] autorelease];
-            [appearanceClass setCurrentAppearance:[(id<NSAppearanceCustomization>)object effectiveAppearance]];
-        }
+        appearance = [[[NSAppearance currentAppearance] retain] autorelease];
+        [NSAppearance setCurrentAppearance:[(id<NSAppearanceCustomization>)object effectiveAppearance]];
     }
     code();
-    if (appearanceClass)
-        [appearanceClass setCurrentAppearance:appearance];
+    if ([object respondsToSelector:@selector(effectiveAppearance)])
+        [NSAppearance setCurrentAppearance:appearance];
 }
 
 void SKRunWithLightAppearance(void (^code)(void)) {
-    Class appearanceClass = NSClassFromString(@"NSAppearance");
-    NSAppearance *appearance = [[[appearanceClass currentAppearance] retain] autorelease];
-    [appearanceClass setCurrentAppearance:[appearanceClass appearanceNamed:@"NSAppearanceNameAqua"]];
+    NSAppearance *appearance = [[[NSAppearance currentAppearance] retain] autorelease];
+    [NSAppearance setCurrentAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
     code();
-    [appearanceClass setCurrentAppearance:appearance];
+    [NSAppearance setCurrentAppearance:appearance];
 }
 
 #pragma mark -
 
 void SKSetColorsForResizeHandle(CGContextRef context, BOOL active)
 {
-    NSColor *color = [[[NSColor selectionHighlightInteriorColor:active] colorUsingColorSpaceName:NSCalibratedRGBColorSpace] colorWithAlphaComponent:0.8];
+    NSColor *color = [NSColor selectionHighlightInteriorColor:active];
     CGContextSetFillColorWithColor(context, [color CGColor]);
     color = [NSColor selectionHighlightColor:active];
     CGContextSetStrokeColorWithColor(context, [color CGColor]);
@@ -157,7 +140,6 @@ void SKDrawResizeHandles(CGContextRef context, NSRect rect, CGFloat radius, BOOL
 #pragma mark -
 
 void SKDrawTextFieldBezel(NSRect rect, NSView *controlView) {
-    // @@ Dark mode
     static NSTextFieldCell *cell = nil;
     if (cell == nil) {
         cell = [[NSTextFieldCell alloc] initTextCell:@""];

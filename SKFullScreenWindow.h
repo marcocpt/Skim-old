@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,16 +41,13 @@
 
 
 @interface SKFullScreenWindow : SKMainWindow <NSAnimationDelegate> {
-    NSViewAnimation *animation;
     BOOL isMain;
 }
 
-- (id)initWithScreen:(NSScreen *)screen backgroundColor:(NSColor *)backgroundColor level:(NSInteger)level isMain:(BOOL)flag;
+- (id)initWithScreen:(NSScreen *)screen level:(NSInteger)level isMain:(BOOL)flag;
 
-- (void)fadeOutBlocking;
-- (void)fadeOut;
-- (void)fadeInBlocking;
-- (void)fadeIn;
+- (void)fadeOutBlocking:(BOOL)blocking;
+- (void)fadeInBlocking:(BOOL)blocking;
 
 @end
 

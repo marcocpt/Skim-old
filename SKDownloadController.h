@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/11/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,9 +43,9 @@
 #import "NSTouchBar_SKForwardDeclarations.h"
 
 
-@class SKDownload, NSURLSession;
+@class SKDownload;
 
-@interface SKDownloadController : SKWindowController <SKTableViewDelegate, NSTableViewDataSource, NSToolbarDelegate, QLPreviewPanelDelegate, QLPreviewPanelDataSource, NSTouchBarDelegate> {
+@interface SKDownloadController : SKWindowController <SKTableViewDelegate, NSTableViewDataSource, NSToolbarDelegate, NSURLSessionDelegate, QLPreviewPanelDelegate, QLPreviewPanelDataSource, NSTouchBarDelegate> {
     SKTableView *tableView;
     NSButton *clearButton;
     NSButton *tbClearButton;
@@ -54,7 +54,7 @@
     NSButton *removeButton;
     NSMutableArray *downloads;
     NSURLSession *session;
-    NSMapTable *delegates;
+    NSMapTable *downloadsForTasks;
     NSMutableDictionary *touchBarItems;
 }
 
@@ -85,20 +85,7 @@
 
 - (void)setupToolbar;
 
-- (id)newDownloadTaskForDownload:(SKDownload *)download;
-- (void)cancelDownloadTask:(id)task forDownload:(SKDownload *)download;
-- (void)removeDownloadTask:(id)task;
-
-@end
-
-@class NSURLSessionDownloadTask;
-
-@protocol SKURLDownloadTaskDelegate <NSObject>
-
-@optional
-
-- (void)downloadTask:(NSURLSessionDownloadTask *)task didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite;
-- (void)downloadTask:(NSURLSessionDownloadTask *)task didFinishDownloadingToURL:(NSURL *)location;
-- (void)downloadTask:(NSURLSessionDownloadTask *)task didFailWithError:(NSError *)error;
+- (NSURLSessionDownloadTask *)newDownloadTaskForDownload:(SKDownload *)download;
+- (void)removeDownloadTask:(NSURLSessionDownloadTask *)task;
 
 @end

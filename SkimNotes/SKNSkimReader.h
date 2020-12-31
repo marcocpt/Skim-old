@@ -4,7 +4,7 @@
 //
 //  Created by Adam Maxwell on 04/09/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Adam Maxwell. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@
 // this should only be used before any of the following calls is made
 - (void)setAgentIdentifier:(NSString *)identifier;
 
-- (NSArray *)SkimNotesAtURL:(NSURL *)fileURL;
+- (NSData *)SkimNotesAtURL:(NSURL *)fileURL;
 - (NSData *)RTFNotesAtURL:(NSURL *)fileURL;
 - (NSString *)textNotesAtURL:(NSURL *)fileURL;
 

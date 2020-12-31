@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 06/05/2019.
 /*
- This software is Copyright (c) 2019
+ This software is Copyright (c) 2019-2020
  Christiaan Hofman. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,8 @@
 #import "NSEvent_SKExtensions.h"
 #import <SkimNotes/SkimNotes.h>
 #import "PDFAnnotation_SKExtensions.h"
+#import "NSUserDefaults_SKExtensions.h"
+#import "SKColorList.h"
 
 #define SKDocumentTouchBarIdentifier @"net.sourceforge.skim-app.touchbar.document"
 
@@ -59,17 +61,13 @@
 #define SKTouchBarItemIdentifierFullScreen     @"net.sourceforge.skim-app.touchbar-item.fullScreen"
 #define SKTouchBarItemIdentifierPresentation   @"net.sourceforge.skim-app.touchbar-item.presentation"
 #define SKTouchBarItemIdentifierFavoriteColors @"net.sourceforge.skim-app.touchbar-item.favoriteColors"
+#define SKTouchBarItemIdentifierColors         @"net.sourceforge.skim-app.touchbar-item.clors"
 
 static NSString *noteToolImageNames[] = {@"TouchBarTextNotePopover", @"TouchBarAnchoredNotePopover", @"TouchBarCircleNotePopover", @"TouchBarSquareNotePopover", @"TouchBarHighlightNotePopover", @"TouchBarUnderlineNotePopover", @"TouchBarStrikeOutNotePopover", @"TouchBarLineNotePopover", @"TouchBarInkNotePopover"};
 
-#if SDK_BEFORE(10_10)
-enum {
-    NSSegmentStyleSeparated = 8
-}
-#endif
-
 @interface SKMainTouchBarController (SKPrivate)
 
+- (void)chooseColor:(id)sender;
 - (void)goToPreviousNextPage:(id)sender;
 - (void)goToPreviousNextFirstLastPage:(id)sender;
 - (void)zoomInActualOut:(id)sender;
@@ -121,7 +119,7 @@ enum {
     NSTouchBar *touchBar = [[[NSClassFromString(@"NSTouchBar") alloc] init] autorelease];
     [touchBar setCustomizationIdentifier:SKDocumentTouchBarIdentifier];
     [touchBar setDelegate:self];
-    [touchBar setCustomizationAllowedItemIdentifiers:[NSArray arrayWithObjects:SKTouchBarItemIdentifierNavigation, SKTouchBarItemIdentifierNavigationFull, SKTouchBarItemIdentifierZoom, SKTouchBarItemIdentifierToolMode, SKTouchBarItemIdentifierAddNote, SKTouchBarItemIdentifierFullScreen, SKTouchBarItemIdentifierPresentation, SKTouchBarItemIdentifierFavoriteColors, @"NSTouchBarItemIdentifierFlexibleSpace", nil]];
+    [touchBar setCustomizationAllowedItemIdentifiers:[NSArray arrayWithObjects:SKTouchBarItemIdentifierNavigation, SKTouchBarItemIdentifierNavigationFull, SKTouchBarItemIdentifierZoom, SKTouchBarItemIdentifierToolMode, SKTouchBarItemIdentifierAddNote, SKTouchBarItemIdentifierFullScreen, SKTouchBarItemIdentifierPresentation, SKTouchBarItemIdentifierFavoriteColors, SKTouchBarItemIdentifierColors, @"NSTouchBarItemIdentifierFlexibleSpace", nil]];
     [touchBar setDefaultItemIdentifiers:[NSArray arrayWithObjects:SKTouchBarItemIdentifierNavigation, SKTouchBarItemIdentifierToolMode, SKTouchBarItemIdentifierAddNote, SKTouchBarItemIdentifierFavoriteColors, nil]];
     return touchBar;
 }
@@ -141,8 +139,7 @@ enum {
                 previousNextPageButton = [[NSSegmentedControl segmentedControlWithImages:images trackingMode:NSSegmentSwitchTrackingMomentary target:self action:@selector(goToPreviousNextPage:)] retain];
 #pragma clang diagnostic pop
                 [self handlePageChangedNotification:nil];
-                if (RUNNING_AFTER(10_9))
-                    [previousNextPageButton setSegmentStyle:NSSegmentStyleSeparated];
+                [previousNextPageButton setSegmentStyle:NSSegmentStyleSeparated];
             }
             item = [[[NSClassFromString(@"NSCustomTouchBarItem") alloc] initWithIdentifier:identifier] autorelease];
             [(NSCustomTouchBarItem *)item setView:previousNextPageButton];
@@ -157,8 +154,7 @@ enum {
                 previousNextFirstLastPageButton = [[NSSegmentedControl segmentedControlWithImages:images trackingMode:NSSegmentSwitchTrackingMomentary target:self action:@selector(goToPreviousNextPage:)] retain];
 #pragma clang diagnostic pop
                 [self handlePageChangedNotification:nil];
-                if (RUNNING_AFTER(10_9))
-                    [previousNextFirstLastPageButton setSegmentStyle:NSSegmentStyleSeparated];
+                [previousNextFirstLastPageButton setSegmentStyle:NSSegmentStyleSeparated];
             }
             item = [[[NSClassFromString(@"NSCustomTouchBarItem") alloc] initWithIdentifier:identifier] autorelease];
             [(NSCustomTouchBarItem *)item setView:previousNextFirstLastPageButton];
@@ -172,9 +168,9 @@ enum {
 #pragma clang diagnostic ignored "-Wpartial-availability"
                 zoomInActualOutButton = [[NSSegmentedControl segmentedControlWithImages:images trackingMode:NSSegmentSwitchTrackingMomentary target:self action:@selector(zoomInActualOut:)] retain];
 #pragma clang diagnostic pop
-                if (RUNNING_AFTER(10_9))
-                    [zoomInActualOutButton setSegmentStyle:NSSegmentStyleSeparated];
+                [zoomInActualOutButton setSegmentStyle:NSSegmentStyleSeparated];
                 [self handleScaleChangedNotification:nil];
+                [self overviewChanged];
             }
             item = [[[NSClassFromString(@"NSCustomTouchBarItem") alloc] initWithIdentifier:identifier] autorelease];
             [(NSCustomTouchBarItem *)item setView:zoomInActualOutButton];
@@ -293,6 +289,14 @@ enum {
             [(NSCustomTouchBarItem *)item setViewController:colorPicker];
             [(NSCustomTouchBarItem *)item setCustomizationLabel:NSLocalizedString(@"Favorite Colors", @"Toolbar item label")];
             
+        } else if ([identifier isEqualToString:SKTouchBarItemIdentifierColors]) {
+            
+            item = [[[NSClassFromString(@"NSColorPickerTouchBarItem") alloc] initWithIdentifier:identifier] autorelease];
+            [(NSColorPickerTouchBarItem *)item setColorList:[SKColorList favoriteColorList]];
+            [(NSColorPickerTouchBarItem *)item setAction:@selector(chooseColor:)];
+            [(NSColorPickerTouchBarItem *)item setTarget:self];
+            [(NSColorPickerTouchBarItem *)item setCustomizationLabel:NSLocalizedString(@"Colors", @"Toolbar item label")];
+            
         }
         if (item) {
             [touchBarItems setObject:item forKey:identifier];
@@ -308,11 +312,20 @@ enum {
     PDFAnnotation *annotation = [mainController.pdfView activeAnnotation];
     BOOL isShift = ([NSEvent standardModifierFlags] & NSShiftKeyMask) != 0;
     BOOL isAlt = ([NSEvent standardModifierFlags] & NSAlternateKeyMask) != 0;
-    if ([annotation isSkimNote])
+    if ([annotation isSkimNote]) {
         [annotation setColor:color alternate:isAlt updateDefaults:isShift];
+    } else {
+       NSString *defaultKey = [mainController.pdfView currentColorDefaultKeyForAlternate:isAlt];
+       if (defaultKey)
+           [[NSUserDefaults standardUserDefaults] setColor:color forKey:defaultKey];
+   }
 }
 
 #pragma mark Actions
+
+- (void)chooseColor:(id)sender {
+    [self colorPicker:nil didSelectColor:[sender color]];
+}
 
 - (void)goToPreviousNextPage:(id)sender {
     NSInteger tag = [sender selectedSegment];
@@ -428,13 +441,24 @@ enum {
 - (void)interactionModeChanged {
     SKInteractionMode mode = [mainController interactionMode];
     
-    NSString *imageName = (mode == SKFullScreenMode || mode == SKLegacyFullScreenMode) ? @"NSTouchBarExitFullScreenTemplate" : @"NSTouchBarEnterFullScreenTemplate";
+    NSString *imageName = mode == SKFullScreenMode ? @"NSTouchBarExitFullScreenTemplate" : @"NSTouchBarEnterFullScreenTemplate";
     [fullScreenButton setImage:[NSImage imageNamed:imageName] forSegment:0];
     
-    BOOL enabled = mode != SKPresentationMode;
+    BOOL enabled = mode != SKPresentationMode && [mainController hasOverview] == NO;
     [toolModeButton setEnabled:enabled];
     [annotationModeButton setEnabled:enabled];
     [noteButton setEnabled:enabled];
+}
+
+- (void)overviewChanged {
+    BOOL showPDF = [mainController hasOverview] == NO;
+    
+    BOOL enabled = [mainController interactionMode] != SKPresentationMode && showPDF;
+    [toolModeButton setEnabled:enabled];
+    [annotationModeButton setEnabled:enabled];
+    [noteButton setEnabled:enabled];
+    
+    [zoomInActualOutButton setEnabled:showPDF];
 }
 
 - (void)registerForNotifications {

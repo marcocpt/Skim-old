@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/10/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,24 +43,31 @@ NSString *SKPasteboardTypeTransition = @"net.sourceforge.skim-app.pasteboard.tra
 
 @implementation SKTransitionInfo
 
-@synthesize transitionStyle, duration, shouldRestrict, thumbnail, label;
-@dynamic properties, title;
+@synthesize transitionStyle, duration, shouldRestrict, thumbnail, toThumbnail;
+@dynamic properties, label, title, transitionName;
+
++ (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
+    NSSet *keyPaths = [super keyPathsForValuesAffectingValueForKey:key];
+    if ([key isEqualToString:@"transitionName"])
+        keyPaths = [keyPaths setByAddingObjectsFromSet:[NSSet setWithObjects:@"transitionStyle", nil]];
+    return keyPaths;
+}
 
 - (id)init {
     self = [super init];
     if (self) {
         transitionStyle = SKNoTransition;
         duration = 1.0;
-        shouldRestrict = NO;
+        shouldRestrict = YES;
         thumbnail = nil;
-        label = nil;
+        toThumbnail = nil;
     }
     return self;
 }
 
 - (void)dealloc {
     SKDESTROY(thumbnail);
-    SKDESTROY(label);
+    SKDESTROY(toThumbnail);
     [super dealloc];
 }
 
@@ -118,8 +125,18 @@ NSString *SKPasteboardTypeTransition = @"net.sourceforge.skim-app.pasteboard.tra
         [self setShouldRestrict:[value doubleValue]];
 }
 
+- (NSString *)label {
+    if ([self thumbnail] && [self toThumbnail])
+        return [NSString stringWithFormat:@"%@\u2192%@", [[self thumbnail] label], [[self toThumbnail] label]];
+    return nil;
+}
+
 - (NSString *)title {
     return NSLocalizedString(@"Page Transition", @"Box title");
+}
+
+- (NSString *)transitionName {
+    return [SKTransitionController localizedNameForStyle:[self transitionStyle]];
 }
 
 @end

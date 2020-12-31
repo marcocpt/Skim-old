@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/25/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -115,7 +115,7 @@ static inline NSString *titleForTableColumnIdentifier(NSString *identifier) {
                     if ([theEvent type] == NSLeftMouseDragged) {
                         CGFloat currentHeight = fmax([self rowHeight], startHeight + [theEvent locationInView:self].y - mouseLoc.y);
                         [[self delegate] outlineView:self setHeight:currentHeight ofRowByItem:item];
-                        [self noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndex:row]];
+                        [self noteHeightOfRowsChangedAnimating:NO];
                     }
                 }
                 
@@ -156,6 +156,20 @@ static inline NSString *titleForTableColumnIdentifier(NSString *identifier) {
         return [super validateMenuItem:menuItem];
     }
     return YES;
+}
+
+- (NSRect)frameOfCellAtColumn:(NSInteger)column row:(NSInteger)row {
+    if (column == -1) {
+        NSRect frame = NSZeroRect;
+        NSInteger numColumns = [self numberOfColumns];
+        NSArray *tcs = [self tableColumns];
+        for (column = 0; column < numColumns; column++) {
+            if ([[tcs objectAtIndex:column] isHidden] == NO)
+                frame = NSUnionRect(frame, [super frameOfCellAtColumn:column row:row]);
+        }
+        return frame;
+    }
+    return [super frameOfCellAtColumn:column row:row];
 }
 
 #pragma mark Delegate

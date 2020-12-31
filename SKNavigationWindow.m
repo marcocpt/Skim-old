@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 12/19/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@
 #import "PDFView_SKExtensions.h"
 #import "NSShadow_SKExtensions.h"
 #import "NSView_SKExtensions.h"
+#import "NSImage_SKExtensions.h"
 
 #define BUTTON_WIDTH 50.0
 #define BUTTON_HEIGHT 50.0
@@ -64,24 +65,31 @@ static inline NSBezierPath *zoomButtonPath(NSSize size);
 static inline NSBezierPath *alternateZoomButtonPath(NSSize size);
 static inline NSBezierPath *closeButtonPath(NSSize size);
 
-
 @implementation SKNavigationWindow
 
 - (id)initWithPDFView:(SKPDFView *)pdfView {
     NSScreen *screen = [[pdfView window] screen] ?: [NSScreen mainScreen];
     CGFloat width = 4 * BUTTON_WIDTH + 2 * SEP_WIDTH + 2 * BUTTON_MARGIN;
-    BOOL hasSlider = [pdfView interactionMode] == SKLegacyFullScreenMode; 
-    if (hasSlider)
-        width += SLIDER_WIDTH;
     NSRect contentRect = NSMakeRect(NSMidX([screen frame]) - 0.5 * width, NSMinY([screen frame]) + WINDOW_OFFSET, width, BUTTON_HEIGHT + 2 * BUTTON_MARGIN);
     self = [super initWithContentRect:contentRect];
     if (self) {
         
+        [self setIgnoresMouseEvents:NO];
         [self setDisplaysWhenScreenProfileChanges:YES];
         [self setLevel:[[pdfView window] level]];
         [self setMovableByWindowBackground:YES];
         
-        [self setContentView:[[[SKNavigationContentView alloc] init] autorelease]];
+        contentRect.origin = NSZeroPoint;
+        NSVisualEffectView *contentView = [[NSVisualEffectView alloc] initWithFrame:contentRect];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+        [contentView setMaterial:RUNNING_BEFORE(10_14) ? NSVisualEffectMaterialDark : NSVisualEffectMaterialFullScreenUI];
+#pragma clang diagnostic pop
+        [contentView setState:NSVisualEffectStateActive];
+        [contentView setMaskImage:[NSImage maskImageWithSize:contentRect.size cornerRadius:CORNER_RADIUS]];
+        
+        [self setContentView:contentView];
+        [contentView release];
         
         NSRect rect = NSMakeRect(BUTTON_MARGIN, BUTTON_MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
         previousButton = [[SKNavigationButton alloc] initWithFrame:rect];
@@ -104,19 +112,6 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
         rect.origin.x = NSMaxX(rect);
         rect.size.width = SEP_WIDTH;
         [[self contentView] addSubview:[[[SKNavigationSeparator alloc] initWithFrame:rect] autorelease]];
-        
-        if (hasSlider) {
-            rect.origin.x = NSMaxX(rect);
-            rect.size.width = SLIDER_WIDTH;
-            zoomSlider = [[SKNavigationSlider alloc] initWithFrame:rect];
-            [zoomSlider setTarget:pdfView];
-            [zoomSlider setAction:@selector(zoomLog:)];
-            [zoomSlider setToolTip:NSLocalizedString(@"Zoom", @"Tool tip message")];
-            [zoomSlider setMinValue:[pdfView minimumScaleFactor]];
-            [zoomSlider setMaxValue:[pdfView maximumScaleFactor]];
-            [zoomSlider setDoubleValue:log([pdfView scaleFactor])];
-            [[self contentView] addSubview:zoomSlider];
-        }
         
         rect.origin.x = NSMaxX(rect);
         rect.size.width = BUTTON_WIDTH;
@@ -161,8 +156,25 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
     [super dealloc];
 }
 
+- (void)showForWindow:(NSWindow *)window {
+    NSRect frame = [window frame];
+    CGFloat width = NSWidth([self frame]);
+    frame = NSMakeRect(NSMidX(frame) - 0.5 * width, NSMinY(frame) + WINDOW_OFFSET, width, BUTTON_HEIGHT + 2 * BUTTON_MARGIN);
+    [self setFrame:frame display:NO];
+    if ([self parentWindow] == nil) {
+        [self setAlphaValue:0.0];
+        [window addChildWindow:self ordered:NSWindowAbove];
+    }
+    [self fadeIn];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleParentWindowDidResizeNotification:) name:NSWindowDidResizeNotification object:window];
+}
+
 - (void)remove {
-    [[self parentWindow] removeChildWindow:self];
+    if ([self parentWindow]) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResizeNotification object:[self parentWindow]];
+        [[self parentWindow] removeChildWindow:self];
+    }
     [super remove];
 }
 
@@ -179,6 +191,14 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
 - (void)handlePageChangedNotification:(NSNotification *)notification {
     [previousButton setEnabled:[[notification object] canGoToPreviousPage]];
     [nextButton setEnabled:[[notification object] canGoToNextPage]];
+}
+
+- (void)handleParentWindowDidResizeNotification:(NSNotification *)notification {
+    NSWindow *window = [self parentWindow];
+    NSRect frame = [window frame];
+    CGFloat width = NSWidth([self frame]);
+    frame = NSMakeRect(NSMidX(frame) - 0.5 * width, NSMinY(frame) + WINDOW_OFFSET, width, BUTTON_HEIGHT + 2 * BUTTON_MARGIN);
+    [self setFrame:frame display:YES];
 }
 
 @end
@@ -297,8 +317,7 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
         return nil;
     NSShadow *aShadow = [[NSShadow alloc] init];
     [aShadow setShadowColor:[NSColor blackColor]];
-    [aShadow setShadowBlurRadius:3.0];
-    [aShadow setShadowOffset:NSMakeSize(0.0, -1.0)];
+    [aShadow setShadowBlurRadius:2.0];
     NSDictionary *attrs = [NSDictionary dictionaryWithObjectsAndKeys:
         [NSFont boldSystemFontOfSize:15.0], NSFontAttributeName, 
         [NSColor whiteColor], NSForegroundColorAttributeName, 
@@ -403,6 +422,15 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
     [coder encodeObject:alternatePath forKey:@"alternatePath"];
 }
 
+- (id)copyWithZone:(NSZone *)zone {
+    SKNavigationButtonCell *copy = [super copyWithZone:zone];
+    copy->toolTip = [toolTip retain];
+    copy->alternateToolTip = [alternateToolTip retain];
+    copy->path = [path retain];
+    copy->alternatePath = [alternatePath retain];
+    return copy;
+}
+
 - (void)dealloc {
     SKDESTROY(toolTip);
     SKDESTROY(alternateToolTip);
@@ -446,62 +474,6 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
 
 #pragma mark -
 
-@implementation SKNavigationSlider
-
-@synthesize toolTip;
-
-+ (Class)cellClass { return [SKNavigationSliderCell class]; }
-
-- (id)initWithFrame:(NSRect)frameRect {
-    self = [super initWithFrame:frameRect];
-    if (self) {
-        trackingArea = [[NSTrackingArea alloc] initWithRect:[self bounds] options:NSTrackingMouseEnteredAndExited | NSTrackingInVisibleRect | NSTrackingActiveAlways owner:self userInfo:nil];
-        [self addTrackingArea:trackingArea];
-        toolTip = nil;
-    }
-    return self;
-}
-
-- (id)initWithCoder:(NSCoder *)decoder {
-    self = [super initWithCoder:decoder];
-    if (self) {
-        toolTip = [[decoder decodeObjectForKey:@"toolTip"] retain];
-        trackingArea = [[NSTrackingArea alloc] initWithRect:[self bounds] options:NSTrackingMouseEnteredAndExited | NSTrackingInVisibleRect | NSTrackingActiveAlways owner:self userInfo:nil];
-        [self addTrackingArea:trackingArea];
-    }
-    return self;
-}
-
-- (void)encodeWithCoder:(NSCoder *)coder {
-    [super encodeWithCoder:coder];
-    [coder encodeObject:toolTip forKey:@"toolTip"];
-}
-
-- (void)dealloc {
-    SKDESTROY(trackingArea);
-    SKDESTROY(toolTip);
-    [super dealloc];
-}
-
-- (void)mouseEntered:(NSEvent *)theEvent {
-    if ([[theEvent trackingArea] isEqual:trackingArea])
-        [[SKNavigationToolTipWindow sharedToolTipWindow] showToolTip:toolTip forView:self];
-    else
-        [super mouseEntered:theEvent];
-}
-
-- (void)mouseExited:(NSEvent *)theEvent {
-    if ([[theEvent trackingArea] isEqual:trackingArea]) {
-        if ([[[SKNavigationToolTipWindow sharedToolTipWindow] view] isEqual:self])
-            [[SKNavigationToolTipWindow sharedToolTipWindow] orderOut:nil];
-    } else
-        [super mouseExited:theEvent];
-}
-
-@end
-
-#pragma mark -
-
 @implementation SKNavigationSliderCell
 
 - (void)drawBarInside:(NSRect)frame flipped:(BOOL)flipped {
@@ -521,7 +493,7 @@ static inline NSBezierPath *closeButtonPath(NSSize size);
 - (void)drawKnob:(NSRect)frame {
 	if ([self isEnabled]) {
         [[NSColor colorWithDeviceWhite:1.0 alpha:[self isHighlighted] ? 0.9 : 0.7] setFill];
-        [NSShadow setShadowWithColor:[NSColor blackColor] blurRadius:2.0 yOffset:0.0];
+        [NSShadow setShadowWithWhite:0.0 alpha:1.0 blurRadius:2.0 yOffset:0.0];
     } else {
         [[NSColor colorWithDeviceWhite:1.0 alpha:0.3] setFill];
     }

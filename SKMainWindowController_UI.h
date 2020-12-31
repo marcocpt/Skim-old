@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 5/2/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -44,10 +44,12 @@
 #import "SKNoteTypeSheetController.h"
 
 
-@interface SKMainWindowController (UI) <NSWindowDelegate, NSDrawerDelegate, SKTableViewDelegate, NSTableViewDataSource, SKOutlineViewDelegate, SKNoteOutlineViewDelegate, NSOutlineViewDataSource, SKNoteTypeSheetControllerDelegate, NSMenuDelegate>
+@interface SKMainWindowController (UI) <NSWindowDelegate, SKTableViewDelegate, NSTableViewDataSource, SKOutlineViewDelegate, SKNoteOutlineViewDelegate, NSOutlineViewDataSource, NSTextFieldDelegate, SKNoteTypeSheetControllerDelegate, NSMenuDelegate>
 
 - (void)registerForNotifications;
 
 - (void)handlePageChangedNotification:(NSNotification *)notification;
+
+- (NSInteger)thumbnailHighlightLevelForRow:(NSInteger)row;
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 6/12/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@
     if (cell == nil)
         cell = [[NSTextFieldCell alloc] init];
     [cell setAttributedStringValue:self];
-    return [cell accessibilityAttributeValue:NSAccessibilityAttributedStringForRangeParameterizedAttribute forParameter:[NSValue valueWithRange:NSMakeRange(0, [self length])]];
+    return [cell accessibilityAttributedStringForRange:NSMakeRange(0, [self length])];
 }
 
 #pragma mark Templating support

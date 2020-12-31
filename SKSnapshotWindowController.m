@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -63,6 +63,7 @@
 #import "NSWindow_SKExtensions.h"
 #import "NSView_SKExtensions.h"
 #import "NSScreen_SKExtensions.h"
+#import "SKApplication.h"
 
 #define EM_DASH_CHARACTER (unichar)0x2014
 
@@ -70,7 +71,6 @@
 #define RESIZE_TIME_FACTOR 1.0
 
 NSString *SKSnapshotCurrentSetupKey = @"currentSetup";
-NSString *SKSnapshotTabsKey = @"tabs";
 
 #define PAGE_KEY            @"page"
 #define RECT_KEY            @"rect"
@@ -86,12 +86,6 @@ NSString *SKSnapshotTabsKey = @"tabs";
 
 static char SKSnaphotWindowDefaultsObservationContext;
 
-#if SDK_BEFORE(10_10)
-@interface NSLayoutConstraint (SKYosemiteDeclarations)
-@property (getter=isActive) BOOL active;
-@end
-#endif
-
 @interface SKSnapshotWindowController ()
 @property (nonatomic, copy) NSString *pageLabel;
 @property (nonatomic) BOOL hasWindow;
@@ -100,7 +94,7 @@ static char SKSnaphotWindowDefaultsObservationContext;
 @implementation SKSnapshotWindowController
 
 @synthesize pdfView, delegate, thumbnail, pageLabel, string, hasWindow, forceOnTop;
-@dynamic pageIndex, pageAndWindow, currentSetup, thumbnailAttachment, thumbnail512Attachment, thumbnail256Attachment, thumbnail128Attachment, thumbnail64Attachment, thumbnail32Attachment;
+@dynamic bounds, pageIndex, pageAndWindow, currentSetup, thumbnailAttachment, thumbnail512Attachment, thumbnail256Attachment, thumbnail128Attachment, thumbnail64Attachment, thumbnail32Attachment;
 
 + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
     NSSet *keyPaths = [super keyPathsForValuesAffectingValueForKey:key];
@@ -134,26 +128,8 @@ static char SKSnaphotWindowDefaultsObservationContext;
     if ([NSWindow instancesRespondToSelector:@selector(setTabbingMode:)])
         [[self window] setTabbingMode:NSWindowTabbingModeDisallowed];
     [[self window] setCollectionBehavior:[[self window] collectionBehavior] | NSWindowCollectionBehaviorFullScreenAuxiliary];
-    if (RUNNING_AFTER(10_9)) {
-        // we need to set NSFullSizeContentViewWindowMask, otherwise the pdfview becomes sluggish on some OS versions
-        NSView *contentView = [[self window] contentView];
-        for (NSLayoutConstraint *constraint in [contentView constraints]) {
-            if ([constraint firstItem] == pdfView && [constraint firstAttribute] == NSLayoutAttributeTop) {
-                [[self window] setStyleMask:[[self window] styleMask] | NSFullSizeContentViewWindowMask];
-                [contentView removeConstraint:constraint];
-                constraint = [NSLayoutConstraint constraintWithItem:pdfView attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:[[self window] contentLayoutGuide] attribute:NSLayoutAttributeTop multiplier:1.0 constant:0.0];
-                // contentLayoutGuide may not be a view, so we can't use addConstraint:,
-                // but we are on 10.10+ so that's not a problem
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
-                [constraint setActive:YES];
-#pragma clang diagnostic pop
-                break;
-            }
-        }
-    }
     [self updateWindowLevel];
-    [[NSUserDefaultsController sharedUserDefaultsController] addObserver:self forKeys:[NSArray arrayWithObjects:SKSnapshotsOnTopKey, SKShouldAntiAliasKey, SKGreekingThresholdKey, SKBackgroundColorKey, SKDarkBackgroundColorKey, SKPageBackgroundColorKey, nil] context:&SKSnaphotWindowDefaultsObservationContext];
+    [[NSUserDefaultsController sharedUserDefaultsController] addObserver:self forKeys:[NSArray arrayWithObjects:SKSnapshotsOnTopKey, SKShouldAntiAliasKey, SKInterpolationQualityKey, SKGreekingThresholdKey, SKBackgroundColorKey, SKDarkBackgroundColorKey, SKPageBackgroundColorKey, nil] context:&SKSnaphotWindowDefaultsObservationContext];
     // the window is initialially exposed. The windowDidExpose notification is useless, it has nothing to do with showing the window
     [self setHasWindow:YES];
 }
@@ -253,20 +229,29 @@ static char SKSnaphotWindowDefaultsObservationContext;
     }
 }
 
+- (void)handleDarkModeChangedNotification:(NSNotification *)notification {
+    [pdfView setBackgroundColor:[PDFView defaultBackgroundColor]];
+}
+
 - (void)windowWillClose:(NSNotification *)notification {
-    @try { [[NSUserDefaultsController sharedUserDefaultsController] removeObserver:self forKeys:[NSArray arrayWithObjects:SKSnapshotsOnTopKey, SKShouldAntiAliasKey, SKGreekingThresholdKey, SKBackgroundColorKey, SKDarkBackgroundColorKey, SKPageBackgroundColorKey, nil]]; }
+    @try { [[NSUserDefaultsController sharedUserDefaultsController] removeObserver:self forKeys:[NSArray arrayWithObjects:SKSnapshotsOnTopKey, SKShouldAntiAliasKey, SKInterpolationQualityKey, SKGreekingThresholdKey, SKBackgroundColorKey, SKDarkBackgroundColorKey, SKPageBackgroundColorKey, nil]]; }
     @catch (id e) {}
     if ([[self delegate] respondsToSelector:@selector(snapshotControllerWillClose:)])
         [[self delegate] snapshotControllerWillClose:self];
     [self setDelegate:nil];
     // Yosemite and El Capitan have a retain cycle when we leave the PDFView with a document
-    if (RUNNING_AFTER(10_9) && RUNNING_BEFORE(10_12))
+    if (RUNNING_BEFORE(10_12))
         [pdfView setDocument:nil];
 }
 
 - (void)windowDidMove:(NSNotification *)notification {
     if ([[self delegate] respondsToSelector:@selector(snapshotControllerDidMove:)])
         [[self delegate] snapshotControllerDidMove:self];
+}
+
+- (void)PDFView:(PDFView *)sender goToExternalDestination:(PDFDestination *)destination {
+    if ([[self delegate] respondsToSelector:@selector(snapshotController:goToDestination:)])
+        [[self delegate] snapshotController:self goToDestination:destination];
 }
 
 - (void)goToRect:(NSRect)rect openType:(SKSnapshotOpenType)openType {
@@ -284,7 +269,7 @@ static char SKSnaphotWindowDefaultsObservationContext;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDocumentDidUnlockNotification:) 
                                                  name:PDFDocumentDidUnlockNotification object:[pdfView document]];
     
-    NSView *clipView = [[[pdfView documentView] enclosingScrollView] contentView];
+    NSView *clipView = [[pdfView scrollView] contentView];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePDFViewFrameChangedNotification:) 
                                                  name:NSViewFrameDidChangeNotification object:clipView];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePDFViewFrameChangedNotification:) 
@@ -297,6 +282,8 @@ static char SKSnaphotWindowDefaultsObservationContext;
                                                  name:SKPDFViewDidRemoveAnnotationNotification object:nil];    
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDidMoveAnnotationNotification:) 
                                                  name:SKPDFViewDidMoveAnnotationNotification object:nil];    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDarkModeChangedNotification:)
+                                                 name:SKDarkModeChangedNotification object:nil];
     if ([[self delegate] respondsToSelector:@selector(snapshotController:didFinishSetup:)])
         DISPATCH_MAIN_AFTER_SEC(SMALL_DELAY, ^{
             [[self delegate] snapshotController:self didFinishSetup:openType];
@@ -315,11 +302,11 @@ static char SKSnaphotWindowDefaultsObservationContext;
     [pdfView setAutoScales:NO];
     [pdfView setDisplaysPageBreaks:NO];
     [pdfView setDisplayBox:kPDFDisplayBoxCropBox];
-    [pdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] floatForKey:SKShouldAntiAliasKey]];
+    [pdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] boolForKey:SKShouldAntiAliasKey]];
+    [pdfView setInterpolationQuality:[[NSUserDefaults standardUserDefaults] integerForKey:SKInterpolationQualityKey]];
     [pdfView setGreekingThreshold:[[NSUserDefaults standardUserDefaults] floatForKey:SKGreekingThresholdKey]];
     [pdfView setBackgroundColor:[PDFView defaultBackgroundColor]];
     [pdfView applyDefaultPageBackgroundColor];
-    [pdfView applyDefaultInterpolationQuality];
     [pdfView setDocument:pdfDocument];
     
     PDFPage *page = [pdfDocument pageAtIndex:pageNum];
@@ -339,7 +326,6 @@ static char SKSnaphotWindowDefaultsObservationContext;
         [pdfView setDisplayMode:kPDFDisplaySinglePage];
         frame = SKRectFromCenterAndSize(SKCenterPoint([screen frame]), frame.size);
         [(SKSnapshotWindow *)[self window] setWindowControllerMiniaturizesWindow:NO];
-        [[self window] setTabbingIdentifier:@"SKPreviewSnapshotWindowTabbingIdentifier"];
     }
     
     [[self window] setFrame:NSIntegralRect(frame) display:NO animate:NO];
@@ -393,13 +379,13 @@ static char SKSnaphotWindowDefaultsObservationContext;
 }
 
 - (BOOL)isPageVisible:(PDFPage *)page {
-    return [[page document] isEqual:[pdfView document]] && NSLocationInRange([page pageIndex], [pdfView displayedPageIndexRange]);
+    return [[page document] isEqual:[pdfView document]] && [pdfView isPageAtIndexDisplayed:[page pageIndex]];
 }
 
 #pragma mark Acessors
 
 - (NSRect)bounds {
-    NSView *clipView = [[[pdfView documentView] enclosingScrollView] contentView];
+    NSView *clipView = [[pdfView scrollView] contentView];
     return [pdfView convertRect:[pdfView convertRect:[clipView bounds] fromView:clipView] toPage:[pdfView currentPage]];
 }
 
@@ -426,15 +412,7 @@ static char SKSnaphotWindowDefaultsObservationContext;
 }
 
 - (NSDictionary *)currentSetup {
-    NSView *clipView = [[[pdfView documentView] enclosingScrollView] contentView];
-    NSRect rect = [pdfView convertRect:[pdfView convertRect:[clipView bounds] fromView:clipView] toPage:[pdfView currentPage]];
-    BOOL autoFits = [pdfView autoFits];
-    NSString *tabs = nil;
-    if (RUNNING_AFTER(10_11)) {
-        NSArray *windows = [[[(SKMainDocument *)[self document] mainWindowController] snapshots] valueForKey:@"window"];
-        tabs = [[self window] tabIndexesInWindows:windows];
-    }
-    return [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInteger:[self pageIndex]], PAGE_KEY, NSStringFromRect(rect), RECT_KEY, [NSNumber numberWithDouble:[pdfView scaleFactor]], SCALEFACTOR_KEY, [NSNumber numberWithBool:autoFits], AUTOFITS_KEY, [NSNumber numberWithBool:[[self window] isVisible]], HASWINDOW_KEY, NSStringFromRect([[self window] frame]), WINDOWFRAME_KEY, tabs, SKSnapshotTabsKey, nil];
+    return [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInteger:[self pageIndex]], PAGE_KEY, NSStringFromRect([self bounds]), RECT_KEY, [NSNumber numberWithDouble:[pdfView scaleFactor]], SCALEFACTOR_KEY, [NSNumber numberWithBool:[pdfView autoFits]], AUTOFITS_KEY, [NSNumber numberWithBool:[[self window] isVisible]], HASWINDOW_KEY, NSStringFromRect([[self window] frame]), WINDOWFRAME_KEY, nil];
 }
 
 #pragma mark Actions
@@ -515,9 +493,9 @@ static char SKSnaphotWindowDefaultsObservationContext;
 #pragma mark Thumbnails
 
 - (NSImage *)thumbnailWithSize:(CGFloat)size {
-    NSView *clipView = [[[pdfView documentView] enclosingScrollView] contentView];
+    NSView *clipView = [[pdfView scrollView] contentView];
     NSRect bounds = [pdfView convertRect:[clipView bounds] fromView:clipView];
-    NSBitmapImageRep *imageRep = [pdfView bitmapImageRepCachingDisplayInRect:bounds];
+    NSBitmapImageRep *imageRep = [clipView bitmapImageRepCachingDisplayInRect:[clipView bounds]];
     NSAffineTransform *transform = nil;
     NSSize thumbnailSize = thumbnailSize = bounds.size;
     CGFloat shadowBlurRadius = 0.0;
@@ -546,7 +524,7 @@ static char SKSnaphotWindowDefaultsObservationContext;
     [NSGraphicsContext saveGraphicsState];
     [[PDFView defaultPageBackgroundColor] set];
     if (shadowBlurRadius > 0.0)
-        [NSShadow setShadowWithColor:[NSColor colorWithCalibratedWhite:0.0 alpha:0.5] blurRadius:shadowBlurRadius yOffset:shadowOffset];
+        [NSShadow setShadowWithWhite:0.0 alpha:0.5 blurRadius:shadowBlurRadius yOffset:shadowOffset];
     NSRectFill(bounds);
     [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationDefault];
     [NSGraphicsContext restoreGraphicsState];
@@ -599,7 +577,7 @@ static char SKSnaphotWindowDefaultsObservationContext;
 #pragma mark Miniaturize / Deminiaturize
 
 - (NSRect)miniaturizedRectForDockingRect:(NSRect)dockRect {
-    NSView *clipView = [[[pdfView documentView] enclosingScrollView] contentView];
+    NSView *clipView = [[pdfView scrollView] contentView];
     NSRect sourceRect = [clipView convertRect:[clipView bounds] toView:nil];
     NSRect targetRect;
     NSSize windowSize = [[self window] frame].size;
@@ -699,7 +677,10 @@ static char SKSnaphotWindowDefaultsObservationContext;
                 [self updateWindowLevel];
         } else if ([key isEqualToString:SKShouldAntiAliasKey]) {
             [pdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] boolForKey:SKShouldAntiAliasKey]];
-            [pdfView applyDefaultInterpolationQuality];
+            [pdfView requiresDisplay];
+        } else if ([key isEqualToString:SKInterpolationQualityKey]) {
+            [pdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] integerForKey:SKInterpolationQualityKey]];
+            [pdfView requiresDisplay];
         } else if ([key isEqualToString:SKGreekingThresholdKey]) {
             [pdfView setGreekingThreshold:[[NSUserDefaults standardUserDefaults] floatForKey:SKGreekingThresholdKey]];
         } else if ([key isEqualToString:SKBackgroundColorKey] || [key isEqualToString:SKDarkBackgroundColorKey]) {
@@ -714,13 +695,13 @@ static char SKSnaphotWindowDefaultsObservationContext;
 
 #pragma mark NSPasteboardItemDataProvider protocol
 
-// the controller is set as owner in -[SKRightSideViewController tableView:writeRowsWithIndexestoPasteboard:]
+// the controller is set as owner in -[SKMainWindowController tableView:pasteboardWriterForRow:]
 - (void)pasteboard:(NSPasteboard *)pboard item:(NSPasteboardItem *)item provideDataForType:(NSString *)type {
     if ([type isEqualToString:(NSString *)kPasteboardTypeFileURLPromise]) {
         NSURL *dropDestination = [pboard pasteLocationURL];
         PDFPage *page = [[[self pdfView] document] pageAtIndex:[self pageIndex]];
         NSString *filename = [NSString stringWithFormat:@"%@ %c %@", ([[[self document] displayName] stringByDeletingPathExtension] ?: @"PDF"), '-', [NSString stringWithFormat:NSLocalizedString(@"Page %@", @""), [page displayLabel]]];
-        NSURL *fileURL = [[dropDestination URLByAppendingPathComponent:filename] URLByAppendingPathExtension:@"tiff"];
+        NSURL *fileURL = [[dropDestination URLByAppendingPathComponent:filename isDirectory:NO] URLByAppendingPathExtension:@"tiff"];
         fileURL = [fileURL uniqueFileURL];
         if ([[[self thumbnailWithSize:0.0] TIFFRepresentation] writeToURL:fileURL atomically:YES])
             [item setString:[fileURL absoluteString] forType:type];

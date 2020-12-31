@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/14/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,9 @@
 - (IBAction)changeDisplaySinglePages:(id)sender;
 - (IBAction)changeDisplayContinuous:(id)sender;
 - (IBAction)changeDisplayMode:(id)sender;
-- (IBAction)toggleDisplayAsBook:(id)sender;
+- (IBAction)changeDisplayDirection:(id)sender;
+- (IBAction)toggleDisplaysRTL:(id)sender;
+- (IBAction)toggleDisplaysAsBook:(id)sender;
 - (IBAction)toggleDisplayPageBreaks:(id)sender;
 - (IBAction)changeDisplayBox:(id)sender;
 - (IBAction)doGoToNextPage:(id)sender;
@@ -106,8 +108,12 @@
 - (IBAction)changeFindPaneState:(id)sender;
 - (IBAction)toggleStatusBar:(id)sender;
 - (IBAction)toggleSplitPDF:(id)sender;
+- (IBAction)toggleOverview:(id)sender;
 - (IBAction)toggleReadingBar:(id)sender;
+- (IBAction)togglePacer:(id)sender;
+- (IBAction)changePacerSpeed:(id)sender;
 - (IBAction)searchPDF:(id)sender;
+- (IBAction)filterNotes:(id)sender;
 - (IBAction)search:(id)sender;
 - (IBAction)searchNotes:(id)sender;
 - (IBAction)toggleFullscreen:(id)sender;
@@ -118,8 +124,9 @@
 - (IBAction)chooseTransition:(id)sender;
 - (IBAction)toggleCaseInsensitiveSearch:(id)sender;
 - (IBAction)toggleWholeWordSearch:(id)sender;
-- (IBAction)toggleCaseInsensitiveNoteSearch:(id)sender;
+- (IBAction)toggleCaseInsensitiveFilter:(id)sender;
 - (IBAction)performFindPanelAction:(id)sender;
+- (IBAction)centerSelectionInVisibleArea:(id)sender;
 - (void)scrollUp:(id)sender;
 - (void)scrollDown:(id)sender;
 - (void)scrollRight:(id)sender;

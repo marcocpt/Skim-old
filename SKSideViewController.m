@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/28/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,22 +38,23 @@
 
 #import "SKSideViewController.h"
 #import "SKImageToolTipWindow.h"
-#import "SKGradientView.h"
+#import "SKTopBarView.h"
+#import "SKImageToolTipWindow.h"
 #import "NSGeometry_SKExtensions.h"
 #import "SKStringConstants.h"
 
-#define GRADIENT_MIN_WIDTH 111.0
+#define TOPBAR_MIN_WIDTH 100.0
 
 #define DURATION 0.7
 
 @implementation SKSideViewController
 
-@synthesize mainController, gradientView, button, alternateButton, searchField, currentView;
+@synthesize mainController, topBar, button, alternateButton, searchField, currentView;
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     mainController = nil;
-    SKDESTROY(gradientView);
+    SKDESTROY(topBar);
     SKDESTROY(button);
     SKDESTROY(alternateButton);
     SKDESTROY(searchField);
@@ -64,8 +65,15 @@
 - (void)loadView {
     [super loadView];
     
-    [gradientView setAutoTransparent:YES];
-    [gradientView setMinSize:NSMakeSize(GRADIENT_MIN_WIDTH, NSHeight([gradientView frame]))];
+    [topBar setHasSeparator:YES];
+    [topBar setMinSize:NSMakeSize(TOPBAR_MIN_WIDTH, NSHeight([topBar contentRect]))];
+}
+
+- (void)setMainController:(SKMainWindowController *)newMainController {
+    if (mainController && newMainController == nil) {
+        [[self topBar] reflectView:nil animate:NO];
+    }
+    mainController = newMainController;
 }
 
 #pragma mark View animation
@@ -75,10 +83,11 @@
 }
 
 - (void)replaceSideView:(NSView *)newView animate:(BOOL)animate {
-    if ([newView window] != nil)
+    if ([newView superview] != nil)
         return;
     
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey])
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey] ||
+        [currentView window] == nil)
         animate = NO;
     
     NSView *oldView = [[currentView retain] autorelease];
@@ -112,31 +121,46 @@
             [[oldButton superview] replaceSubview:oldButton with:newButton];
         [[firstResponder window] makeFirstResponder:firstResponder];
         [[contentView window] recalculateKeyViewLoop];
+        [[self topBar] reflectView:newView animate:NO];
     } else {
         isAnimating = YES;
         
-        BOOL wantsLayer = [contentView wantsLayer];
+        BOOL hasLayer = YES;
         
-        if (wantsLayer == NO) {
-            [contentView setWantsLayer:YES];
-            [contentView displayIfNeeded];
-            if (changeButton) {
-                [buttonView setWantsLayer:YES];
-                [buttonView displayIfNeeded];
+        if (RUNNING_AFTER(10_13)) {
+            hasLayer = [[self view] wantsLayer] || [[self view] layer] != nil;
+            if (hasLayer == NO) {
+                [[self view] setWantsLayer:YES];
+                [[self view] displayIfNeeded];
+            }
+        } else {
+            hasLayer = [contentView wantsLayer] || [contentView layer] != nil;
+            if (hasLayer == NO) {
+                [contentView setWantsLayer:YES];
+                [contentView displayIfNeeded];
+                if (changeButton) {
+                    [buttonView setWantsLayer:YES];
+                    [buttonView displayIfNeeded];
+                }
             }
         }
         
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
                 [context setDuration:DURATION]; 
                 [[contentView animator] replaceSubview:oldView with:newView];
+                [[self topBar] reflectView:newView animate:YES];
                 if (changeButton)
                     [[buttonView animator] replaceSubview:oldButton with:newButton];
             }
             completionHandler:^{
-                if (wantsLayer == NO) {
-                    [contentView setWantsLayer:NO];
-                    if (changeButton)
-                        [buttonView setWantsLayer:NO];
+                if (hasLayer == NO) {
+                    if (RUNNING_AFTER(10_13)) {
+                        [[self view] setWantsLayer:NO];
+                    } else {
+                        [contentView setWantsLayer:NO];
+                        if (changeButton)
+                            [buttonView setWantsLayer:NO];
+                    }
                 }
                 [[firstResponder window] makeFirstResponder:firstResponder];
                 [[contentView window] recalculateKeyViewLoop];

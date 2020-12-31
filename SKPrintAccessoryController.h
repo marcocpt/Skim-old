@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/24/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,13 +41,8 @@
 #import "SKViewController.h"
 
 
-@interface SKPrintAccessoryController : SKViewController <NSPrintPanelAccessorizing> {
-    NSButton *autoRotateButton;
-    NSMatrix *printScalingModeMatrix;
-}
+@interface SKPrintAccessoryController : SKViewController <NSPrintPanelAccessorizing>
 
-@property (nonatomic, retain) IBOutlet NSButton *autoRotateButton;
-@property (nonatomic, retain) IBOutlet NSMatrix *printScalingModeMatrix;
 @property (nonatomic) BOOL autoRotate;
 @property (nonatomic) PDFPrintScalingMode printScalingMode;
 

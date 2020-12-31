@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 12/19/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,8 @@
 - (id)initWithPDFView:(SKPDFView *)pdfView;
 - (void)handleScaleChangedNotification:(NSNotification *)notification;
 - (void)handlePageChangedNotification:(NSNotification *)notification;
+- (void)handleParentWindowDidResizeNotification:(NSNotification *)notification;
+- (void)showForWindow:(NSWindow *)window;
 @end
 
 
@@ -93,16 +95,6 @@
 
 @property (nonatomic, retain) NSBezierPath *path, *alternatePath;
 @property (nonatomic, retain) NSString *toolTip, *alternateToolTip;
-
-@end
-
-
-@interface SKNavigationSlider : NSSlider {
-    NSTrackingArea *trackingArea;
-    NSString *toolTip;
-}
-
-@property (copy) NSString *toolTip;
 
 @end
 

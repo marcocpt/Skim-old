@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/15/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,36 +43,28 @@ extern NSString *SKDurationKey;
 extern NSString *SKShouldRestrictKey;
 
 // this corresponds to the CGSTransitionType enum
-typedef NS_ENUM(NSUInteger, SKAnimationTransitionStyle) {
+typedef NS_ENUM(NSUInteger, SKTransitionStyle) {
 	SKNoTransition
 };
 
-// First Core Image transition
-extern SKAnimationTransitionStyle SKCoreImageTransition;
-
 @class CIImage;
+@protocol SKTransitionView;
 
 @interface SKTransitionController : NSObject {
+    NSView <SKTransitionView> *transitionView;
     NSWindow *window;
     NSView *view;
-    CIImage *initialImage;
-    NSRect imageRect;
     BOOL animating;
     
-    SKAnimationTransitionStyle transitionStyle;
+    SKTransitionStyle transitionStyle;
     CGFloat duration;
     BOOL shouldRestrict;
-    
-    SKAnimationTransitionStyle currentTransitionStyle;
-    CGFloat currentDuration;
-    BOOL currentShouldRestrict;
-    BOOL currentForward;
     
     NSArray *pageTransitions;
 }
 
 @property (nonatomic, assign) NSView *view;
-@property (nonatomic) SKAnimationTransitionStyle transitionStyle;
+@property (nonatomic) SKTransitionStyle transitionStyle;
 @property (nonatomic) CGFloat duration;
 @property (nonatomic) BOOL shouldRestrict;
 @property (nonatomic, copy) NSArray *pageTransitions;
@@ -80,17 +72,16 @@ extern SKAnimationTransitionStyle SKCoreImageTransition;
 
 + (NSArray *)transitionNames;
 
-+ (NSString *)nameForStyle:(SKAnimationTransitionStyle)style;
-+ (SKAnimationTransitionStyle)styleForName:(NSString *)name;
++ (NSString *)nameForStyle:(SKTransitionStyle)style;
++ (SKTransitionStyle)styleForName:(NSString *)name;
 
-+ (NSString *)localizedNameForStyle:(SKAnimationTransitionStyle)style;
++ (NSString *)localizedNameForStyle:(SKTransitionStyle)style;
 
-+ (BOOL)isCoreGraphicsTransition:(SKAnimationTransitionStyle)style;
-+ (BOOL)isCoreImageTransition:(SKAnimationTransitionStyle)style;
++ (BOOL)isCoreGraphicsTransition:(SKTransitionStyle)style;
++ (BOOL)isCoreImageTransition:(SKTransitionStyle)style;
 
 - (id)initForView:(NSView *)aView;
 
-- (BOOL)prepareAnimationForRect:(NSRect)rect from:(NSUInteger)fromIndex to:(NSUInteger)toIndex;
-- (void)animateForRect:(NSRect)rect;
+- (void)animateForRect:(NSRect)rect from:(NSUInteger)fromIndex to:(NSUInteger)toIndex change:(NSRect (^)(void))change;
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/1/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -77,7 +77,21 @@
 
 - (BOOL)isMovable { return [self isSkimNote]; }
 
+- (BOOL)hasInteriorColor { return [self isSkimNote]; }
+
 - (BOOL)isConvertibleAnnotation { return YES; }
+
+- (BOOL)hitTest:(NSPoint)point {
+    if ([super hitTest:point] == NO)
+        return NO;
+    
+    if ([self interiorColor])
+        return YES;
+    
+    NSRect bounds = [self bounds];
+    CGFloat delta = fmax(8.0, [self lineWidth]);
+    return NSWidth(bounds) <= 2.0 * delta || NSHeight(bounds) <= 2.0 * delta || NSPointInRect(point, NSInsetRect(bounds, delta, delta)) == NO;
+}
 
 - (void)autoUpdateString {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableUpdateContentsFromEnclosedTextKey])

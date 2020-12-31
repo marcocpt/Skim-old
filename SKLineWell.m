@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 6/22/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -163,10 +163,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
     [super viewWillMoveToWindow:newWindow];
 }
 
-- (void)dirty {
-    [self setNeedsDisplay:YES];
-}
-
 - (NSBezierPath *)path {
     NSBezierPath *path = [NSBezierPath bezierPath];
     NSRect bounds = [self bounds];
@@ -263,13 +259,13 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
     
     if ([self isActive]) {
         [NSGraphicsContext saveGraphicsState];
+        [[NSGraphicsContext currentContext] setCompositingOperation:NSCompositeMultiply];
         [[NSColor selectedControlColor] setFill];
         [NSBezierPath fillRect:NSInsetRect(bounds, 1.0, 1.0)];
         [NSGraphicsContext restoreGraphicsState];
     }
     if ([self isHighlighted]) {
         [NSGraphicsContext saveGraphicsState];
-        // @@ Dark mode
         [[[NSColor controlTextColor] colorWithAlphaComponent:0.3] setStroke];
         [NSBezierPath strokeRect:NSInsetRect(bounds, 0.5, 0.5)];
         [NSGraphicsContext restoreGraphicsState];
@@ -300,8 +296,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
     lwFlags.active = 0;
     imageRep = [self bitmapImageRepCachingDisplayInRect:bounds];
     lwFlags.active = wasActive;
-    
-    // @@ Dark mode
     
     __block NSImage *image = nil;
     CGFloat scale = [imageRep pixelsWide] / NSWidth(bounds);
@@ -334,42 +328,30 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
 
 - (void)mouseDown:(NSEvent *)theEvent {
     if ([self isEnabled]) {
-        [self dirty];
+        [self setHighlighted:YES];
         [self setNeedsDisplay:YES];
         NSUInteger modifiers = [theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
-		BOOL keepOn = YES;
-        while (keepOn) {
-			theEvent = [[self window] nextEventMatchingMask: NSLeftMouseUpMask | NSLeftMouseDraggedMask];
-			switch ([theEvent type]) {
-				case NSLeftMouseDragged:
-                {
-                    NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                        [NSNumber numberWithDouble:lineWidth], SKLineWellLineWidthKey, [NSNumber numberWithInteger:style], SKLineWellStyleKey, dashPattern, SKLineWellDashPatternKey, nil];
-                    if ([self displayStyle] == SKLineWellDisplayStyleLine) {
-                        [dict setObject:[NSNumber numberWithInteger:startLineStyle] forKey:SKLineWellStartLineStyleKey];
-                        [dict setObject:[NSNumber numberWithInteger:endLineStyle] forKey:SKLineWellEndLineStyleKey];
-                    }
-                    
-                    NSPasteboardItem *item = [[[NSPasteboardItem alloc] init] autorelease];
-                    [item setPropertyList:dict forType:SKPasteboardTypeLineStyle];
-                    
-                    NSDraggingItem *dragItem = [[[NSDraggingItem alloc] initWithPasteboardWriter:item] autorelease];
-                    [dragItem setDraggingFrame:[self bounds] contents:[self dragImage]];
-                    [self beginDraggingSessionWithItems:[NSArray arrayWithObjects:dragItem, nil] event:theEvent source:self];
-                    
-                    keepOn = NO;
-                    break;
-				}
-                case NSLeftMouseUp:
-                    if ([self isActive])
-                        [self deactivate];
-                    else
-                        [self activate:(modifiers & NSShiftKeyMask) == 0];
-                    keepOn = NO;
-                    break;
-				default:
-                    break;
+        theEvent = [[self window] nextEventMatchingMask: NSLeftMouseUpMask | NSLeftMouseDraggedMask];
+        [self setHighlighted:NO];
+        [self setNeedsDisplay:YES];
+        if ([theEvent type] == NSLeftMouseDragged) {
+            NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                [NSNumber numberWithDouble:lineWidth], SKLineWellLineWidthKey, [NSNumber numberWithInteger:style], SKLineWellStyleKey, dashPattern, SKLineWellDashPatternKey, nil];
+            if ([self displayStyle] == SKLineWellDisplayStyleLine) {
+                [dict setObject:[NSNumber numberWithInteger:startLineStyle] forKey:SKLineWellStartLineStyleKey];
+                [dict setObject:[NSNumber numberWithInteger:endLineStyle] forKey:SKLineWellEndLineStyleKey];
             }
+            
+            NSPasteboardItem *item = [[[NSPasteboardItem alloc] init] autorelease];
+            [item setPropertyList:dict forType:SKPasteboardTypeLineStyle];
+            
+            NSDraggingItem *dragItem = [[[NSDraggingItem alloc] initWithPasteboardWriter:item] autorelease];
+            [dragItem setDraggingFrame:[self bounds] contents:[self dragImage]];
+            [self beginDraggingSessionWithItems:[NSArray arrayWithObjects:dragItem, nil] event:theEvent source:self];
+        } else if ([self isActive]) {
+            [self deactivate];
+        } else {
+            [self activate:(modifiers & NSShiftKeyMask) == 0];
         }
     }
 }
@@ -439,7 +421,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
         
         lwFlags.active = 1;
         
-        [self dirty];
         [self setNeedsDisplay:YES];
     }
 }
@@ -448,7 +429,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
     if ([self isActive]) {
         [[NSNotificationCenter defaultCenter] removeObserver:self];
         lwFlags.active = 0;
-        [self dirty];
         [self setNeedsDisplay:YES];
     }
 }
@@ -589,7 +569,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
     if ([self isEnabled] && [sender draggingSource] != self && [[sender draggingPasteboard] canReadItemWithDataConformingToTypes:[NSArray arrayWithObjects:SKPasteboardTypeLineStyle, nil]]) {
         [self setHighlighted:YES];
-        [self dirty];
         [self setNeedsDisplay:YES];
         return NSDragOperationEvery;
     } else
@@ -599,7 +578,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
 - (void)draggingExited:(id <NSDraggingInfo>)sender {
     if ([self isEnabled] && [sender draggingSource] != self && [[sender draggingPasteboard] canReadItemWithDataConformingToTypes:[NSArray arrayWithObjects:SKPasteboardTypeLineStyle, nil]]) {
         [self setHighlighted:NO];
-        [self dirty];
         [self setNeedsDisplay:YES];
     }
 }
@@ -629,7 +607,6 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
     [self sendAction:[self action] to:[self target]];
     
     [self setHighlighted:NO];
-    [self dirty];
     [self setNeedsDisplay:YES];
     
 	return dict != nil;
@@ -637,93 +614,48 @@ NSString *SKLineWellEndLineStyleKey = @"endLineStyle";
 
 #pragma mark Accessibility
 
-- (NSArray *)accessibilityAttributeNames {
-    static NSArray *attributes = nil;
-    if (attributes == nil) {
-        attributes = [[NSArray alloc] initWithObjects:
-	    NSAccessibilityRoleAttribute,
-	    NSAccessibilityRoleDescriptionAttribute,
-        NSAccessibilityValueAttribute,
-        NSAccessibilityTitleAttribute,
-        NSAccessibilityHelpAttribute,
-	    NSAccessibilityFocusedAttribute,
-	    NSAccessibilityParentAttribute,
-	    NSAccessibilityWindowAttribute,
-	    NSAccessibilityTopLevelUIElementAttribute,
-	    NSAccessibilityPositionAttribute,
-	    NSAccessibilitySizeAttribute,
-	    nil];
-    }
-    return attributes;
+- (BOOL)accessibilityElement {
+    return YES;
 }
 
-- (id)accessibilityAttributeValue:(NSString *)attribute {
-    if ([attribute isEqualToString:NSAccessibilityRoleAttribute]) {
-        return NSAccessibilityCheckBoxRole;
-    } else if ([attribute isEqualToString:NSAccessibilityRoleDescriptionAttribute]) {
-        return NSAccessibilityRoleDescription(NSAccessibilityCheckBoxRole, nil);
-    } else if ([attribute isEqualToString:NSAccessibilityValueAttribute]) {
-        return [NSNumber numberWithInteger:[self isActive]];
-    } else if ([attribute isEqualToString:NSAccessibilityTitleAttribute]) {
-        return [NSString stringWithFormat:@"%@ %ld", NSLocalizedString(@"line width", @"Accessibility description"), (long)[self lineWidth]];
-    } else if ([attribute isEqualToString:NSAccessibilityHelpAttribute]) {
-        return [self toolTip];
-    } else if ([attribute isEqualToString:NSAccessibilityFocusedAttribute]) {
-        // Just check if the app thinks we're focused.
-        id focusedElement = [NSApp accessibilityAttributeValue:NSAccessibilityFocusedUIElementAttribute];
-        return [NSNumber numberWithBool:[focusedElement isEqual:self]];
-    } else if ([attribute isEqualToString:NSAccessibilityParentAttribute]) {
-        return NSAccessibilityUnignoredAncestor([self superview]);
-    } else if ([attribute isEqualToString:NSAccessibilityWindowAttribute]) {
-        // We're in the same window as our parent.
-        return [NSAccessibilityUnignoredAncestor([self superview]) accessibilityAttributeValue:NSAccessibilityWindowAttribute];
-    } else if ([attribute isEqualToString:NSAccessibilityTopLevelUIElementAttribute]) {
-        // We're in the same top level element as our parent.
-        return [NSAccessibilityUnignoredAncestor([self superview]) accessibilityAttributeValue:NSAccessibilityTopLevelUIElementAttribute];
-    } else if ([attribute isEqualToString:NSAccessibilityPositionAttribute]) {
-        return [NSValue valueWithPoint:[self convertRectToScreen:[self bounds]].origin];
-    } else if ([attribute isEqualToString:NSAccessibilitySizeAttribute]) {
-        return [NSValue valueWithSize:[self convertSize:[self bounds].size toView:nil]];
-    } else {
-        return nil;
-    }
+- (NSString *)accessibilityRole {
+    return NSAccessibilityCheckBoxRole;
 }
 
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)attribute {
-    if ([attribute isEqualToString:NSAccessibilityFocusedAttribute]) {
-        return [self canActivate];
-    } else {
-        return NO;
-    }
+- (NSString *)accessibilityRoleDescription {
+    return NSAccessibilityRoleDescription(NSAccessibilityCheckBoxRole, nil);
 }
 
-- (void)accessibilitySetValue:(id)value forAttribute:(NSString *)attribute {
-    if ([attribute isEqualToString:NSAccessibilityFocusedAttribute]) {
+- (id)accessibilityValue {
+    return [NSNumber numberWithInteger:[self isActive]];
+}
+
+- (NSString *)accessibilityTitle {
+    return [NSString stringWithFormat:@"%@ %ld", NSLocalizedString(@"line width", @"Accessibility description"), (long)[self lineWidth]];
+}
+
+- (NSString *)accessibilityHelp {
+    return [self toolTip];
+}
+
+- (BOOL)isAccessibilityFocused {
+    // Just check if the app thinks we're focused.
+    return [[NSApp accessibilityFocusedUIElement] isEqual:self];
+}
+
+- (void)setAccessibilityFocused:(BOOL)flag {
+    if (flag && [self canActivate])
         [[self window] makeFirstResponder:self];
-    }
 }
 
-
-// actions
-
-- (NSArray *)accessibilityActionNames {
-    return [NSArray arrayWithObject:NSAccessibilityPressAction];
+- (BOOL)accessibilityPerformPress {
+    [self performClick:self];
+    return YES;
 }
 
-- (NSString *)accessibilityActionDescription:(NSString *)anAction {
-    return NSAccessibilityActionDescription(anAction);
-}
-
-- (void)accessibilityPerformAction:(NSString *)anAction {
-    if ([anAction isEqualToString:NSAccessibilityPressAction])
-        [self performClick:self];
-}
-
-
-// misc
-
-- (BOOL)accessibilityIsIgnored {
-    return NO;
+- (BOOL)accessibilityPerformPick {
+    [self performClick:self];
+    return YES;
 }
 
 - (id)accessibilityHitTest:(NSPoint)point {

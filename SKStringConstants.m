@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 1/5/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -48,14 +48,14 @@ NSString *SKFullScreenBackgroundColorKey = @"SKFullScreenBackgroundColor";
 NSString *SKDarkBackgroundColorKey = @"SKDarkBackgroundColor";
 NSString *SKDarkFullScreenBackgroundColorKey = @"SKDarkFullScreenBackgroundColor";
 NSString *SKPageBackgroundColorKey = @"SKPageBackgroundColor";
-/// 最后一次打开的文件名
 NSString *SKLastOpenFileNamesKey = @"SKLastOpenFileNames";
 NSString *SKOpenContentsPaneOnlyForTOCKey = @"SKOpenContentsPaneOnlyForTOC";
 NSString *SKInitialWindowSizeOptionKey = @"SKInitialWindowSizeOption";
 NSString *SKReopenLastOpenFilesKey = @"SKReopenLastOpenFiles";
 NSString *SKRememberLastPageViewedKey = @"SKRememberLastPageViewed";
 NSString *SKRememberSnapshotsKey = @"SKRememberSnapshots";
-/// 配置中 General - Automatically save Skim notes backups
+NSString *SKWriteLegacySkimNotesKey = @"SKWriteLegacySkimNotes";
+NSString *SKWriteSkimNotesAsPlistKey = @"SKWriteSkimNotesAsPlist";
 NSString *SKAutoSaveSkimNotesKey = @"SKAutoSaveSkimNotes";
 NSString *SKSnapshotsOnTopKey = @"SKSnapshotsOnTop";
 NSString *SKSnapshotThumbnailSizeKey = @"SKSnapshotThumbnailSize";
@@ -64,7 +64,7 @@ NSString *SKLastToolModeKey = @"SKLastToolMode";
 NSString *SKLastAnnotationModeKey = @"SKLastAnnotationMode";
 NSString *SKLastSecondarySelectsTextKey = @"SKLastSecondarySelectsText";
 NSString *SKShouldAntiAliasKey = @"SKShouldAntiAlias";
-NSString *SKImageInterpolationKey = @"SKImageInterpolation";
+NSString *SKInterpolationQualityKey = @"SKInterpolationQuality";
 NSString *SKGreekingThresholdKey = @"SKGreekingThreshold";
 NSString *SKReadingBarColorKey = @"SKReadingBarColor";
 NSString *SKReadingBarInvertKey = @"SKReadingBarInvert";
@@ -135,10 +135,10 @@ NSString *SKDisableUpdateContentsFromEnclosedTextKey = @"SKDisableUpdateContents
 NSString *SKCaseInsensitiveSearchKey = @"SKCaseInsensitiveSearch";
 NSString *SKWholeWordSearchKey = @"SKWholeWordSearch";
 NSString *SKCaseInsensitiveNoteSearchKey = @"SKCaseInsensitiveNoteSearch";
+NSString *SKCaseInsensitiveFilterKey = @"SKCaseInsensitiveFilter";
 NSString *SKCaseInsensitiveFindKey = @"SKCaseInsensitiveFind";
 NSString *SKDownloadsDirectoryKey = @"SKDownloadsDirectory";
 NSString *SKDisableSearchAfterSpotlighKey = @"SKDisableSearchAfterSpotligh";
 NSString *SKDisplayNoteBoundsKey = @"SKDisplayNoteBounds";
 NSString *SKDisplayPageBoundsKey = @"SKDisplayPageBounds";
 NSString *SKDisableHistoryHighlightsKey = @"SKDisableHistoryHighlights";
-

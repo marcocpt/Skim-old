@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 12/23/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,6 @@
 #import "NSUserDefaultsController_SKExtensions.h"
 #import "NSString_SKExtensions.h"
 #import "NSError_SKExtensions.h"
-#import "NSAlert_SKExtensions.h"
 
 #define PATH_KEY @"path"
 

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/17/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -40,17 +40,16 @@
 #import "SKLineWell.h"
 #import "SKFontWell.h"
 
-
 @implementation NSView (SKExtensions)
 
-- (id)subviewOfClass:(Class)aClass {
+- (id)descendantOfClass:(Class)aClass {
 	if ([self isKindOfClass:aClass])
 		return self;
 	
 	NSView *view;
 	
 	for (NSView *subview in [self subviews]) {
-		if ((view = [subview subviewOfClass:aClass]))
+		if ((view = [subview descendantOfClass:aClass]))
 			return view;
 	}
 	return nil;
@@ -74,9 +73,7 @@
 }
 
 - (CGFloat)backingScale {
-    if ([self respondsToSelector:@selector(convertSizeToBacking:)])
-        return [self convertSizeToBacking:NSMakeSize(1.0, 1.0)].width;
-    return 1.0;
+    return [self convertSizeToBacking:NSMakeSize(1.0, 1.0)].width;
 }
 
 - (NSRect)convertRectToScreen:(NSRect)rect {

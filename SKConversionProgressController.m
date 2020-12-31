@@ -4,7 +4,7 @@
 //
 //  Created by Adam Maxwell on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Adam Maxwell. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -270,7 +270,7 @@ static NSString *createToolPathForCommand(NSString *defaultKey, NSArray *support
             NSString *commandName = [toolPath lastPathComponent];
             NSURL *tmpDirURL = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory inDomain:NSUserDomainMask appropriateForURL:aURL create:YES error:NULL];
             BOOL outputPS = [commandName isEqualToString:@"dvips"];
-            NSURL *outFileURL = [tmpDirURL URLByAppendingPathComponent:[aURL lastPathComponentReplacingPathExtension:outputPS ? @"ps" : @"pdf"]];
+            NSURL *outFileURL = [tmpDirURL URLByAppendingPathComponent:[aURL lastPathComponentReplacingPathExtension:outputPS ? @"ps" : @"pdf"] isDirectory:NO];
             NSArray *arguments = [commandName isEqualToString:@"dvipdf"] ? [NSArray arrayWithObjects:[aURL path], [outFileURL path], nil] : [NSArray arrayWithObjects:@"-o", [outFileURL path], [aURL path], nil];
             
             task = [[NSTask alloc] init];
@@ -296,7 +296,7 @@ static NSString *createToolPathForCommand(NSString *defaultKey, NSArray *support
     }
     
     NSModalSession session = [NSApp beginModalSessionForWindow:[self window]];
-    NSInteger rv = NSRunContinuesResponse;
+    NSInteger rv = NSModalResponseContinue;
     
     if (provider) {
         [self convertPostScriptWithProvider:provider];
@@ -314,7 +314,7 @@ static NSString *createToolPathForCommand(NSString *defaultKey, NSArray *support
         [NSApp stopModalWithCode:SKConversionFailed];
     }
     
-    while (rv == NSRunContinuesResponse)
+    while (rv == NSModalResponseContinue)
         rv = [NSApp runModalSession:session];
     [NSApp endModalSession:session];
     

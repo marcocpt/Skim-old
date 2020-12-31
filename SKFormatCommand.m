@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/19/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@
     else if ([template isKindOfClass:[NSURL class]] == NO)
 		[self setScriptErrorNumber:NSArgumentsWrongScriptError]; 
     else if ([[SKTemplateManager sharedManager] isRichTextTemplateType:[template path]])
-        attrString = [[[NSAttributedString alloc] initWithURL:template documentAttributes:&docAttrs] autorelease];
+        attrString = [[[NSAttributedString alloc] initWithURL:template options:[NSDictionary dictionary] documentAttributes:&docAttrs error:NULL] autorelease];
     else
         string = [NSString stringWithContentsOfURL:template encoding:NSUTF8StringEncoding error:NULL];
     
@@ -80,7 +80,7 @@
                 NSString *ext = [[[file path] pathExtension] lowercaseString];
                 if ([ext isEqualToString:@"rtfd"]) {
                     [mutableDocAttrs setObject:NSRTFDTextDocumentType forKey:NSDocumentTypeDocumentAttribute];
-                    [[attrText RTFDFileWrapperFromRange:NSMakeRange(0, [attrText length]) documentAttributes:mutableDocAttrs] writeToFile:[file path] atomically:YES updateFilenames:NO];
+                    [[attrText RTFDFileWrapperFromRange:NSMakeRange(0, [attrText length]) documentAttributes:mutableDocAttrs] writeToURL:file options:NSFileWrapperWritingAtomic originalContentsURL:nil error:NULL];
                 } else {
                     NSString *docType = nil;
                     if ([ext isEqualToString:@"rtf"])

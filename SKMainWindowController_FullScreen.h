@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan on 14/06/2019.
 /*
- This software is Copyright (c) 2019
+ This software is Copyright (c) 2019-2020
  Christiaan Hofman. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -45,16 +45,15 @@
 - (void)enterFullscreen;
 - (void)enterPresentation;
 - (void)exitFullscreen;
+- (void)exitPresentation;
 
 - (BOOL)canEnterFullscreen;
 - (BOOL)canEnterPresentation;
 - (BOOL)canExitFullscreen;
 - (BOOL)canExitPresentation;
 
-- (void)showLeftSideWindow;
-- (void)showRightSideWindow;
-- (void)hideLeftSideWindow;
-- (void)hideRightSideWindow;
+- (void)showSideWindow;
+- (void)hideSideWindow;
 
 - (void)addPresentationNotesNavigation;
 - (void)removePresentationNotesNavigation;

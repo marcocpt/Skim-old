@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 5/23/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,14 +42,9 @@
 extern NSString *SKDocumentFileURLDidChangeNotification;
 
 typedef NS_ENUM(NSInteger, SKInteractionMode) {
-    /// 普通模式
     SKNormalMode,
-    /// 全屏模式。显示工具栏
     SKFullScreenMode,
-    /// 展示模式，不显示工具栏
-    SKPresentationMode,
-    /// l遗留全屏模式？
-    SKLegacyFullScreenMode
+    SKPresentationMode
 };
 
 @interface NSDocument (SKExtensions)
@@ -64,10 +59,11 @@ typedef NS_ENUM(NSInteger, SKInteractionMode) {
 
 - (IBAction)copyURL:(id)sender;
 
+- (NSMenu *)notesMenu;
+
 #pragma mark Document Setup
 
 - (void)saveRecentDocumentInfo;
-- (void)saveRecentDocumentInfoIfNeeded;
 - (void)applySetup:(NSDictionary *)setup;
 - (void)applyOptions:(NSDictionary *)options;
 - (NSDictionary *)currentDocumentSetup;
@@ -80,10 +76,13 @@ typedef NS_ENUM(NSInteger, SKInteractionMode) {
 #pragma mark Bookmark Actions
 
 - (IBAction)addBookmark:(id)sender;
+- (IBAction)share:(id)sender;
 
 #pragma mark Notes
 
 - (NSArray *)notes;
+
+- (NSArray *)SkimNoteProperties;
 
 - (NSData *)notesData;
 
@@ -97,11 +96,19 @@ typedef NS_ENUM(NSInteger, SKInteractionMode) {
 
 - (NSData *)notesFDFDataForFile:(NSString *)filename fileIDStrings:(NSArray *)fileIDStrings;
 
+#pragma mark Outlines
+
+- (BOOL)isOutlineExpanded:(PDFOutline *)outline;
+- (void)setExpanded:(BOOL)flag forOutline:(PDFOutline *)outline;
+
 #pragma mark Scripting
 
 - (NSArray *)pages;
 - (NSUInteger)countOfPages;
 - (PDFPage *)objectInPagesAtIndex:(NSUInteger)theIndex;
+
+- (NSUInteger)countOfOutlines;
+- (PDFOutline *)objectInOutlinesAtIndex:(NSUInteger)idx;
 
 - (PDFPage *)currentPage;
 - (void)setCurrentPage:(PDFPage *)page;

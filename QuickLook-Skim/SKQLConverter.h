@@ -1,5 +1,5 @@
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 extern NSString *SKQLPDFPathForPDFBundleURL(NSURL *url);
 
 @interface SKQLConverter : NSObject
++ (NSArray *)notesWithData:(NSData *)data;
 + (NSAttributedString *)attributedStringWithNotes:(NSArray *)notes forThumbnail:(QLThumbnailRequestRef)thumbnail;
 + (NSString *)htmlStringWithNotes:(NSArray *)notes;
 @end

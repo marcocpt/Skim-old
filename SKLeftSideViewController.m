@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/28/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -57,6 +57,8 @@
 
 #define SKDisableTableToolTipsKey @"SKDisableTableToolTips"
 
+#define SKRecentsAutosaveName @"SKRecentPDFSearches"
+
 @implementation SKLeftSideViewController
 
 @synthesize tocOutlineView, thumbnailArrayController, thumbnailTableView, findArrayController, findTableView, groupedFindArrayController, groupedFindTableView;
@@ -92,8 +94,19 @@
     [alternateButton setHelp:NSLocalizedString(@"Group search results by page", @"Tool tip message") forSegment:SKFindPaneStateGrouped];
     
     NSMenu *menu = [NSMenu menu];
+    NSMenuItem *item;
     [menu addItemWithTitle:NSLocalizedString(@"Whole Words Only", @"Menu item title") action:@selector(toggleWholeWordSearch:) target:mainController];
     [menu addItemWithTitle:NSLocalizedString(@"Ignore Case", @"Menu item title") action:@selector(toggleCaseInsensitiveSearch:) target:mainController];
+    item = [NSMenuItem separatorItem];
+    [item setTag:NSSearchFieldRecentsTitleMenuItemTag];
+    [menu addItem:item];
+    [menu addItemWithTitle:NSLocalizedString(@"Recent Searches", @"Menu item title") action:NULL target:nil tag:NSSearchFieldRecentsTitleMenuItemTag];
+    [menu addItemWithTitle:@"" action:NULL target:nil tag:NSSearchFieldRecentsMenuItemTag];
+    item = [NSMenuItem separatorItem];
+    [item setTag:NSSearchFieldRecentsTitleMenuItemTag];
+    [menu addItem:item];
+    [menu addItemWithTitle:NSLocalizedString(@"Clear Recent Searches", @"Menu item title") action:NULL target:nil tag:NSSearchFieldClearRecentsMenuItemTag];
+    [searchField setRecentsAutosaveName:SKRecentsAutosaveName];
     [[searchField cell] setSearchMenuTemplate:menu];
     [[searchField cell] setPlaceholderString:NSLocalizedString(@"Search", @"placeholder")];
     
@@ -138,8 +151,8 @@
     
     if (NO == [[NSUserDefaults standardUserDefaults] boolForKey:SKDisableTableToolTipsKey]) {
         [tocOutlineView setHasImageToolTips:YES];
-        [findTableView setHasImageToolTips:YES];
-        [groupedFindTableView setHasImageToolTips:YES];
+        [findTableView setImageToolTipLayout:SKTableImageToolTipByRow];
+        [groupedFindTableView setImageToolTipLayout:SKTableImageToolTipByRow];
     }
 }
 

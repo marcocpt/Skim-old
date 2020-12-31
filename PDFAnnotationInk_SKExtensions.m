@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/14/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -240,8 +240,8 @@ static void (*original_drawWithBox_inContext)(id, SEL, PDFDisplayBox, CGContextR
     return NSUnionRect([super displayRectForBounds:bounds lineWidth:lineWidth], NSIntegralRect(rect));
 }
 
-- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context {
-    [super drawSelectionHighlightForView:pdfView inContext:context];
+- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context active:(BOOL)active {
+    [super drawSelectionHighlightForView:pdfView inContext:context active:active];
     if (NSIsEmptyRect([self bounds]) == NO && [self isSkimNote]) {
         CGFloat scale = ceil(1.0 / [pdfView unitWidthOnPage:[self page]]);
         NSRect b = [self bounds];
@@ -265,7 +265,7 @@ static void (*original_drawWithBox_inContext)(id, SEL, PDFDisplayBox, CGContextR
             [path setLineCapStyle:NSRoundLineCapStyle];
         }
         [NSGraphicsContext saveGraphicsState];
-        [NSShadow setShadowWithColor:[NSColor colorWithWhite:0.0 alpha:0.33333] blurRadius:2.0 yOffset:-2.0];
+        [NSShadow setShadowWithWhite:0.0 alpha:0.33333 blurRadius:2.0 yOffset:-2.0];
         [[NSColor colorWithCalibratedWhite:0.0 alpha:[[self color] alphaComponent]] setStroke];
         [path stroke];
         [NSGraphicsContext restoreGraphicsState];

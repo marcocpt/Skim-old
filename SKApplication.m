@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/15/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,6 @@ NSString *SKDarkModeChangedNotification = @"SKDarkModeChangedNotification";
 }
 
 - (void)sendEvent:(NSEvent *)anEvent {
-    // 处理远程控制的事件，HIDRemote 相关
     if ([anEvent type] == NSApplicationDefined && [anEvent subtype] == SKRemoteButtonEvent) {
         id target = [self targetForAction:@selector(remoteButtonPressed:)];
         if (target == nil) {
@@ -81,7 +80,10 @@ NSString *SKDarkModeChangedNotification = @"SKDarkModeChangedNotification";
 }
 
 - (void)updatePresentationOptionsForWindow:(NSWindow *)aWindow {
-    const NSApplicationPresentationOptions options[4] = {NSApplicationPresentationDefault, NSApplicationPresentationAutoHideDock | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationFullScreen, NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar | NSApplicationPresentationDisableProcessSwitching, NSApplicationPresentationHideDock | NSApplicationPresentationAutoHideMenuBar};
+    const NSApplicationPresentationOptions options[4] = {NSApplicationPresentationDefault,
+            NSApplicationPresentationAutoHideDock | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationFullScreen,
+            NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar
+        };
     SKInteractionMode mode = [[[aWindow windowController] document] systemInteractionMode];
     if ([self presentationOptions] != options[mode])
         [self setPresentationOptions:options[mode]];

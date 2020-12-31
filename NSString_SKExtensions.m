@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/12/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,6 @@
 #import "NSValueTransformer_SKExtensions.h"
 #import <SkimNotes/SkimNotes.h>
 #import <CoreFoundation/CoreFoundation.h>
-
-#define ELLIPSIS_CHARACTER (unichar)0x2026
 
 #pragma mark CFString extensions
 
@@ -238,7 +236,7 @@ static inline bool __SKIsPrivateUseCharacter(const UTF32Char ch)
 
 - (NSString *)stringByAppendingEllipsis;
 {
-    return [self stringByAppendingFormat:@"%C", ELLIPSIS_CHARACTER];
+    return [NSString stringWithFormat:NSLocalizedString(@"%@\u2026", "format for appending ellipsis character..."), self];
 }
 
 - (NSString *)stringByBackslashEscapingCharactersFromSet:(NSCharacterSet *)charSet {
@@ -263,6 +261,14 @@ static inline bool __SKIsPrivateUseCharacter(const UTF32Char ch)
     if (shellSpecialChars == nil)
         shellSpecialChars = [[NSCharacterSet characterSetWithCharactersInString:@"$\"`\\"] retain];
     return [self stringByBackslashEscapingCharactersFromSet:shellSpecialChars];
+}
+
+// Escape those characters that are special, to AppleScript, inside a "quoted" string
+- (NSString *)stringByEscapingDoubleQuotes {
+    static NSCharacterSet *doubleQuoteChars = nil;
+    if (doubleQuoteChars == nil)
+        doubleQuoteChars = [[NSCharacterSet characterSetWithCharactersInString:@"$\"\\"] retain];
+    return [self stringByBackslashEscapingCharactersFromSet:doubleQuoteChars];
 }
 
 - (NSString *)stringByEscapingParenthesis {

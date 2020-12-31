@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/28/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,17 +52,16 @@
 #import "NSDocument_SKExtensions.h"
 #import "NSGraphics_SKExtensions.h"
 #import "NSColor_SKExtensions.h"
-
-#define RIGHTARROW_CHARACTER (unichar)0x2192
+#import "NSView_SKExtensions.h"
 
 #define PAGE_COLUMNID @"page"
 #define IMAGE_COLUMNID @"image"
+#define TOIMAGE_COLUMNID @"toImage"
 
 #define TRANSITIONSTYLE_KEY @"transitionStyle"
 #define DURATION_KEY @"duration"
 #define SHOULDRESTRICT_KEY @"shouldRestrict"
 #define PROPERTIES_KEY @"properties"
-#define CONTENTOBJECT_BINDINGNAME @"contentObject"
 #define SEPARATE_KEY @"separate"
 #define TRANSITION_KEY @"transition"
 #define TRANSITIONS_KEY @"transitions"
@@ -78,9 +77,11 @@ static char *SKTransitionPropertiesObservationContext;
 #define SKTouchBarItemIdentifierOK     @"net.sourceforge.skim-app.touchbar-item.OK"
 #define SKTouchBarItemIdentifierCancel @"net.sourceforge.skim-app.touchbar-item.cancel"
 
+#pragma mark -
+
 @implementation SKPresentationOptionsSheetController
 
-@synthesize notesDocumentPopUpButton, tableView, stylePopUpButton, extentMatrix, okButton, cancelButton, tableWidthConstraint, boxLeadingConstraint, arrayController, separate, transition, transitions, undoManager;
+@synthesize notesDocumentPopUpButton, tableView, stylePopUpButton, okButton, cancelButton, tableWidthConstraint, boxLeadingConstraint, arrayController, separate, transition, transitions, undoManager;
 @dynamic currentTransitions, pageTransitions, notesDocument, notesDocumentOffset, verticalScroller;
 
 + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
@@ -116,7 +117,6 @@ static char *SKTransitionPropertiesObservationContext;
     SKDESTROY(notesDocumentPopUpButton);
     SKDESTROY(tableView);
     SKDESTROY(stylePopUpButton);
-    SKDESTROY(extentMatrix);
     SKDESTROY(okButton);
     SKDESTROY(cancelButton);
     SKDESTROY(arrayController);
@@ -163,6 +163,10 @@ static char *SKTransitionPropertiesObservationContext;
         [stylePopUpButton addItemWithTitle:title];
         [[stylePopUpButton lastItem] setTag:i];
     }
+    [stylePopUpButton addItemWithTitle:NSLocalizedString(@"Multiple effects", @"Menu item title")];
+    [[stylePopUpButton lastItem] setTag:-1];
+    [[stylePopUpButton lastItem] setHidden:YES];
+    [[stylePopUpButton lastItem] setEnabled:NO];
     
     [[notesDocumentPopUpButton itemAtIndex:1] setRepresentedObject:[controller document]];
     [[notesDocumentPopUpButton itemAtIndex:2] setRepresentedObject:[controller document]];
@@ -173,9 +177,6 @@ static char *SKTransitionPropertiesObservationContext;
     [transition setShouldRestrict:[transitionController shouldRestrict]];
     [self startObservingTransitions:[NSArray arrayWithObject:transition]];
     
-    // auto layout does not resize NSMatrix, so we need to do it ourselves
-    [extentMatrix sizeToFit];
-    
     // collapse the table, it is already hidden
     [boxLeadingConstraint setConstant:BOX_OFFSET];
     
@@ -183,9 +184,7 @@ static char *SKTransitionPropertiesObservationContext;
     
     [tableView setTypeSelectHelper:[SKTypeSelectHelper typeSelectHelperWithMatchOption:SKFullStringMatch]];
     
-    [tableView setHasImageToolTips:YES];
-    
-    [tableView setBackgroundColor:[NSColor mainSourceListBackgroundColor]];
+    [tableView setImageToolTipLayout:SKTableImageToolTipByCell];
     
     if ([transitionController pageTransitions]) {
         [[self undoManager] disableUndoRegistration];
@@ -211,8 +210,10 @@ static char *SKTransitionPropertiesObservationContext;
     
     // determine the table width by getting the largest page label
     NSTableColumn *tableColumn = [tableView tableColumnWithIdentifier:PAGE_COLUMNID];
-    id cell = [tableColumn dataCell];
+    id cell = [[tableColumn dataCell] copy];
     CGFloat labelWidth = 0.0;
+    
+    [cell setFont:[[NSFontManager sharedFontManager] convertFont:[cell font] toHaveTrait:NSBoldFontMask]];
     
     NSMutableArray *array = [NSMutableArray array];
     NSDictionary *dictionary = [transition properties];
@@ -223,7 +224,7 @@ static char *SKTransitionPropertiesObservationContext;
         if (tn) {
             SKTransitionInfo *info = [[SKTransitionInfo alloc] init];
             [info setThumbnail:tn];
-            [info setLabel:[NSString stringWithFormat:@"%@%C%@", [tn label], RIGHTARROW_CHARACTER, [next label]]];
+            [info setToThumbnail:next];
             [info setProperties:([ptEnum nextObject] ?: dictionary)];
             [array addObject:info];
             [cell setStringValue:[info label]];
@@ -238,7 +239,11 @@ static char *SKTransitionPropertiesObservationContext;
     [tableColumn setMaxWidth:labelWidth];
     [tableColumn setWidth:labelWidth];
     
-    [tableWidthConstraint setConstant:19.0 + [[[tableView tableColumns] valueForKeyPath:@"@sum.width"] doubleValue]];
+    [cell release];
+    
+    NSScrollView *scrollView = [tableView enclosingScrollView];
+    CGFloat width = [[[tableView tableColumns] valueForKeyPath:@"@sum.width"] doubleValue] + NSWidth([scrollView frame]) - [scrollView contentSize].width + 3.0 * [tableView intercellSpacing].width;
+    [tableWidthConstraint setConstant:width];
     
     [self setTransitions:array];
 }
@@ -249,7 +254,7 @@ static char *SKTransitionPropertiesObservationContext;
 
 - (void)dismissSheet:(id)sender {
     [[SKImageToolTipWindow sharedToolTipWindow] orderOut:nil];
-    if ([sender tag] == NSCancelButton) {
+    if ([sender tag] == NSModalResponseCancel) {
         [super dismissSheet:sender];
     } else if ([arrayController commitEditing]) {
         // don't make changes when nothing was changed
@@ -407,6 +412,39 @@ static char *SKTransitionPropertiesObservationContext;
     return [transitions objectAtIndex:row];
 }
 
+- (void)tableView:(NSTableView *)tv draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint forRowIndexes:(NSIndexSet *)rowIndexes {
+    if ([rowIndexes count] != 1)
+        return;
+    
+    NSTableRowView *view = [tv rowViewAtRow:[rowIndexes firstIndex] makeIfNecessary:NO];
+    if (view) {
+        NSRect frame = [view convertRectToScreen:[view bounds]];
+        frame.origin.x -= screenPoint.x - [session draggingLocation].x;
+        frame.origin.y -= screenPoint.y - [session draggingLocation].y;
+        NSArray *classes = [NSArray arrayWithObjects:[SKTransitionInfo class], nil];
+        [session enumerateDraggingItemsWithOptions:0 forView:nil classes:classes searchOptions:[NSDictionary dictionary] usingBlock:^(NSDraggingItem *draggingItem, NSInteger idx, BOOL *stop){
+            [draggingItem setImageComponentsProvider:^{
+                NSMutableArray *components = [NSMutableArray array];
+                NSUInteger i, iMax = [view numberOfColumns];
+                for (i = 0; i < iMax; i++) {
+                    NSTableCellView *cellView = [view viewAtColumn:i];
+                    NSDraggingImageComponent *component = [[cellView draggingImageComponents] firstObject];
+                    NSRect rect = [component frame];
+                    NSPoint offset = [cellView frame].origin;
+                    rect.origin.x += offset.x;
+                    rect.origin.y += offset.y;
+                    [component setFrame:rect];
+                    if (i == 1)
+                        [component setKey:@"toIcon"];
+                    [components addObject:component];
+                }
+                return components;
+            }];
+            [draggingItem setDraggingFrame:frame];
+        }];
+    }
+}
+
 - (NSDragOperation)tableView:(NSTableView *)tv validateDrop:(id < NSDraggingInfo >)info proposedRow:(NSInteger)row proposedDropOperation:(NSTableViewDropOperation)operation {
     if ([[info draggingPasteboard] canReadObjectForClasses:[NSArray arrayWithObject:[SKTransitionInfo class]] options:[NSDictionary dictionary]]) {
         if (operation == NSTableViewDropAbove)
@@ -436,8 +474,13 @@ static char *SKTransitionPropertiesObservationContext;
     return [tv makeViewWithIdentifier:[tableColumn identifier] owner:self];
 }
 
-- (id <SKImageToolTipContext>)tableView:(NSTableView *)tv imageContextForRow:(NSInteger)row {
-    return [[controller pdfDocument] pageAtIndex:row];
+- (id <SKImageToolTipContext>)tableView:(NSTableView *)tv imageContextForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
+    if ([[tableColumn identifier] isEqualToString:IMAGE_COLUMNID])
+        return [[controller pdfDocument] pageAtIndex:row];
+    else if ([[tableColumn identifier] isEqualToString:TOIMAGE_COLUMNID])
+        return [[controller pdfDocument] pageAtIndex:row + 1];
+    else
+        return nil;
 }
 
 - (void)tableView:(NSTableView *)tv copyRowsWithIndexes:(NSIndexSet *)rowIndexes {
@@ -447,7 +490,7 @@ static char *SKTransitionPropertiesObservationContext;
 }
 
 - (BOOL)tableView:(NSTableView *)tv canCopyRowsWithIndexes:(NSIndexSet *)rowIndexes {
-    return YES;
+    return [rowIndexes count] == 1;
 }
 
 - (void)tableView:(NSTableView *)tv pasteFromPasteboard:(NSPasteboard *)pboard {
@@ -458,6 +501,12 @@ static char *SKTransitionPropertiesObservationContext;
 
 - (BOOL)tableView:(NSTableView *)tv canPasteFromPasteboard:(NSPasteboard *)pboard {
     return ([tableView selectedRow] != -1 && [pboard canReadObjectForClasses:[NSArray arrayWithObject:[SKTransitionInfo class]] options:[NSDictionary dictionary]]);
+}
+
+- (void)tableView:(NSTableView *)tv deleteRowsWithIndexes:(NSIndexSet *)rowIndexes {
+    NSArray *selTransitions = [transitions objectsAtIndexes:rowIndexes];
+    NSDictionary *empty = [NSDictionary dictionaryWithObjectsAndKeys:@"", SKStyleNameKey, [NSNumber numberWithDouble:1.0], SKDurationKey, [NSNumber numberWithBool:NO], SKShouldRestrictKey, nil];
+    [selTransitions setValue:empty forKey:PROPERTIES_KEY];
 }
 
 - (NSArray *)tableView:(NSTableView *)tv typeSelectHelperSelectionStrings:(SKTypeSelectHelper *)typeSelectHelper {

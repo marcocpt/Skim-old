@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/10/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,6 @@
 #import "NSString_SKExtensions.h"
 #import "NSError_SKExtensions.h"
 #import "SKTemplateManager.h"
-#import "SKCenteredTextFieldCell.h"
 #import "NSArray_SKExtensions.h"
 #import "NSScreen_SKExtensions.h"
 #import "NSInvocation_SKExtensions.h"
@@ -81,8 +80,6 @@
 #define SKNotesDocumentOpenPDFToolbarItemIdentifier @"SKNotesDocumentOpenPDFToolbarItemIdentifier"
 
 #define SKLastExportedNotesTypeKey @"SKLastExportedNotesType"
-
-#define SKWindowFrameKey @"windowFrame"
 
 #define NOTES_KEY @"notes"
 #define PAGES_KEY @"pages"
@@ -124,6 +121,7 @@
     [outlineView setDelegate:nil];
     [outlineView setDataSource:nil];
     SKDESTROY(notes);
+    SKDESTROY(widgets);
     SKDESTROY(pdfDocument);
     SKDESTROY(sourceFileURL);
 	SKDESTROY(rowHeights);
@@ -205,12 +203,13 @@
 
 - (void)windowWillClose:(NSNotification *)notification {
     [pdfDocument setContainingDocument:nil];
+    [outlineView enumerateAvailableRowViewsUsingBlock:^(SKNoteTableRowView *rowView, NSInteger row){ [[rowView rowCellView] setObjectValue:nil]; }];
 }
 
 - (void)windowDidResize:(NSNotification *)notification {
     if (ndFlags.autoResizeRows) {
         [rowHeights removeAllFloats];
-        [outlineView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [outlineView numberOfRows])]];
+        [outlineView noteHeightOfRowsChangedAnimating:NO];
     }
 }
 
@@ -232,7 +231,7 @@
 - (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
     BOOL success = [super prepareSavePanel:savePanel];
     if (success && ndFlags.exportUsingPanel) {
-        NSPopUpButton *formatPopup = [[savePanel accessoryView] subviewOfClass:[NSPopUpButton class]];
+        NSPopUpButton *formatPopup = [[savePanel accessoryView] descendantOfClass:[NSPopUpButton class]];
         if (formatPopup) {
             NSString *lastExportedType = [[NSUserDefaults standardUserDefaults] stringForKey:SKLastExportedNotesTypeKey];
             if (lastExportedType) {
@@ -331,14 +330,15 @@
     NSWorkspace *ws = [NSWorkspace sharedWorkspace];
     
     if ([ws type:typeName conformsToType:SKNotesDocumentType]) {
-        array = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+        array = SKNSkimNotesFromData(data);
     } else if ([ws type:typeName conformsToType:SKNotesFDFDocumentType]) {
         array = [SKFDFParser noteDictionariesFromFDFData:data];
     }
     
     if (array) {
         NSMutableArray *newNotes = [NSMutableArray arrayWithCapacity:[array count]];
-        
+        NSMutableArray *newWidgets = [NSMutableArray arrayWithCapacity:[array count]];
+
         [self willChangeValueForKey:PAGES_KEY];
         [pdfDocument autorelease];
         pdfDocument = [[SKPDFDocument alloc] init];
@@ -347,18 +347,22 @@
         
         for (NSDictionary *dict in array) {
             PDFAnnotation *note = [[PDFAnnotation alloc] initSkimNoteWithProperties:dict];
-            PDFPage *page;
-            NSUInteger pageIndex = [[dict objectForKey:SKNPDFAnnotationPageIndexKey] unsignedIntegerValue];
-            NSUInteger pageCount = [pdfDocument pageCount];
-            
-            while (pageIndex >= pageCount) {
-                page = [[SKNotesPage alloc] init];
-                [pdfDocument insertPage:page atIndex:pageCount++];
-                [page release];
+            if (note) {
+                PDFPage *page;
+                NSUInteger pageIndex = [[dict objectForKey:SKNPDFAnnotationPageIndexKey] unsignedIntegerValue];
+                NSUInteger pageCount = [pdfDocument pageCount];
+                
+                while (pageIndex >= pageCount) {
+                    page = [[SKNotesPage alloc] init];
+                    [pdfDocument insertPage:page atIndex:pageCount++];
+                    [page release];
+                }
+                [[pdfDocument pageAtIndex:pageIndex] addAnnotation:note];
+                [newNotes addObject:note];
+                [note release];
+            } else {
+                [newWidgets addObject:dict];
             }
-            [[pdfDocument pageAtIndex:pageIndex] addAnnotation:note];
-            [newNotes addObject:note];
-            [note release];
         }
         [self didChangeValueForKey:PAGES_KEY];
         
@@ -366,6 +370,9 @@
         [notes autorelease];
         notes = [newNotes copy];
         [self didChangeValueForKey:NOTES_KEY];
+        
+        [widgets release];
+        widgets = [newWidgets count] ? [newWidgets copy] : nil;
         
         [outlineView reloadData];
         didRead = YES;
@@ -400,16 +407,8 @@
     [outlineView reloadData];
 }
 
-- (NSDictionary *)currentDocumentSetup {
-    NSMutableDictionary *setup = [[[super currentDocumentSetup] mutableCopy] autorelease];
-    NSWindow *window = [self window];
-    if (window)
-        [setup setObject:NSStringFromRect([window frame]) forKey:SKWindowFrameKey];
-    return setup;
-}
-
 - (void)applySetup:(NSDictionary *)setup {
-    NSString *rectString = [setup objectForKey:SKWindowFrameKey];
+    NSString *rectString = [setup objectForKey:SKDocumentSetupWindowFrameKey];
     NSWindowController *wc = [[self windowControllers] lastObject];
     if (wc == nil) {
         [self makeWindowControllers];
@@ -421,6 +420,14 @@
         } else {
             [[wc window] setFrame:NSRectFromString(rectString) display:YES];
         }
+    }
+}
+
+- (void)applyOptions:(NSDictionary *)options {
+    NSString *searchString = [options objectForKey:@"search"];
+    if ([searchString length] > 0 && [searchField window]) {
+        [searchField setStringValue:searchString];
+        [self performSelector:@selector(searchNotes:) withObject:searchField afterDelay:0.0];
     }
 }
 
@@ -445,6 +452,17 @@
     if ([NSScreen screenForWindowHasMenuBar:[self window]])
         return [self interactionMode];
     return SKNormalMode;
+}
+
+- (NSArray *)SkimNoteProperties {
+    NSArray *array = [super SkimNoteProperties];
+    if ([widgets count])
+        array = [array arrayByAddingObjectsFromArray:widgets];
+    return array;
+}
+
+- (NSMenu *)notesMenu {
+    return [[outlineView headerView] menu];
 }
 
 #pragma mark Printing
@@ -524,7 +542,7 @@
     
     if (items == nil) {
         NSMutableArray *tmpItems = [NSMutableArray array];
-        for (PDFAnnotation *note in items) {
+        for (PDFAnnotation *note in notes) {
             [tmpItems addObject:note];
             if ([note hasNoteText])
                 [tmpItems addObject:[note noteText]];
@@ -549,7 +567,7 @@
                 [rowIndexes addIndex:row];
         }
     }
-    [outlineView noteHeightOfRowsWithIndexesChanged:rowIndexes];
+    [outlineView noteHeightOfRowsWithIndexesChanged:rowIndexes ?: [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [outlineView numberOfRows])]];
 }
 
 - (void)resetHeightOfNoteRows:(id)sender {
@@ -560,14 +578,14 @@
         for (id item in items)
             [rowHeights removeFloatForKey:item];
     }
-    [outlineView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [outlineView numberOfRows])]];
+    [outlineView noteHeightOfRowsChangedAnimating:YES];
 }
 
 - (void)toggleAutoResizeNoteRows:(id)sender {
     ndFlags.autoResizeRows = (0 == ndFlags.autoResizeRows);
     if (ndFlags.autoResizeRows) {
         [rowHeights removeAllFloats];
-        [outlineView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [outlineView numberOfRows])]];
+        [outlineView noteHeightOfRowsChangedAnimating:YES];
     } else {
         [self autoSizeNoteRows:nil];
     }
@@ -655,11 +673,10 @@
 }
 
 - (NSView *)outlineView:(NSOutlineView *)ov viewForTableColumn:(NSTableColumn *)tableColumn item:(id)item {
-    NSTableCellView *view = nil;
     if ([(PDFAnnotation *)item type]) {
-        view = [ov makeViewWithIdentifier:[tableColumn identifier] owner:self];
+        return [ov makeViewWithIdentifier:[tableColumn identifier] owner:self];
     }
-    return view;
+    return nil;
 }
 
 - (NSTableRowView *)outlineView:(NSOutlineView *)ov rowViewForItem:(id)item {
@@ -668,23 +685,12 @@
 
 - (void)outlineView:(NSOutlineView *)ov didAddRowView:(NSTableRowView *)rowView forRow:(NSInteger)row {
     SKNoteTableRowView *noteRowView = [rowView isKindOfClass:[SKNoteTableRowView class]] ? (SKNoteTableRowView *)rowView : nil;
-    NSTableCellView *view = [noteRowView rowCellView];
-    if (view) {
-        [noteRowView setRowCellView:nil];
-        [view removeFromSuperview];
-    }
     id item = [ov itemAtRow:row];
     if ([(PDFAnnotation *)item type] == nil) {
-        NSRect frame = NSZeroRect;
-        NSInteger column, numColumns = [ov numberOfColumns];
-        NSArray *tcs = [ov tableColumns];
-        for (column = 0; column < numColumns; column++) {
-            if ([[tcs objectAtIndex:column] isHidden] == NO)
-                frame = NSUnionRect(frame, [ov frameOfCellAtColumn:column row:row]);
-        }
-        view = [ov makeViewWithIdentifier:NOTE_COLUMNID owner:self];
+        NSRect frame = [outlineView convertRect:[outlineView frameOfCellAtColumn:-1 row:row] toView:rowView];
+        NSTableCellView *view = [ov makeViewWithIdentifier:NOTE_COLUMNID owner:self];
         [view setObjectValue:item];
-        [view setFrame:[ov convertRect:frame toView:rowView]];
+        [view setFrame:frame];
         [rowView addSubview:view];
         [noteRowView setRowCellView:view];
     }
@@ -696,6 +702,8 @@
     if (view) {
         [noteRowView setRowCellView:nil];
         [view setObjectValue:nil];
+        @try { [[view textField] unbind:NSValueBinding]; }
+        @catch (id e) {}
         [view removeFromSuperview];
     }
 }
@@ -740,11 +748,9 @@
 }
 
 - (void)outlineViewColumnDidResize:(NSNotification *)notification{
-    if (ndFlags.autoResizeRows &&
-        [[[[notification userInfo] objectForKey:@"NSTableColumn"] identifier] isEqualToString:NOTE_COLUMNID] &&
-        [(SKScrollView *)[[notification object] enclosingScrollView] isResizingSubviews] == NO) {
+    if (ndFlags.autoResizeRows && [[[[notification userInfo] objectForKey:@"NSTableColumn"] identifier] isEqualToString:NOTE_COLUMNID] && [(SKScrollView *)[[notification object] enclosingScrollView] isResizingSubviews] == NO) {
         [rowHeights removeAllFloats];
-        [outlineView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [outlineView numberOfRows])]];
+        [outlineView noteHeightOfRowsChangedAnimating:NO];
     }
 }
 
@@ -752,7 +758,7 @@
     if (ndFlags.autoResizeRows &&
         [[tableColumn identifier] isEqualToString:NOTE_COLUMNID]) {
         [rowHeights removeAllFloats];
-        [outlineView noteHeightOfRowsWithIndexesChanged:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [outlineView numberOfRows])]];
+        [outlineView noteHeightOfRowsChangedAnimating:NO];
     }
 }
 

@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 1/5/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,8 @@ extern NSString *SKInitialWindowSizeOptionKey;
 extern NSString *SKReopenLastOpenFilesKey;
 extern NSString *SKRememberLastPageViewedKey;
 extern NSString *SKRememberSnapshotsKey;
+extern NSString *SKWriteLegacySkimNotesKey;
+extern NSString *SKWriteSkimNotesAsPlistKey;
 extern NSString *SKAutoSaveSkimNotesKey;
 extern NSString *SKSnapshotsOnTopKey;
 extern NSString *SKSnapshotThumbnailSizeKey;
@@ -61,7 +63,7 @@ extern NSString *SKLastToolModeKey;
 extern NSString *SKLastAnnotationModeKey;
 extern NSString *SKLastSecondarySelectsTextKey;
 extern NSString *SKShouldAntiAliasKey;
-extern NSString *SKImageInterpolationKey;
+extern NSString *SKInterpolationQualityKey;
 extern NSString *SKGreekingThresholdKey;
 extern NSString *SKReadingBarColorKey;
 extern NSString *SKReadingBarInvertKey;
@@ -132,10 +134,10 @@ extern NSString *SKDisableUpdateContentsFromEnclosedTextKey;
 extern NSString *SKCaseInsensitiveSearchKey;
 extern NSString *SKWholeWordSearchKey;
 extern NSString *SKCaseInsensitiveNoteSearchKey;
+extern NSString *SKCaseInsensitiveFilterKey;
 extern NSString *SKCaseInsensitiveFindKey;
 extern NSString *SKDownloadsDirectoryKey;
 extern NSString *SKDisableSearchAfterSpotlighKey;
 extern NSString *SKDisplayNoteBoundsKey;
 extern NSString *SKDisplayPageBoundsKey;
 extern NSString *SKDisableHistoryHighlightsKey;
-

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/8/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #import "NSGeometry_SKExtensions.h"
 #import "NSShadow_SKExtensions.h"
 #import "NSColor_SKExtensions.h"
+#import "NSGraphics_SKExtensions.h"
 
 #define DEFAULT_WINDOW_WIDTH    300.0
 #define DEFAULT_WINDOW_HEIGHT   400.0
@@ -54,31 +55,21 @@
 
 static CGFloat WINDOW_OFFSET = 8.0;
 
-#define SKHideClosedFullScreenSidePanelsKey @"SKHideClosedFullScreenSidePanels"
-
-enum { SKClosedSidePanelCollapse, SKClosedSidePanelAutoHide, SKClosedSidePanelHide };
-
 @implementation SKSideWindow
 
-@synthesize edge, state, enabled, acceptsMouseOver;
-@dynamic mainView;
-
-static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
-
-+ (void)initialize {
-    SKINITIALIZE;
-    
-    hideWhenClosed = [[NSUserDefaults standardUserDefaults] integerForKey:SKHideClosedFullScreenSidePanelsKey];
-    
-    if (hideWhenClosed == SKClosedSidePanelHide)
-        WINDOW_OFFSET = 0.0;
+- (void)contentViewFrameChanged:(NSNotification *)notification {
+    NSVisualEffectView *contentView = (NSVisualEffectView *)[self contentView];
+    NSBezierPath *path = [NSBezierPath bezierPathWithRoundedRect:SKShrinkRect([contentView bounds], -CORNER_RADIUS, NSMinXEdge) xRadius:CORNER_RADIUS yRadius:CORNER_RADIUS];
+    NSImage *mask = [[NSImage alloc] initWithSize:[contentView bounds].size];
+    [mask lockFocus];
+    [[NSColor blackColor] set];
+    [path fill];
+    [mask unlockFocus];
+    [mask setTemplate:YES];
+    [contentView setMaskImage:mask];
 }
 
-+ (CGFloat)requiredMargin {
-    return hideWhenClosed == SKClosedSidePanelHide ? 0.0 : WINDOW_OFFSET + 1.0;
-}
-
-- (id)initWithEdge:(NSRectEdge)anEdge {
+- (id)initWithView:(NSView *)view {
     self = [super initWithContentRect:NSMakeRect(0.0, 0.0, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT) styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
     if (self) {
 		[self setBackgroundColor:[NSColor clearColor]];
@@ -86,54 +77,72 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
 		[self setHasShadow:YES];
         [self setDisplaysWhenScreenProfileChanges:YES];
         [self setReleasedWhenClosed:NO];
-        [self setAlphaValue:0.0];
+        [self setAlphaValue:RUNNING_AFTER(10_13) ? 1.0 : 0.95];
         [self setAnimationBehavior:NSWindowAnimationBehaviorNone];
         
-        edge = anEdge;
-        enabled = YES;
+        NSView *backgroundView = [[[SKSideWindowContentView alloc] init] autorelease];
         
-        timer = nil;
-        
-        NSView *contentView = [[[SKSideWindowContentView alloc] initWithFrame:NSZeroRect edge:edge] autorelease];
-        [self setContentView:contentView];
-        
-        NSRect contentRect = SKShrinkRect(NSInsetRect([contentView bounds], 0.0, CONTENT_INSET), CONTENT_INSET, edge == NSMaxXEdge ? NSMinXEdge : NSMaxXEdge);
-        mainContentView = [[[NSView alloc] initWithFrame:contentRect] autorelease];
-        [mainContentView setAutoresizingMask:(edge == NSMaxXEdge ? NSViewMaxXMargin : NSViewMinXMargin) | NSViewHeightSizable];
-        [contentView addSubview:mainContentView];
-        
-        if (hideWhenClosed != SKClosedSidePanelHide) {
-            trackingArea = [[NSTrackingArea alloc] initWithRect:[contentView bounds] options:NSTrackingMouseEnteredAndExited | NSTrackingInVisibleRect | NSTrackingActiveInActiveApp owner:self userInfo:nil];
-            [contentView addTrackingArea:trackingArea];
+        if (RUNNING_AFTER(10_13)) {
+            NSVisualEffectView *contentView = [[NSVisualEffectView alloc] init];
+            [contentView setMaterial:RUNNING_BEFORE(10_11) ? NSVisualEffectMaterialAppearanceBased : NSVisualEffectMaterialSidebar];
+            [self setContentView:contentView];
+            [backgroundView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+            [backgroundView setFrame:[contentView bounds]];
+            [contentView addSubview:backgroundView];
+            [contentView release];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewFrameChanged:) name:NSViewFrameDidChangeNotification object:contentView];
+            [self contentViewFrameChanged:nil];
+            SKSetHasDarkAppearance(self);
+        } else {
+            [self setContentView:backgroundView];
         }
+        
+        NSRect contentRect = SKShrinkRect(NSInsetRect([backgroundView bounds], 0.0, CONTENT_INSET), CONTENT_INSET, NSMaxXEdge);
+        mainContentView = [[[NSView alloc] initWithFrame:contentRect] autorelease];
+        [mainContentView setAutoresizingMask:NSViewMinXMargin | NSViewHeightSizable];
+        [backgroundView addSubview:mainContentView];
+        [view setFrame:[mainContentView bounds]];
+        [mainContentView addSubview:view];
     }
     return self;
 }
 
 - (void)dealloc {
-    [timer invalidate];
-    SKDESTROY(timer);
-    SKDESTROY(trackingArea);
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     [super dealloc];
 }
 
 - (BOOL)canBecomeMainWindow { return NO; }
 
-- (BOOL)canBecomeKeyWindow {
-    return state == NSDrawerOpenState || state == NSDrawerOpeningState;
-}
+- (BOOL)canBecomeKeyWindow { return YES; }
 
 - (void)attachToWindow:(NSWindow *)window {
     NSRect frame;
-    frame = SKSliceRect([[window screen] frame], WINDOW_OFFSET, edge);
+    NSRect screenFrame = [[window screen] frame];
+    frame = SKSliceRect(screenFrame, WINDOW_OFFSET, NSMinXEdge);
     [self setFrame:NSInsetRect(frame, 0.0, WINDOW_INSET) display:NO];
-    state = NSDrawerClosedState;
-    [self setAcceptsMouseOver:YES];
     [self setLevel:[window level]];
     [self orderFront:nil];
     [window addChildWindow:self ordered:NSWindowAbove];
-    if (hideWhenClosed == SKClosedSidePanelCollapse && [self alphaValue] < 0.1)
-        [([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey] ? self : [self animator]) setAlphaValue:1.0];
+    
+    frame.size.width = NSWidth([mainContentView frame]) + CONTENT_INSET;
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey]) {
+        [self setFrame:frame display:YES];
+        if ([window isKeyWindow])
+            [self makeKeyAndOrderFront:nil];
+        else
+            [self orderFront:nil];
+    } else {
+        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
+                [[self animator] setFrame:frame display:YES];
+            }
+            completionHandler:^{
+                if ([window isKeyWindow])
+                    [self makeKeyAndOrderFront:nil];
+                else
+                    [self orderFront:nil];
+            }];
+    }
 }
 
 - (void)remove {
@@ -141,93 +150,8 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
     [self orderOut:nil];
 }
 
-- (void)animateToWidth:(CGFloat)width completionHandler:(void(^)(void))completionHandler {
-    NSRect screenFrame = [[[self parentWindow] screen] frame];
-    NSRect frame = [self frame];
-    frame.size.width = width;
-    frame.origin.x = edge == NSMaxXEdge ? NSMaxX(screenFrame) - width : NSMinX(screenFrame);
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey]) {
-        [self setFrame:frame display:YES];
-        if (completionHandler) completionHandler();
-    } else {
-        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
-                [[self animator] setFrame:frame display:YES];
-            }
-            completionHandler:completionHandler];
-    }
-}
-
-- (void)slideOut {
-    if (state == NSDrawerOpenState || state == NSDrawerOpeningState) {
-        state = NSDrawerClosingState;
-        [self animateToWidth:WINDOW_OFFSET
-            completionHandler:^{
-                if ([self isKeyWindow])
-                    [[self parentWindow] makeKeyAndOrderFront:self];
-                state = NSDrawerClosedState;
-                if (hideWhenClosed != SKClosedSidePanelCollapse)
-                    [self setAlphaValue:0.0];
-            }];
-    }
-}
-
-- (void)slideIn {
-    if (state == NSDrawerClosedState || state == NSDrawerClosingState) {
-        if ([self alphaValue] < 0.1)
-            [self setAlphaValue:1.0];
-        state = NSDrawerOpeningState;
-        [self animateToWidth:NSWidth([mainContentView frame]) + CONTENT_INSET 
-            completionHandler:^{
-                if ([[self parentWindow] isKeyWindow])
-                    [self makeKeyAndOrderFront:nil];
-                else
-                    [self orderFront:nil];
-                state = NSDrawerOpenState;
-            }];
-    }
-}
-
-- (NSView *)mainView {
-    return [[mainContentView subviews] firstObject];
-}
-
-- (void)setMainView:(NSView *)newContentView {
-    [newContentView setFrame:[mainContentView bounds]];
-    [newContentView retain];
-    if ([[mainContentView subviews] count])
-        [mainContentView replaceSubview:[[mainContentView subviews] objectAtIndex:0] with:newContentView];
-    else
-        [mainContentView addSubview:newContentView];
-    [newContentView release];
-    [self recalculateKeyViewLoop];
-}
-
-- (void)expand {
-    [self setAcceptsMouseOver:NO];
-    [self slideIn];
-}
-
-- (void)collapse {
-    [self slideOut];
-    [self setAcceptsMouseOver:YES];
-}
-
-- (BOOL)acceptsMouseOver {
-    return acceptsMouseOver && hideWhenClosed != SKClosedSidePanelHide;
-}
-
-- (void)setAcceptsMouseOver:(BOOL)flag {
-    if (acceptsMouseOver != flag) {
-        acceptsMouseOver = flag;
-        if (timer) {
-            [timer invalidate];
-            SKDESTROY(timer);
-        }
-    }
-}
-
 - (void)keyDown:(NSEvent *)theEvent {
-    if ([theEvent firstCharacter] == 'p' && [theEvent deviceIndependentModifierFlags] == 0 && enabled == NO)
+    if ([theEvent firstCharacter] == 't' && [theEvent deviceIndependentModifierFlags] == 0)
         [self cancelOperation:self];
     else
         [super keyDown:theEvent];
@@ -243,48 +167,7 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
     return [[self parentWindow] windowController];
 }
 
-- (void)mouseExited:(NSEvent *)theEvent {
-    if ([[theEvent trackingArea] isEqual:trackingArea] == NO) {
-        [super mouseExited:theEvent];
-    } else if (acceptsMouseOver && resizing == NO) {
-        if (timer) {
-            [timer invalidate];
-            SKDESTROY(timer);
-        }
-        //if (NSPointInRect([NSEvent mouseLocation], [[self window] frame]) == NO)
-        [self slideOut];
-    }
-}
-
-- (void)slideInWithTimer:(NSTimer *)aTimer {
-    [timer invalidate];
-    SKDESTROY(timer);
-    [self slideIn];
-}
-
-- (void)mouseEntered:(NSEvent *)theEvent {
-    if ([[theEvent trackingArea] isEqual:trackingArea] == NO) {
-        [super mouseEntered:theEvent];
-    } else if (acceptsMouseOver && resizing == NO) {
-        if (NSPointInRect([NSEvent mouseLocation], [self frame])) {
-            if (timer == nil)
-                timer = [[NSTimer scheduledTimerWithTimeInterval:0.3 target:self selector:@selector(slideInWithTimer:) userInfo:NULL repeats:NO] retain];
-        } else if (timer) {
-            [timer invalidate];
-            SKDESTROY(timer);
-        }
-    }
-}
-
 - (void)resizeWithEvent:(NSEvent *)theEvent {
-    if (state != NSDrawerOpenState)
-        return;
-    
-    if (enabled && [theEvent clickCount] == 2) {
-        [self collapse];
-        return;
-	}
-    
     NSPoint initialLocation = [theEvent locationOnScreen];
 	NSRect initialFrame = [self frame];
 	BOOL keepGoing = YES;
@@ -299,17 +182,9 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
             {
 				NSPoint	newLocation = [theEvent locationOnScreen];
                 NSRect newFrame = initialFrame;
-                
-                if (edge == NSMaxXEdge) {
-                    newFrame.size.width -= newLocation.x - initialLocation.x;
-                    if (NSWidth(newFrame) < WINDOW_MIN_WIDTH)
-                        newFrame.size.width = WINDOW_MIN_WIDTH;
-                    newFrame.origin.x = NSMaxX(initialFrame) - NSWidth(newFrame);
-                } else {
-                    newFrame.size.width += newLocation.x - initialLocation.x;
-                    if (NSWidth(newFrame) < WINDOW_MIN_WIDTH)
-                        newFrame.size.width = WINDOW_MIN_WIDTH;
-                }
+                newFrame.size.width += newLocation.x - initialLocation.x;
+                if (NSWidth(newFrame) < WINDOW_MIN_WIDTH)
+                    newFrame.size.width = WINDOW_MIN_WIDTH;
                 [self setFrame:newFrame display:YES];
 			}
 				break;
@@ -324,7 +199,7 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
 		} // end of switch (event type)
 	} // end of mouse-tracking loop
     
-    [mainContentView setAutoresizingMask:(edge == NSMaxXEdge ? NSViewMaxXMargin : NSViewMinXMargin) | NSViewHeightSizable];
+    [mainContentView setAutoresizingMask:NSViewMinXMargin | NSViewHeightSizable];
     resizing = NO;
 }
 
@@ -333,29 +208,8 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
 
 @implementation SKSideWindowContentView
 
-- (id)initWithFrame:(NSRect)frameRect edge:(NSRectEdge)anEdge {
-    self = [super initWithFrame:frameRect];
-    if (self) {
-        edge = anEdge;
-    }
-    return self;
-}
-
-- (id)initWithCoder:(NSCoder *)decoder {
-    self = [super initWithCoder:decoder];
-    if (self) {
-        edge = [decoder decodeIntegerForKey:@"edge"];
-    }
-    return self;
-}
-
-- (void)encodeWithCoder:(NSCoder *)coder {
-    [super encodeWithCoder:coder];
-    [coder encodeInteger:edge forKey:@"edge"];
-}
-
 - (NSRect)resizeHandleRect {
-    return SKSliceRect([self bounds], CONTENT_INSET, edge == NSMaxXEdge ? NSMinXEdge : NSMaxXEdge);
+    return SKSliceRect([self bounds], CONTENT_INSET, NSMaxXEdge);
 }
 
 - (void)drawRect:(NSRect)aRect {
@@ -365,23 +219,22 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
     NSSize offset = NSZeroSize;
     NSPoint startPoint, endPoint;
     NSBezierPath *path = [NSBezierPath bezierPathWithRect:rect];
-    
-    // @@ Dark mode
-    
-    NSColor *backgroundColor = [[NSColor secondarySelectedControlColor] colorUsingColorSpaceName:NSCalibratedWhiteColorSpace];
-    CGFloat gray = [backgroundColor whiteComponent];
-    NSColor *topShadeColor = [NSColor colorWithCalibratedWhite:fmin(1.0, gray + 0.2) alpha:1.0];
-    NSColor *bottomShadeColor = [NSColor colorWithCalibratedWhite:fmax(0.0, gray - 0.8) alpha:1.0];
-    NSColor *handleColor = [NSColor colorWithCalibratedWhite:fmax(0.0, gray - 0.3) alpha:1.0];
-    NSColor *handleShadeColor = [NSColor colorWithCalibratedWhite:fmin(1.0, gray + 0.1) alpha:1.0];
+    NSColor *backgroundColor = [NSColor windowBackgroundColor];
+    CGFloat gray = [[[NSColor secondarySelectedControlColor] colorUsingColorSpaceName:NSDeviceWhiteColorSpace] whiteComponent];
+    NSColor *topShadeColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.5];
+    NSColor *bottomShadeColor = [NSColor colorWithDeviceWhite:0.0 alpha:0.5];
+    NSColor *handleColor = [NSColor colorWithDeviceWhite:fmax(0.0, gray - 0.3) alpha:1.0];
+    NSColor *handleShadeColor = [NSColor colorWithDeviceWhite:fmin(1.0, gray + 0.1) alpha:1.0];
 
     [NSGraphicsContext saveGraphicsState];
     
     [path addClip];
-    rect = SKShrinkRect(rect, -CORNER_RADIUS, edge);
+    rect = SKShrinkRect(rect, -CORNER_RADIUS, NSMinXEdge);
     [[NSBezierPath bezierPathWithRoundedRect:rect xRadius:CORNER_RADIUS yRadius:CORNER_RADIUS] addClip];
-    [backgroundColor set];
-    [path fill];
+    if ([[self window] contentView] == self) {
+        [backgroundColor set];
+        [path fill];
+    }
     
     offset.width = NSWidth(rect) + 6.0;
     rect.origin.x -= offset.width;
@@ -393,13 +246,11 @@ static NSUInteger hideWhenClosed = SKClosedSidePanelCollapse;
     [[NSBezierPath bezierPathWithRect:topRect] addClip];
     [NSShadow setShadowWithColor:topShadeColor  blurRadius:2.0 offset:offset];
     [path fill];
-    [path fill];
     [NSGraphicsContext restoreGraphicsState];
     
     [NSGraphicsContext saveGraphicsState];
     [[NSBezierPath bezierPathWithRect:bottomRect] addClip];
     [NSShadow setShadowWithColor:bottomShadeColor blurRadius:2.0 offset:offset];
-    [path fill];
     [path fill];
     [NSGraphicsContext restoreGraphicsState];
     

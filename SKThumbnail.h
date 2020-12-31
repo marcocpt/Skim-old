@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,8 @@
 
 @protocol SKThumbnailDelegate;
 
+@class PDFPage;
+
 @interface SKThumbnail : NSObject {
     NSImage *image;
     NSString *label;
@@ -56,6 +58,7 @@
 @property (nonatomic, readonly) NSString *label;
 @property (nonatomic, readonly) NSUInteger pageIndex;
 @property (nonatomic, readonly) NSSize size;
+@property (nonatomic, readonly) PDFPage *page;
 
 - (id)initWithImage:(NSImage *)anImage label:(NSString *)aLabel pageIndex:(NSUInteger)anIndex;
 
@@ -66,4 +69,5 @@
 
 @protocol SKThumbnailDelegate <NSObject>
 - (BOOL)generateImageForThumbnail:(SKThumbnail *)thumbnail;
+- (PDFPage *)pageForThumbnail:(SKThumbnail *)thumbnail;
 @end

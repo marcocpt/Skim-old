@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 11/4/12.
 /*
- This software is Copyright (c) 2012-2019
+ This software is Copyright (c) 2012-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,23 +38,36 @@
 
 #import <Cocoa/Cocoa.h>
 
+@protocol SKAttachmentEmailerDelegate;
 
 @interface SKAttachmentEmailer : NSObject {
-    NSURL *fileURL;
+    NSString *mailAppID;
+    id<SKAttachmentEmailerDelegate> delegate;
     NSString *subject;
-    void (^completionHandler)(BOOL);
 }
 
 + (BOOL)permissionToComposeMessage;
 
-+ (void)emailAttachmentWithURL:(NSURL *)aFileURL subject:(NSString *)aSubject preparedByTask:(NSTask *)task completionHandler:(void (^)(BOOL success))aCompletionHandler;
+@property (nonatomic, readonly) BOOL permissionToComposeMessage;
 
-@property (nonatomic, retain) NSURL *fileURL;
+@property (nonatomic, readonly) NSString *title;
+@property (nonatomic, readonly) NSImage *image;
+@property (nonatomic, assign) id<SKAttachmentEmailerDelegate> delegate;
+
 @property (nonatomic, retain) NSString *subject;
-@property (nonatomic, copy) void (^completionHandler)(BOOL success);
 
-- (void)emailAttachmentFile;
+- (BOOL)canPerformWithItems:(NSArray *)items;
+- (void)performWithItems:(NSArray *)items;
 
-- (void)launchTask:(NSTask *)task;
+@end
+
+#pragma mark -
+
+@protocol SKAttachmentEmailerDelegate <NSObject>
+
+@optional
+
+- (void)sharingService:(id)sharingService didShareItems:(NSArray *)items;
+- (void)sharingService:(id)sharingService didFailToShareItems:(NSArray *)items error:(NSError *)error;
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan on 9/27/12.
 /*
- This software is Copyright (c) 2012-2019
+ This software is Copyright (c) 2012-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -45,10 +45,9 @@
 
 @implementation SKExportAccessoryController
 
-@synthesize matrix, labelField;
+@synthesize labelField, hasExportOptions, allowsEmbeddedOption;
 
 - (void)dealloc {
-    SKDESTROY(matrix);
     SKDESTROY(labelField);
     [super dealloc];
 }
@@ -57,49 +56,16 @@
     return @"ExportAccessoryView";
 }
 
-- (void)loadView {
-    [super loadView];
-    [matrix sizeToFit];
-}
-
 - (void)addFormatPopUpButton:(NSPopUpButton *)popupButton {
-    // find the largest item and size popup to fit
-    CGFloat width = 0.0, maxWidth = 0.0;
-    NSSize size = NSMakeSize(1000.0, 1000.0);
-    NSDictionary *attrs = [NSDictionary dictionaryWithObjectsAndKeys:[popupButton font], NSFontAttributeName, nil];
-    NSUInteger i, iNum = [popupButton numberOfItems], iMax = 0;
-    for (i = 0; i < iNum; i++) {
-        width = NSWidth([[popupButton itemTitleAtIndex:i] boundingRectWithSize:size options:0 attributes:attrs]);
-        if (width > maxWidth) {
-            maxWidth = width;
-            iMax = i;
-        }
-    }
-    i = [popupButton indexOfSelectedItem];
-    [popupButton selectItemAtIndex:iMax];
-    [popupButton sizeToFit];
-    [popupButton selectItemAtIndex:i];
-
-    NSView *view = [self view];
-    NSRect frame = [view frame];
-    NSRect matrixFrame = [matrix frame];
-    NSRect popupFrame = [popupButton frame];
-    
-    popupFrame.origin.x = NSMinX(matrixFrame) - POPUP_MATRIX_OFFSET;
-    popupFrame.origin.y = NSMaxY(matrixFrame) + MARGIN_Y;
-    popupFrame.size.width = fmax(NSWidth(popupFrame), NSWidth(matrixFrame) + 2.0 * POPUP_MATRIX_OFFSET);
-    frame.size.width = fmax(NSMaxX(popupFrame) + MARGIN_X - POPUP_MATRIX_OFFSET, NSMaxX(matrixFrame) + MARGIN_X);
-    
+    NSView *view = [[[self view] subviews] firstObject];
     [popupButton setTranslatesAutoresizingMaskIntoConstraints:NO];
-    [popupButton setFrame:popupFrame];
-    [view setFrame:frame];
     [view addSubview:popupButton];
     
-    NSMutableArray *contraints = [NSMutableArray array];
-    [contraints addObject:[NSLayoutConstraint constraintWithItem:popupButton attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:matrix attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0]];
-    [contraints addObject:[NSLayoutConstraint constraintWithItem:popupButton attribute:NSLayoutAttributeTrailing relatedBy:NSLayoutRelationLessThanOrEqual toItem:view attribute:NSLayoutAttributeTrailing multiplier:1.0 constant:-12.0]];
-    [contraints addObject:[NSLayoutConstraint constraintWithItem:popupButton attribute:NSLayoutAttributeBaseline relatedBy:NSLayoutRelationEqual toItem:labelField attribute:NSLayoutAttributeBaseline multiplier:1.0 constant:0.0]];
-    [view addConstraints:contraints];
+    NSArray *constraints = [NSArray arrayWithObjects:
+        [NSLayoutConstraint constraintWithItem:popupButton attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:labelField attribute:NSLayoutAttributeTrailing multiplier:1.0 constant:8.0],
+        [NSLayoutConstraint constraintWithItem:popupButton attribute:NSLayoutAttributeBaseline relatedBy:NSLayoutRelationEqual toItem:labelField attribute:NSLayoutAttributeBaseline multiplier:1.0 constant:0.0],
+        [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeTrailing relatedBy:NSLayoutRelationGreaterThanOrEqual toItem:popupButton attribute:NSLayoutAttributeTrailing multiplier:1.0 constant:20.0], nil];
+    [NSLayoutConstraint activateConstraints:constraints];
 }
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 1/12/15.
 /*
- This software is Copyright (c) 2015-2019
+ This software is Copyright (c) 2015-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,6 @@
 @interface NSShadow (SKExtensions)
 
 + (void)setShadowWithColor:(NSColor *)color blurRadius:(CGFloat)blurRadius offset:(NSSize)offset;
-+ (void)setShadowWithColor:(NSColor *)color blurRadius:(CGFloat)blurRadius yOffset:(CGFloat)yOffset;
++ (void)setShadowWithWhite:(CGFloat)white alpha:(CGFloat)alpha blurRadius:(CGFloat)blurRadius yOffset:(CGFloat)yOffset;
 
 @end

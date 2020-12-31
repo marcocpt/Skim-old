@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/14/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -76,15 +76,25 @@
 #import "SKNoteWindowController.h"
 #import "SKNoteTextView.h"
 #import "SKMainTouchBarController.h"
+#import "SKThumbnailItem.h"
+#import "SKFloatMapTable.h"
+#import "PDFSelection_SKExtensions.h"
 
 #define STATUSBAR_HEIGHT 22.0
 
-#define PAGE_BREAK_MARGIN 8.0
+#define PAGE_BREAK_MARGIN 4.0
 
 #define DEFAULT_SIDE_PANE_WIDTH 250.0
 #define MIN_SIDE_PANE_WIDTH 100.0
 
 #define DEFAULT_SPLIT_PDF_FACTOR 0.3
+
+
+#if SDK_BEFORE(10_13)
+@interface PDFView (SKHighSierraDeclarations)
+@property (nonatomic) NSEdgeInsets pageBreakMargins;
+@end
+#endif
 
 @interface SKMainWindowController (SKPrivateUI)
 - (void)updateLineInspector;
@@ -96,9 +106,9 @@
 
 - (IBAction)changeColor:(id)sender{
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if (mwcFlags.updatingColor == 0 && [annotation isSkimNote]) {
-        BOOL isFill = [colorAccessoryView state] == NSOnState && [annotation respondsToSelector:@selector(setInteriorColor:)];
-        BOOL isText = [textColorAccessoryView state] == NSOnState && [annotation respondsToSelector:@selector(setFontColor:)];
+    if (mwcFlags.updatingColor == 0 && [self hasOverview] == NO && [annotation isSkimNote]) {
+        BOOL isFill = [colorAccessoryView state] == NSOnState && [annotation hasInteriorColor];
+        BOOL isText = [textColorAccessoryView state] == NSOnState && [annotation isText];
         BOOL isShift = ([NSEvent standardModifierFlags] & NSShiftKeyMask) != 0;
         mwcFlags.updatingColor = 1;
         [annotation setColor:[sender color] alternate:isFill || isText updateDefaults:isShift];
@@ -108,7 +118,7 @@
 
 - (IBAction)changeFont:(id)sender{
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if (mwcFlags.updatingFont == 0 && [annotation isSkimNote] && [annotation respondsToSelector:@selector(setFont:)] && [annotation respondsToSelector:@selector(font)]) {
+    if (mwcFlags.updatingFont == 0 && [self hasOverview] == NO && [annotation isSkimNote] && [annotation isText]) {
         NSFont *font = [sender convertFont:[(PDFAnnotationFreeText *)annotation font]];
         mwcFlags.updatingFont = 1;
         [(PDFAnnotationFreeText *)annotation setFont:font];
@@ -118,7 +128,7 @@
 
 - (IBAction)changeAttributes:(id)sender{
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if (mwcFlags.updatingFontAttributes == 0 && mwcFlags.updatingColor == 0 && [annotation isSkimNote] && [annotation respondsToSelector:@selector(setFontColor:)] && [annotation respondsToSelector:@selector(fontColor)]) {
+    if (mwcFlags.updatingFontAttributes == 0 && mwcFlags.updatingColor == 0 && [self hasOverview] == NO && [annotation isSkimNote] && [annotation isText]) {
         NSColor *color = [(PDFAnnotationFreeText *)annotation fontColor];
         NSColor *newColor = [[sender convertAttributes:[NSDictionary dictionaryWithObjectsAndKeys:color, NSForegroundColorAttributeName, nil]] valueForKey:NSForegroundColorAttributeName];
         if ([newColor isEqual:color] == NO) {
@@ -131,21 +141,21 @@
 
 - (IBAction)alignLeft:(id)sender {
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if ([annotation isSkimNote] && [annotation respondsToSelector:@selector(setAlignment:)] && [annotation respondsToSelector:@selector(alignment)]) {
+    if ([self hasOverview] == NO && [annotation isSkimNote] && [annotation isText]) {
         [(PDFAnnotationFreeText *)annotation setAlignment:NSLeftTextAlignment];
     }
 }
 
 - (IBAction)alignRight:(id)sender {
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if ([annotation isSkimNote] && [annotation respondsToSelector:@selector(setAlignment:)] && [annotation respondsToSelector:@selector(alignment)]) {
+    if ([self hasOverview] == NO && [annotation isSkimNote] && [annotation isText]) {
         [(PDFAnnotationFreeText *)annotation setAlignment:NSRightTextAlignment];
     }
 }
 
 - (IBAction)alignCenter:(id)sender {
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if ([annotation isSkimNote] && [annotation respondsToSelector:@selector(setAlignment:)] && [annotation respondsToSelector:@selector(alignment)]) {
+    if ([self hasOverview] == NO && [annotation isSkimNote] && [annotation isText]) {
         [(PDFAnnotationFreeText *)annotation setAlignment:NSCenterTextAlignment];
     }
 }
@@ -153,7 +163,7 @@
 - (void)changeLineAttribute:(id)sender {
     SKLineChangeAction action = [sender currentLineChangeAction];
     PDFAnnotation *annotation = [pdfView activeAnnotation];
-    if (mwcFlags.updatingLine == 0 && [annotation hasBorder]) {
+    if (mwcFlags.updatingLine == 0 && [self hasOverview] == NO && [annotation hasBorder]) {
         mwcFlags.updatingLine = 1;
         switch (action) {
             case SKLineChangeActionLineWidth:
@@ -189,9 +199,11 @@
 }
 
 - (void)addNoteFromPanel:(id)sender {
-    [self createNewNote:sender];
-    [[self window] makeKeyWindow];
-    [[self window] makeFirstResponder:[self pdfView]];
+    if ([self hasOverview] == NO) {
+        [self createNewNote:sender];
+        [[self window] makeKeyWindow];
+        [[self window] makeFirstResponder:[self pdfView]];
+    }
 }
 
 - (void)selectSelectedNote:(id)sender{
@@ -268,19 +280,31 @@
 
 - (IBAction)changeDisplaySinglePages:(id)sender {
     PDFDisplayMode displayMode = ([pdfView displayMode] & ~kPDFDisplayTwoUp) | [sender tag];
-    [pdfView setDisplayModeAndRewind:displayMode];
+    if ([pdfView displaysHorizontally] && displayMode == kPDFDisplaySinglePageContinuous)
+        displayMode = kPDFDisplayHorizontalContinuous;
+    [pdfView setExtendedDisplayModeAndRewind:displayMode];
 }
 
 - (IBAction)changeDisplayContinuous:(id)sender {
     PDFDisplayMode displayMode = ([pdfView displayMode] & ~kPDFDisplaySinglePageContinuous) | [sender tag];
-    [pdfView setDisplayModeAndRewind:displayMode];
+    if ([pdfView displaysHorizontally] && displayMode == kPDFDisplaySinglePageContinuous)
+        displayMode = kPDFDisplayHorizontalContinuous;
+    [pdfView setExtendedDisplayModeAndRewind:displayMode];
 }
 
 - (IBAction)changeDisplayMode:(id)sender {
-    [pdfView setDisplayModeAndRewind:[sender tag]];
+    [pdfView setExtendedDisplayModeAndRewind:[sender tag]];
 }
 
-- (IBAction)toggleDisplayAsBook:(id)sender {
+- (IBAction)changeDisplayDirection:(id)sender {
+    [pdfView setDisplaysHorizontallyAndRewind:[sender tag]];
+}
+
+- (IBAction)toggleDisplaysRTL:(id)sender {
+    [pdfView setDisplaysRightToLeftAndRewind:[pdfView displaysRightToLeft] == NO];
+}
+
+- (IBAction)toggleDisplaysAsBook:(id)sender {
     [pdfView setDisplaysAsBookAndRewind:[pdfView displaysAsBook] == NO];
 }
 
@@ -341,7 +365,7 @@ static NSArray *allMainDocumentPDFViews() {
     [pageSheetController setStringValue:[self pageLabel]];
     
     [pageSheetController beginSheetModalForWindow:[self window] completionHandler:^(NSInteger result) {
-            if (result == NSOKButton)
+            if (result == NSModalResponseOK)
                 [self setPageLabel:[pageSheetController stringValue]];
         }];
 }
@@ -369,8 +393,11 @@ static NSArray *allMainDocumentPDFViews() {
 }
 
 - (IBAction)markPage:(id)sender {
+    if (markedPageIndex != NSNotFound)
+        [(SKThumbnailItem *)[overviewView itemAtIndex:markedPageIndex] setMarked:NO];
     markedPageIndex = [pdfView currentPageIndexAndPoint:&markedPagePoint rotated:NULL];
     beforeMarkedPageIndex = NSNotFound;
+    [(SKThumbnailItem *)[overviewView itemAtIndex:markedPageIndex] setMarked:YES];
 }
 
 - (IBAction)doZoomIn:(id)sender {
@@ -403,40 +430,53 @@ static NSArray *allMainDocumentPDFViews() {
     if (RUNNING(10_12) && 0 == ([pdfView displayMode] & kPDFDisplaySinglePageContinuous)) {
         CGFloat pageHeight = NSHeight([[pdfView currentPage] boundsForBox:[pdfView displayBox]]);
         if ([pdfView displaysPageBreaks])
-            pageHeight += PAGE_BREAK_MARGIN;
+            pageHeight += 2.0 * PAGE_BREAK_MARGIN;
         CGFloat scaleFactor = fmax([pdfView minimumScaleFactor], NSHeight([pdfView frame]) / pageHeight);
         if (scaleFactor < [pdfView scaleFactor])
             [pdfView setScaleFactor:scaleFactor];
     }
 }
 
+// @@ Horizontal layout
 - (IBAction)alternateZoomToFit:(id)sender {
-    PDFDisplayMode displayMode = [pdfView displayMode];
+    PDFDisplayMode displayMode = [pdfView extendedDisplayMode];
     NSRect frame = [pdfView frame];
     PDFPage *page = [pdfView currentPage];
     NSRect pageRect = [page boundsForBox:[pdfView displayBox]];
     CGFloat scrollerWidth = 0.0;
-    CGFloat margin = [pdfView displaysPageBreaks] ? PAGE_BREAK_MARGIN : 0.0;
     CGFloat scaleFactor;
     NSUInteger pageCount = [[pdfView document] pageCount];
-    if (displayMode == kPDFDisplaySinglePage || displayMode == kPDFDisplayTwoUp) {
+    if ([pdfView displaysPageBreaks]) {
+        if (RUNNING_BEFORE(10_13)) {
+            pageRect = NSInsetRect(pageRect, -PAGE_BREAK_MARGIN, -PAGE_BREAK_MARGIN);
+        } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+            NSEdgeInsets margins = [pdfView pageBreakMargins];
+#pragma clang diagnostic pop
+            pageRect = NSInsetRect(pageRect, -margins.bottom, -margins.left);
+            pageRect.size.width += margins.right - margins.left;
+            pageRect.size.height += margins.top - margins.bottom;
+        }
+    }
+    if ((displayMode & kPDFDisplaySinglePageContinuous) == 0) {
         // zoom to width
         NSUInteger numCols = (displayMode == kPDFDisplayTwoUp && pageCount > 1 && ([pdfView displaysAsBook] == NO || pageCount > 2)) ? 2 : 1;
-        if (NSWidth(frame) * ( margin + NSHeight(pageRect) ) > NSHeight(frame) * numCols * ( margin + NSWidth(pageRect) ))
+        if (NSWidth(frame) * ( NSHeight(pageRect) ) > NSHeight(frame) * numCols * ( NSWidth(pageRect) ))
             scrollerWidth =  [NSScroller effectiveScrollerWidth];
-        scaleFactor = ( NSWidth(frame) - scrollerWidth ) / ( margin + NSWidth(pageRect) );
+        scaleFactor = ( NSWidth(frame) - scrollerWidth ) / ( NSWidth(pageRect) );
     } else {
         // zoom to height
         NSUInteger numRows = pageCount;
         if (displayMode == kPDFDisplayTwoUpContinuous)
             numRows = [pdfView displaysAsBook] ? (1 + pageCount) / 2 : 1 + pageCount / 2;
-        if (NSHeight(frame) * ( margin + NSWidth(pageRect) ) > NSWidth(frame) * numRows * ( margin + NSHeight(pageRect) ))
+        if (NSHeight(frame) * ( NSWidth(pageRect) ) > NSWidth(frame) * numRows * ( NSHeight(pageRect) ))
             scrollerWidth = [NSScroller effectiveScrollerWidth];
-        scaleFactor = ( NSHeight(frame) - scrollerWidth ) / ( margin + NSHeight(pageRect) );
+        scaleFactor = ( NSHeight(frame) - scrollerWidth ) / ( NSHeight(pageRect) );
     }
     [pdfView setScaleFactor:scaleFactor];
     [pdfView layoutDocumentView];
-    [pdfView goToRect:NSInsetRect(pageRect, -0.5 * margin, -0.5 * margin) onPage:page];
+    [pdfView goToRect:pageRect onPage:page];
 }
 
 - (IBAction)doAutoScale:(id)sender {
@@ -705,22 +745,36 @@ static NSArray *allMainDocumentPDFViews() {
 
 - (IBAction)toggleStatusBar:(id)sender {
     [[NSUserDefaults standardUserDefaults] setBool:(NO == [statusBar isVisible]) forKey:SKShowStatusBarKey];
-    [statusBar toggleBelowView:splitView animate:sender != nil];
-}
-
-- (void)selectLeftSideSearchField:(NSNotification *)note {
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:SKSplitViewAnimationDidEndNotification object:splitView];
-    [leftSideController.searchField selectText:self];
+    NSView *view = [self hasOverview] ? overviewContentView : splitView;
+    [statusBar toggleBelowView:view animate:sender != nil];
 }
 
 - (IBAction)searchPDF:(id)sender {
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES completionHandler:^{ [self searchPDF:sender]; }];
+        return;
+    }
     if ([self leftSidePaneIsOpen] == NO)
         [self toggleLeftSidePane:sender];
     // workaround for an AppKit bug: when selecting immediately before the animation, the search fields does not display its text
     if ([splitView isAnimating])
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(selectLeftSideSearchField:) name:SKSplitViewAnimationDidEndNotification object:splitView];
+        [splitView enqueueOperation:^{ [leftSideController.searchField selectText:self]; }];
     else
         [leftSideController.searchField selectText:self];
+}
+
+- (IBAction)filterNotes:(id)sender {
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES completionHandler:^{ [self filterNotes:sender]; }];
+        return;
+    }
+    if ([self rightSidePaneIsOpen] == NO)
+        [self toggleRightSidePane:sender];
+    // workaround for an AppKit bug: when selecting immediately before the animation, the search fields does not display its text
+    if ([splitView isAnimating])
+        [splitView enqueueOperation:^{ [rightSideController.searchField selectText:self]; }];
+    else
+        [rightSideController.searchField selectText:self];
 }
 
 - (IBAction)search:(id)sender {
@@ -784,6 +838,8 @@ static NSArray *allMainDocumentPDFViews() {
     }
 }
 
+// @@ Horizontal layout
+
 - (IBAction)performFit:(id)sender {
     if ([self interactionMode] != SKNormalMode) {
         NSBeep();
@@ -791,11 +847,12 @@ static NSArray *allMainDocumentPDFViews() {
     }
     
     PDFDisplayMode displayMode = [[self pdfView] displayMode];
+    BOOL horizontal = [[self pdfView] displaysHorizontally] && displayMode == kPDFDisplaySinglePageContinuous;
     CGFloat scaleFactor = [[self pdfView] scaleFactor];
     BOOL autoScales = [[self pdfView] autoScales];
     BOOL isSingleRow;
     
-    if (displayMode == kPDFDisplaySinglePage || displayMode == kPDFDisplayTwoUp)
+    if (displayMode == kPDFDisplaySinglePage || displayMode == kPDFDisplayTwoUp || horizontal)
         isSingleRow = YES;
     else if (displayMode == kPDFDisplaySinglePageContinuous || [[self pdfView] displaysAsBook])
         isSingleRow = [[[self pdfView] document] pageCount] <= 1;
@@ -806,8 +863,21 @@ static NSArray *allMainDocumentPDFViews() {
     NSSize size, oldSize = [[self pdfView] frame].size;
     NSRect documentRect = [[[self pdfView] documentView] convertRect:[[[self pdfView] documentView] bounds] toView:nil];
     PDFPage *page = [[self pdfView] currentPage];
-    PDFDisplayBox box = [[self pdfView] displayBox];
-    CGFloat margin = [[self pdfView] displaysPageBreaks] ? PAGE_BREAK_MARGIN : 0.0;
+    NSRect pageRect = [page boundsForBox:[[self pdfView] displayBox]];
+    
+    if ([pdfView displaysPageBreaks]) {
+        if (RUNNING_BEFORE(10_13)) {
+            pageRect = NSInsetRect(pageRect, -PAGE_BREAK_MARGIN, -PAGE_BREAK_MARGIN);
+        } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+            NSEdgeInsets margins = [pdfView pageBreakMargins];
+#pragma clang diagnostic pop
+            pageRect = NSInsetRect(pageRect, -margins.bottom, -margins.left);
+            pageRect.size.width += margins.right - margins.left;
+            pageRect.size.height += margins.top - margins.bottom;
+        }
+    }
     
     // Calculate the new size for the pdfView
     size.width = NSWidth(documentRect);
@@ -815,8 +885,10 @@ static NSArray *allMainDocumentPDFViews() {
         size.width /= scaleFactor;
     if (isSingleRow) {
         size.height = NSHeight(documentRect);
+        if (horizontal && [[[self pdfView] document] pageCount] > 1)
+            size.width = NSWidth([[self pdfView] convertRect:pageRect fromPage:page]) + [NSScroller effectiveScrollerWidth];
     } else {
-        size.height = NSHeight([[self pdfView] convertRect:[page boundsForBox:box] fromPage:page]) + margin * scaleFactor;
+        size.height = NSHeight([[self pdfView] convertRect:pageRect fromPage:page]);
         size.width += [NSScroller effectiveScrollerWidth];
     }
     if (autoScales)
@@ -833,14 +905,14 @@ static NSArray *allMainDocumentPDFViews() {
     [[self window] setFrame:frame display:[[self window] isVisible]];
     
     if (displayMode == kPDFDisplaySinglePageContinuous || displayMode == kPDFDisplayTwoUpContinuous)
-        [[self pdfView] goToRect:NSInsetRect([page boundsForBox:box], -0.5 * margin, -0.5 * margin) onPage:page];
+        [[self pdfView] goToRect:pageRect onPage:page];
 }
 
 - (IBAction)password:(id)sender {
     SKTextFieldSheetController *passwordSheetController = [[[SKTextFieldSheetController alloc] initWithWindowNibName:@"PasswordSheet"] autorelease];
     
     [passwordSheetController beginSheetModalForWindow:[self window] completionHandler:^(NSInteger result) {
-            if (result == NSOKButton) {
+            if (result == NSModalResponseOK) {
                 [[passwordSheetController window] orderOut:nil];
                 [[pdfView document] unlockWithPassword:[passwordSheetController stringValue]];
             }
@@ -849,6 +921,21 @@ static NSArray *allMainDocumentPDFViews() {
 
 - (IBAction)toggleReadingBar:(id)sender {
     [pdfView toggleReadingBar];
+}
+
+- (IBAction)togglePacer:(id)sender {
+    if ([self interactionMode] != SKPresentationMode)
+        [pdfView togglePacer];
+}
+
+- (IBAction)changePacerSpeed:(id)sender {
+    NSInteger tag = [sender tag];
+    if (tag == 0)
+        [pdfView setPacerSpeed:[pdfView pacerSpeed] + 1.0];
+    else if (tag == -1)
+        [pdfView setPacerSpeed:fmax(1.0, [pdfView pacerSpeed] - 1.0)];
+    else if (tag > 0)
+        [pdfView setPacerSpeed:[[sender title] doubleValue]];
 }
 
 - (IBAction)savePDFSettingToDefaults:(id)sender {
@@ -880,25 +967,21 @@ static NSArray *allMainDocumentPDFViews() {
     [[NSUserDefaults standardUserDefaults] setBool:mwcFlags.wholeWordSearch forKey:SKWholeWordSearchKey];
 }
 
-- (IBAction)toggleCaseInsensitiveNoteSearch:(id)sender {
-    mwcFlags.caseInsensitiveNoteSearch = (0 == mwcFlags.caseInsensitiveNoteSearch);
+- (IBAction)toggleCaseInsensitiveFilter:(id)sender {
+    mwcFlags.caseInsensitiveFilter = (0 == mwcFlags.caseInsensitiveFilter);
     if ([[rightSideController.searchField stringValue] length])
         [self searchNotes:rightSideController.searchField];
-    [[NSUserDefaults standardUserDefaults] setBool:mwcFlags.caseInsensitiveNoteSearch forKey:SKCaseInsensitiveNoteSearchKey];
+    [[NSUserDefaults standardUserDefaults] setBool:mwcFlags.caseInsensitiveFilter forKey:SKCaseInsensitiveFilterKey];
 }
 
 - (IBAction)toggleLeftSidePane:(id)sender {
-    if ([self interactionMode] == SKLegacyFullScreenMode) {
-        [[SKImageToolTipWindow sharedToolTipWindow] fadeOut];
-        if ([self leftSidePaneIsOpen])
-            [leftSideWindow collapse];
+    if ([self interactionMode] == SKPresentationMode) {
+        if ([sideWindow isVisible])
+            [self hideSideWindow];
         else
-            [leftSideWindow expand];
-    } else if ([self interactionMode] == SKPresentationMode) {
-        if ([leftSideWindow isVisible])
-            [self hideLeftSideWindow];
-        else
-            [self showLeftSideWindow];
+            [self showSideWindow];
+    } else if ([self hasOverview]) {
+        [self hideOverviewAnimating:sender != nil completionHandler:^{ [self toggleLeftSidePane:sender]; }];
     } else {
         CGFloat position = [splitView minPossiblePositionOfDividerAtIndex:0];
         if ([self leftSidePaneIsOpen]) {
@@ -917,30 +1000,30 @@ static NSArray *allMainDocumentPDFViews() {
 }
 
 - (IBAction)toggleRightSidePane:(id)sender {
-    if ([self interactionMode] == SKLegacyFullScreenMode) {
-        if ([self rightSidePaneIsOpen])
-            [rightSideWindow collapse];
-        else
-            [rightSideWindow expand];
-    } else if ([self interactionMode] == SKPresentationMode) {
-        if ([rightSideWindow isVisible])
-            [self hideRightSideWindow];
-        else
-            [self showRightSideWindow];
+    if ([self interactionMode] == SKPresentationMode) {
+    } else if ([self hasOverview]) {
+        [self hideOverviewAnimating:sender != nil completionHandler:^{ [self toggleRightSidePane:sender]; }];
     } else {
         CGFloat position = [splitView maxPossiblePositionOfDividerAtIndex:1];
         if ([self rightSidePaneIsOpen]) {
             if ([[[self window] firstResponder] isDescendantOf:rightSideContentView])
                 [[self window] makeFirstResponder:pdfView];
             lastRightSidePaneWidth = fmaxf(MIN_SIDE_PANE_WIDTH, NSWidth([rightSideContentView frame]));
+            [splitView setPosition:position ofDividerAtIndex:1 animate:sender != nil];
         } else {
             if(lastRightSidePaneWidth <= 0.0)
                 lastRightSidePaneWidth = DEFAULT_SIDE_PANE_WIDTH; // a reasonable value to start
             if (lastRightSidePaneWidth > 0.5 * NSWidth([centerContentView frame]))
                 lastRightSidePaneWidth = floor(0.5 * NSWidth([centerContentView frame]));
             position -= lastRightSidePaneWidth + [splitView dividerThickness];
+            [splitView setPosition:position ofDividerAtIndex:1 animate:sender != nil];
+            if (mwcFlags.autoResizeNoteRows && [splitView isAnimating]) {
+               [splitView enqueueOperation:^{
+                   [rowHeights removeAllFloats];
+                   [rightSideController.noteOutlineView noteHeightOfRowsChangedAnimating:YES];
+               }];
+            }
         }
-        [splitView setPosition:position ofDividerAtIndex:1 animate:sender != nil];
     }
 }
 
@@ -956,26 +1039,36 @@ static NSArray *allMainDocumentPDFViews() {
     [self setFindPaneState:[sender tag]];
 }
 
-- (void)removeSecondaryPdfContentView:(NSNotification *)note {
-    if (note)
-        [[NSNotificationCenter defaultCenter] removeObserver:self name:SKSplitViewAnimationDidEndNotification object:pdfSplitView];
-    [secondaryPdfView removeFromSuperview];
-    [pdfSplitView adjustSubviews];
+- (IBAction)toggleOverview:(id)sender {
+    if ([self hasOverview])
+        [self hideOverviewAnimating:YES];
+    else
+        [self showOverviewAnimating:YES];
 }
 
 - (IBAction)toggleSplitPDF:(id)sender {
     if ([pdfSplitView isAnimating])
         return;
     
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES completionHandler:^{ [self toggleSplitPDF:sender]; }];
+        return;
+    }
+    
     if ([secondaryPdfView window]) {
         
         lastSplitPDFHeight = NSHeight([secondaryPdfView frame]);
         
         [pdfSplitView setPosition:[pdfSplitView maxPossiblePositionOfDividerAtIndex:0] ofDividerAtIndex:0 animate:YES];
-        if ([pdfSplitView isAnimating])
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(removeSecondaryPdfContentView:) name:SKSplitViewAnimationDidEndNotification object:pdfSplitView];
-        else
-            [self removeSecondaryPdfContentView:nil];
+        if ([pdfSplitView isAnimating]) {
+            [pdfSplitView enqueueOperation:^{
+                [secondaryPdfView removeFromSuperview];
+                [pdfSplitView adjustSubviews];
+            }];
+        } else {
+            [secondaryPdfView removeFromSuperview];
+            [pdfSplitView adjustSubviews];
+        }
         
     } else {
         
@@ -985,8 +1078,9 @@ static NSArray *allMainDocumentPDFViews() {
             lastSplitPDFHeight = floor(DEFAULT_SPLIT_PDF_FACTOR * NSHeight(frame));
         
         CGFloat position = NSHeight(frame) - lastSplitPDFHeight - [pdfSplitView dividerThickness];
-        NSPoint point = NSZeroPoint;
+        NSPoint point = frame.origin;
         PDFPage *page = nil;
+        BOOL fixedAtBottom = [[[pdfView scrollView] contentView] isFlipped] == NO;
         
         if (secondaryPdfView == nil) {
             secondaryPdfView = [[SKSecondaryPDFView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 200.0, 20.0)];
@@ -996,14 +1090,15 @@ static NSArray *allMainDocumentPDFViews() {
             // Because of a PDFView bug, display properties can not be changed before it is placed in a window
             [secondaryPdfView setSynchronizedPDFView:pdfView];
             [secondaryPdfView setBackgroundColor:[pdfView backgroundColor]];
+            [[secondaryPdfView scrollView] setDrawsBackground:[[pdfView scrollView] drawsBackground]];
             [secondaryPdfView applyDefaultPageBackgroundColor];
             [secondaryPdfView setDisplaysPageBreaks:NO];
             [secondaryPdfView setShouldAntiAlias:[[NSUserDefaults standardUserDefaults] boolForKey:SKShouldAntiAliasKey]];
-            [secondaryPdfView applyDefaultInterpolationQuality];
+            [secondaryPdfView setInterpolationQuality:[[NSUserDefaults standardUserDefaults] integerForKey:SKInterpolationQualityKey]];
             [secondaryPdfView setGreekingThreshold:[[NSUserDefaults standardUserDefaults] floatForKey:SKGreekingThresholdKey]];
             [secondaryPdfView setSynchronizeZoom:YES];
             [secondaryPdfView setDocument:[pdfView document]];
-            point = NSMakePoint(NSMinX(frame), NSMaxY(frame) - position - [pdfSplitView dividerThickness]);
+            point.y += fixedAtBottom ? -lastSplitPDFHeight : NSHeight(frame) - position - [pdfSplitView dividerThickness];
             page = [pdfView pageForPoint:point nearest:YES];
             
         } else {
@@ -1016,16 +1111,14 @@ static NSArray *allMainDocumentPDFViews() {
         if (page) {
             [secondaryPdfView goToPage:page];
             point = [secondaryPdfView convertPoint:[secondaryPdfView convertPoint:[pdfView convertPoint:point toPage:page] fromPage:page] toView:[secondaryPdfView documentView]];
-            if ([[[secondaryPdfView scrollView] contentView] isFlipped] == NO)
-                point.y -= [[secondaryPdfView documentView] isFlipped] ? -NSHeight([[secondaryPdfView documentView] visibleRect]) : NSHeight([[secondaryPdfView documentView] visibleRect]);
+            if ([[[secondaryPdfView scrollView] contentView] isFlipped] == fixedAtBottom)
+                point.y -= ([[secondaryPdfView documentView] isFlipped] == fixedAtBottom ? 1.0 : -1.0) * NSHeight([[secondaryPdfView documentView] visibleRect]);
             [[secondaryPdfView documentView] scrollPoint:point];
             [secondaryPdfView layoutDocumentView];
         }
     }
     
     [[self window] recalculateKeyViewLoop];
-    if ([self interactionMode] == SKLegacyFullScreenMode)
-        [[self window] makeFirstResponder:pdfView];
 }
 
 - (IBAction)toggleFullscreen:(id)sender {
@@ -1037,7 +1130,7 @@ static NSArray *allMainDocumentPDFViews() {
 
 - (IBAction)togglePresentation:(id)sender {
     if ([self canExitPresentation])
-        [self exitFullscreen];
+        [self exitPresentation];
     else if ([self canEnterPresentation])
         [self enterPresentation];
 }
@@ -1045,6 +1138,11 @@ static NSArray *allMainDocumentPDFViews() {
 - (IBAction)performFindPanelAction:(id)sender {
     if ([self interactionMode] == SKPresentationMode) {
         NSBeep();
+        return;
+    }
+    
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES completionHandler:^{ [self performFindPanelAction:sender]; }];
         return;
     }
 	
@@ -1090,19 +1188,46 @@ static NSArray *allMainDocumentPDFViews() {
 	}
 }
 
+- (IBAction)centerSelectionInVisibleArea:(id)sender {
+    if ([self interactionMode] == SKPresentationMode) {
+        NSBeep();
+        return;
+    }
+    
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES completionHandler:^{ [self performFindPanelAction:sender]; }];
+        return;
+    }
+    
+    PDFSelection *selection = [pdfView currentSelection];
+    if ([selection hasCharacters] == NO) {
+        NSBeep();
+        return;
+    }
+    
+    [pdfView goToSelection:selection];
+    PDFPage *page = [selection safeFirstPage];
+    NSRect rect = [pdfView convertRect:[selection boundsForPage:page] fromPage:page];
+    NSView *clipView = [[pdfView scrollView] contentView];
+    NSRect visibleRect = [pdfView convertRect:[clipView visibleRect] fromView:clipView];
+    visibleRect.origin.x = floor(NSMidX(rect) - 0.5 * NSWidth(visibleRect));
+    visibleRect.origin.y = ceil(NSMidY(rect) - 0.5 * NSHeight(visibleRect));
+    visibleRect = [pdfView convertRect:visibleRect toView:[pdfView documentView]];
+    [[pdfView documentView] scrollRectToVisible:visibleRect];
+}
+
 - (void)cancelOperation:(id)sender {
     // passed on from SKSideWindow or SKFullScreenWindow
-    if ([self interactionMode] != SKNormalMode) {
+    if ([self hasOverview]) {
+        [self hideOverviewAnimating:YES];
+    } else if ([self interactionMode] != SKNormalMode) {
         if (sender == [self window]) {
-            [self exitFullscreen];
-        } else if (sender == leftSideWindow || sender == rightSideWindow) {
-            NSDrawerState state = [(SKSideWindow *)sender state];
-            if (state == NSDrawerClosedState || state == NSDrawerClosingState)
+            if ([self canExitFullscreen])
                 [self exitFullscreen];
-            else if (sender == leftSideWindow)
-                [self toggleLeftSidePane:sender];
-            else if (sender == rightSideWindow)
-                [self toggleRightSidePane:sender];
+            else if ([self canExitPresentation])
+                [self exitPresentation];
+        } else if (sender == sideWindow) {
+            [self toggleLeftSidePane:sender];
         }
     }
 }

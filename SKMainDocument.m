@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/5/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -87,21 +87,18 @@
 #import "SKTemporaryData.h"
 #import "SKTemplateManager.h"
 #import "SKExportAccessoryController.h"
-#import "SKAttachmentEmailer.h"
+#import "SKFileShare.h"
 #import "SKAnimatedBorderlessWindow.h"
 #import "PDFOutline_SKExtensions.h"
-#import "NSAlert_SKExtensions.h"
 
 #define BUNDLE_DATA_FILENAME @"data"
 #define PRESENTATION_OPTIONS_KEY @"net_sourceforge_skim-app_presentation_options"
 #define OPEN_META_TAGS_KEY @"com.apple.metadata:kMDItemOMUserTags"
 #define OPEN_META_RATING_KEY @"com.apple.metadata:kMDItemStarRating"
 
+#define SKIM_NOTES_PREFIX @"net_sourceforge_skim-app"
+
 NSString *SKSkimFileDidSaveNotification = @"SKSkimFileDidSaveNotification";
-
-#define SYNCABLE_SKIM_NOTES_KEY @"net_sourceforge_skim-app_notes#S"
-
-#define SKWriteSyncableSkimNotesKey @"SKWriteSyncableSkimNotes"
 
 #define SKLastExportedTypeKey @"SKLastExportedType"
 #define SKLastExportedOptionKey @"SKLastExportedOption"
@@ -137,12 +134,6 @@ enum {
     SKOptionAlways = 1
 };
 
-#if SDK_BEFORE(10_8)
-enum {
-    NSAutosaveAsOperation = 5
-};
-#endif
-
 @interface PDFAnnotation (SKPrivateDeclarations)
 - (void)setPage:(PDFPage *)newPage;
 @end
@@ -165,9 +156,6 @@ enum {
 - (void)tryToUnlockDocument:(PDFDocument *)document;
 
 - (void)handleWindowWillCloseNotification:(NSNotification *)notification;
-
-- (SKPasswordStatus)getPDFPassword:(NSString **)password item:(id *)itemRef forFileID:(NSString *)fileID;
-- (void)setPDFPassword:(NSString *)password item:(id)itemRef forFileID:(NSString *)fileID;
 
 @end
 
@@ -244,29 +232,25 @@ enum {
     
     [super showWindows];
     
-    if (wasVisible == NO) {
-        // currently PDFView on 10.9 and later initially doesn't display the PDF, messing around like this is a workaround for this bug
-        if (RUNNING(10_9)) {
-            [[self mainWindowController] toggleStatusBar:nil];
-            [[self mainWindowController] toggleStatusBar:nil];
-        }
+    if (wasVisible == NO)
         [[NSNotificationCenter defaultCenter] postNotificationName:SKDocumentDidShowNotification object:self];
-    }
 }
 
 - (void)removeWindowController:(NSWindowController *)windowController {
     if ([windowController isEqual:mainWindowController]) {
         // if the window delegate is nil, windowWillClose: has already cleaned up, and should have called saveRecentDocumentInfo
         // otherwise, windowWillClose: comes after this (as it did on Tiger) and we need to do this now
-        if ([mainWindowController isWindowLoaded] && [[mainWindowController window] delegate])
+        if ([mainWindowController isWindowLoaded] && [[mainWindowController window] delegate]) {
+            [mainWindowController setRecentInfoNeedsUpdate:YES];
             [self saveRecentDocumentInfo];
+        }
         SKDESTROY(mainWindowController);
     }
     [super removeWindowController:windowController];
 }
 
 - (void)saveRecentDocumentInfo {
-    if ([[[self mainWindowController] window] delegate]) {
+    if ([[self mainWindowController] recentInfoNeedsUpdate]) {
         NSURL *fileURL = [self fileURL];
         NSUInteger pageIndex = [[[self pdfView] currentPage] pageIndex];
         if (fileURL && pageIndex != NSNotFound) {
@@ -274,11 +258,6 @@ enum {
             [[self mainWindowController] setRecentInfoNeedsUpdate:NO];
         }
     }
-}
-
-- (void)saveRecentDocumentInfoIfNeeded {
-    if ([[self mainWindowController] recentInfoNeedsUpdate])
-        [self saveRecentDocumentInfo];
 }
 
 - (void)applySetup:(NSDictionary *)setup {
@@ -294,6 +273,7 @@ enum {
         [[self mainWindowController] setPageNumber:page];
     if ([searchString length] > 0)
         [[self mainWindowController] displaySearchResultsForString:searchString];
+    [[self mainWindowController] applyPDFSettings:options rewind:NO];
 }
 
 #pragma mark Writing
@@ -340,23 +320,27 @@ enum {
             [ws type:typeName conformsToType:SKXDVDocumentType]);
 }
 
+- (NSInteger)exportOption {
+    return mdFlags.exportOption;
+}
+
+- (void)setExportOption:(NSInteger)option {
+    mdFlags.exportOption = option;
+}
+
 - (void)updateExportAccessoryView {
     NSString *typeName = [self fileTypeFromLastRunSavePanel];
-    NSMatrix *matrix = [exportAccessoryController matrix];
-    [matrix selectCellWithTag:mdFlags.exportOption];
-    if ([self canAttachNotesForType:typeName]) {
-        [matrix setHidden:NO];
-        if ([[NSWorkspace sharedWorkspace] type:typeName conformsToType:SKPDFDocumentType] && ([[self pdfDocument] isLocked] == NO && [[self pdfDocument] allowsPrinting])) {
-            [[matrix cellWithTag:SKExportOptionWithEmbeddedNotes] setEnabled:YES];
-        } else {
-            [[matrix cellWithTag:SKExportOptionWithEmbeddedNotes] setEnabled:NO];
-            if (mdFlags.exportOption == SKExportOptionWithEmbeddedNotes) {
-                mdFlags.exportOption = SKExportOptionDefault;
-                [matrix selectCellWithTag:SKExportOptionDefault];
-            }
-        }
+    if ([self canAttachNotesForType:typeName] == NO) {
+        [exportAccessoryController setHasExportOptions:NO];
     } else {
-        [matrix setHidden:YES];
+        [exportAccessoryController setHasExportOptions:YES];
+        if ([[NSWorkspace sharedWorkspace] type:typeName conformsToType:SKPDFDocumentType] && ([[self pdfDocument] isLocked] == NO && [[self pdfDocument] allowsPrinting])) {
+            [exportAccessoryController setAllowsEmbeddedOption:YES];
+        } else {
+            [exportAccessoryController setAllowsEmbeddedOption:NO];
+            if (mdFlags.exportOption == SKExportOptionWithEmbeddedNotes)
+                [self setExportOption:SKExportOptionDefault];
+        }
     }
 }
 
@@ -367,14 +351,10 @@ enum {
         [self updateExportAccessoryView];
 }
 
-- (void)changeExportOption:(id)sender {
-    mdFlags.exportOption = [[sender selectedCell] tag];
-}
-
 - (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
     BOOL success = [super prepareSavePanel:savePanel];
     if (success && mdFlags.exportUsingPanel) {
-        NSPopUpButton *formatPopup = [[savePanel accessoryView] subviewOfClass:[NSPopUpButton class]];
+        NSPopUpButton *formatPopup = [[savePanel accessoryView] descendantOfClass:[NSPopUpButton class]];
         if (formatPopup) {
             NSString *lastExportedType = [[NSUserDefaults standardUserDefaults] stringForKey:SKLastExportedTypeKey];
             NSInteger lastExportedOption = [[NSUserDefaults standardUserDefaults] integerForKey:SKLastExportedOptionKey];
@@ -390,8 +370,7 @@ enum {
             
             exportAccessoryController = [[SKExportAccessoryController alloc] init];
             [exportAccessoryController addFormatPopUpButton:formatPopup];
-            [[exportAccessoryController matrix] setTarget:self];
-            [[exportAccessoryController matrix] setAction:@selector(changeExportOption:)];
+            [exportAccessoryController setRepresentedObject:self];
             [savePanel setAccessoryView:[exportAccessoryController view]];
             [self updateExportAccessoryView];
         }
@@ -405,6 +384,7 @@ enum {
     // just reset this as well, in case the panel was canceled
     mdFlags.exportOption = SKExportOptionDefault;
     
+    [exportAccessoryController setRepresentedObject:nil];
     SKDESTROY(exportAccessoryController);
     
     NSInvocation *invocation = [(id)contextInfo autorelease];
@@ -429,7 +409,10 @@ enum {
 }
 
 - (NSArray *)SkimNoteProperties {
-    NSArray *array = [[self notes] valueForKey:@"SkimNoteProperties"];
+    NSArray *array = [super SkimNoteProperties];
+    NSArray *widgetProperties = [[self mainWindowController] widgetProperties];
+    if ([widgetProperties count])
+        array = [array arrayByAddingObjectsFromArray:widgetProperties];
     if (pageOffsets != nil) {
         NSMutableArray *mutableArray = [NSMutableArray array];
         for (NSDictionary *dict in array) {
@@ -469,10 +452,12 @@ enum {
     
     SKNSkimNotesWritingOptions writeOptions = 0;
     SKNXattrFlags flags = kSKNXattrDefault;
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKWriteSyncableSkimNotesKey]) {
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKWriteLegacySkimNotesKey] == NO) {
         writeOptions = SKNSkimNotesWritingSyncable;
         flags = kSKNXattrSyncable;
     }
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKWriteSkimNotesAsPlistKey])
+        writeOptions |= SKNSkimNotesWritingPlist;
     
     BOOL success = [fm writeSkimNotes:[self SkimNoteProperties] textNotes:[self notesString] richTextNotes:[self notesRTFData] toExtendedAttributesAtURL:absoluteURL options:writeOptions error:NULL];
     
@@ -561,10 +546,9 @@ enum {
 - (BOOL)writeSafelyToURL:(NSURL *)absoluteURL ofType:(NSString *)typeName forSaveOperation:(NSSaveOperationType)saveOperation error:(NSError **)outError {
     NSWorkspace *ws = [NSWorkspace sharedWorkspace];
     NSURL *tmpURL = nil;
-    NSArray *skimNotes = nil;
-    NSString *textNotes = nil;
-    NSData *rtfNotes = nil;
-    SKNSkimNotesWritingOptions options = 0;
+    NSMutableDictionary *attributes = nil;
+    SKNExtendedAttributeManager *eam = nil;
+    NSString *path = nil;
     BOOL attachNotes = [self canAttachNotesForType:typeName] && mdFlags.exportOption == SKExportOptionDefault;
     
     if ([ws type:typeName conformsToType:SKPDFBundleDocumentType] &&
@@ -575,25 +559,26 @@ enum {
         NSURL *fileURL = [self fileURL];
         // we move everything that's not ours out of the way, so we can preserve version control info
         NSSet *ourExtensions = [NSSet setWithObjects:@"pdf", @"skim", @"fdf", @"txt", @"text", @"rtf", @"plist", nil];
-        for (NSURL *url in [fm contentsOfDirectoryAtURL:fileURL includingPropertiesForKeys:nil options:0 error:NULL]) {
+        for (NSURL *url in [fm contentsOfDirectoryAtURL:fileURL includingPropertiesForKeys:[NSArray array] options:0 error:NULL]) {
             if ([ourExtensions containsObject:[[url pathExtension] lowercaseString]] == NO) {
                 if (tmpURL == nil)
                     tmpURL = [fm URLForDirectory:NSItemReplacementDirectory inDomain:NSUserDomainMask appropriateForURL:fileURL create:YES error:NULL];
-                [fm copyItemAtURL:url toURL:[tmpURL URLByAppendingPathComponent:[url lastPathComponent]] error:NULL];
+                [fm copyItemAtURL:url toURL:[tmpURL URLByAppendingPathComponent:[url lastPathComponent] isDirectory:NO] error:NULL];
             }
         }
     }
     
     // There seems to be a bug on 10.9 when saving to an existing file that has a lot of extended attributes
-    if (RUNNING_AFTER(10_8) && attachNotes && [self fileURL] && (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation)) {
-        NSFileManager *fm = [NSFileManager defaultManager];
-        NSURL *fileURL = [self fileURL];
-        skimNotes = [fm readSkimNotesFromExtendedAttributesAtURL:fileURL error:NULL];
-        textNotes = [fm readSkimTextNotesFromExtendedAttributesAtURL:fileURL error:NULL];
-        rtfNotes = [fm readSkimRTFNotesFromExtendedAttributesAtURL:fileURL error:NULL];
-        if (skimNotes && nil != [[SKNExtendedAttributeManager sharedNoSplitManager] extendedAttributeNamed:SYNCABLE_SKIM_NOTES_KEY atPath:[fileURL path] traverseLink:YES error:NULL])
-            options = SKNSkimNotesWritingSyncable;
-        [fm writeSkimNotes:nil textNotes:nil richTextNotes:nil toExtendedAttributesAtURL:fileURL error:NULL];
+    if (attachNotes && [self fileURL] && (saveOperation == NSSaveOperation || saveOperation == NSAutosaveInPlaceOperation)) {
+        path = [[self fileURL] path];
+        eam = [SKNExtendedAttributeManager sharedNoSplitManager];
+        attributes = [NSMutableDictionary dictionary];
+        [[eam allExtendedAttributesAtPath:path traverseLink:YES error:NULL] enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL *stop){
+            if ([key hasPrefix:SKIM_NOTES_PREFIX]) {
+                [attributes setObject:value forKey:key];
+                [eam removeExtendedAttributeNamed:key atPath:path traverseLink:YES error:NULL];
+            }
+        }];
     }
     
     BOOL didSave = [super writeSafelyToURL:absoluteURL ofType:typeName forSaveOperation:saveOperation error:outError];
@@ -616,11 +601,13 @@ enum {
         } else if (tmpURL) {
             // move extra package content like version info to the new location
             NSFileManager *fm = [NSFileManager defaultManager];
-            for (NSURL *url in [fm contentsOfDirectoryAtURL:tmpURL includingPropertiesForKeys:nil options:0 error:NULL])
-                [fm moveItemAtURL:url toURL:[absoluteURL URLByAppendingPathComponent:[url lastPathComponent]] error:NULL];
+            for (NSURL *url in [fm contentsOfDirectoryAtURL:tmpURL includingPropertiesForKeys:[NSArray array] options:0 error:NULL])
+                [fm moveItemAtURL:url toURL:[absoluteURL URLByAppendingPathComponent:[url lastPathComponent] isDirectory:NO] error:NULL];
         }
-    } else if (skimNotes) {
-        [[NSFileManager defaultManager] writeSkimNotes:skimNotes textNotes:textNotes richTextNotes:rtfNotes toExtendedAttributesAtURL:[self fileURL] options:options error:NULL];
+    } else if ([attributes count]) {
+        [attributes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop){
+            [eam setExtendedAttributeNamed:key toValue:obj atPath:path options:0 error:NULL];
+        }];
     }
     
     if (tmpURL)
@@ -662,7 +649,7 @@ enum {
     NSTask *task = [[[NSTask alloc] init] autorelease];
     [task setLaunchPath:@"/usr/bin/tar"];
     [task setArguments:[NSArray arrayWithObjects:@"-czf", [targetURL path], [sourceURL lastPathComponent], nil]];
-    [task setCurrentDirectoryPath:[sourceURL path]];
+    [task setCurrentDirectoryPath:[[sourceURL URLByDeletingLastPathComponent] path]];
     [task setStandardOutput:[NSFileHandle fileHandleWithNullDevice]];
     [task setStandardError:[NSFileHandle fileHandleWithNullDevice]];
     return task;
@@ -672,7 +659,7 @@ enum {
     NSString *typeName = [self fileType];
     NSURL *tmpURL = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory inDomain:NSUserDomainMask appropriateForURL:absoluteURL create:YES error:NULL];
     NSString *ext = [self fileNameExtensionForType:typeName saveOperation:NSSaveToOperation];
-    NSURL *tmpFileURL = [tmpURL URLByAppendingPathComponent:[[absoluteURL URLReplacingPathExtension:ext] lastPathComponent]];
+    NSURL *tmpFileURL = [tmpURL URLByAppendingPathComponent:[[absoluteURL URLReplacingPathExtension:ext] lastPathComponent] isDirectory:NO];
     BOOL didWrite = [self writeToURL:tmpFileURL ofType:typeName error:outError];
     if (didWrite) {
         if ([self canAttachNotesForType:typeName])
@@ -683,7 +670,7 @@ enum {
             @catch (id exception) { didWrite = NO; }
             if (didWrite) {
                 [task waitUntilExit];
-                didWrite = [task terminationStatus] != 0;
+                didWrite = [task terminationStatus] == 0;
             }
         }
     }
@@ -720,7 +707,8 @@ enum {
     } else if ([ws type:SKArchiveDocumentType conformsToType:typeName]) {
         didWrite = [self writeArchiveToURL:absoluteURL error:&error];
     } else if ([ws type:SKNotesDocumentType conformsToType:typeName]) {
-        didWrite = [[NSFileManager defaultManager] writeSkimNotes:[self SkimNoteProperties] toSkimFileAtURL:absoluteURL error:&error];
+        SKNSkimNotesWritingOptions options = [[NSUserDefaults standardUserDefaults] boolForKey:SKWriteSkimNotesAsPlistKey] ? SKNSkimNotesWritingPlist : 0;
+        didWrite = [[NSFileManager defaultManager] writeSkimNotes:[self SkimNoteProperties] toSkimFileAtURL:absoluteURL options:options error:&error];
     } else if ([ws type:SKNotesRTFDocumentType conformsToType:typeName]) {
         NSData *data = [self notesRTFData];
         if (data)
@@ -942,7 +930,7 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
             NSArray *array = nil;
             NSNumber *number = nil;
             if ([docType isEqualToString:SKPDFBundleDocumentType]) {
-                NSDictionary *info = [NSDictionary dictionaryWithContentsOfURL:[[absoluteURL URLByAppendingPathComponent:BUNDLE_DATA_FILENAME] URLByAppendingPathExtension:@"plist"]];
+                NSDictionary *info = [NSDictionary dictionaryWithContentsOfURL:[[absoluteURL URLByAppendingPathComponent:BUNDLE_DATA_FILENAME isDirectory:NO] URLByAppendingPathExtension:@"plist"]];
                 if ([info isKindOfClass:[NSDictionary class]]) {
                     dictionary = [info objectForKey:SKPresentationOptionsKey];
                     array = [info objectForKey:SKTagsKey];
@@ -1037,6 +1025,15 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
 - (IBAction)copyURL:(id)sender {
     NSURL *skimURL = [[[self pdfView] currentPage] skimURL];
     if (skimURL) {
+        NSString *searchString = [mainWindowController searchString];
+        if ([searchString length] > 0) {
+            searchString = [searchString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+            NSURLComponents *components = [[NSURLComponents alloc] initWithURL:skimURL resolvingAgainstBaseURL:NO];
+            NSString *fragment = [components fragment];
+            [components setFragment:[fragment length] ? [fragment stringByAppendingFormat:@"&search=%@", searchString] : [@"search=" stringByAppendingString:searchString]];
+            skimURL = [components URL];
+            [components release];
+        }
         NSPasteboard *pboard = [NSPasteboard generalPasteboard];
         [pboard clearContents];
         [pboard writeObjects:[NSArray arrayWithObjects:skimURL, nil]];
@@ -1051,7 +1048,7 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
     NSArray *array = nil;
     
     if ([ws type:type conformsToType:SKNotesDocumentType]) {
-        array = [NSKeyedUnarchiver unarchiveObjectWithFile:[notesURL path]];
+        array = [[NSFileManager defaultManager] readSkimNotesFromSkimFileAtURL:notesURL error:NULL];
     } else if ([ws type:type conformsToType:SKNotesFDFDocumentType]) {
         NSData *fdfData = [NSData dataWithContentsOfURL:notesURL];
         if (fdfData)
@@ -1159,11 +1156,17 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
             
             for (j = 0; j < jMax; j++) {
                 PDFPage *page = [pdfDocWithoutNotes pageAtIndex:j];
+                NSArray *notes = [[page annotations] copy];
                 
-                for (PDFAnnotation *annotation in [[[page annotations] copy] autorelease]) {
-                    if ([annotation isSkimNote] == NO && [annotation isConvertibleAnnotation])
+                for (PDFAnnotation *annotation in notes) {
+                    if ([annotation isSkimNote] == NO && [annotation isConvertibleAnnotation]) {
+                        PDFAnnotation *popup = [annotation popup];
+                        if (popup)
+                            [page removeAnnotation:popup];
                         [page removeAnnotation:annotation];
+                    }
                 }
+                [notes release];
             }
             
             NSData *data = [pdfDocWithoutNotes dataRepresentation];
@@ -1173,6 +1176,8 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 
                 [[self mainWindowController] addAnnotationsFromDictionaries:noteDicts removeAnnotations:annotations autoUpdate:YES];
+                
+                [[self mainWindowController] registerWidgetValues];
                 
                 [self setPDFData:data pageOffsets:offsets];
                 
@@ -1204,7 +1209,7 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
     SKTextFieldSheetController *passwordSheetController = [[[SKTextFieldSheetController alloc] initWithWindowNibName:@"PasswordSheet"] autorelease];
     
     [passwordSheetController beginSheetModalForWindow:[[self mainWindowController] window] completionHandler:^(NSInteger result) {
-            if (result == NSOKButton) {
+            if (result == NSModalResponseOK) {
                 [[passwordSheetController window] orderOut:nil];
                 
                 if (pdfDoc && ([pdfDoc allowsNotes] == NO || [pdfDoc allowsPrinting] == NO) &&
@@ -1269,52 +1274,71 @@ static BOOL isIgnorablePOSIXError(NSError *error) {
     }];
 }
 
-- (IBAction)emailArchive:(id)sender {
-    NSString *ext = @"tgz";
-    NSString *fileName = [[self fileURL] lastPathComponentReplacingPathExtension:ext];
-    if (fileName == nil)
-        fileName = [[self displayName] stringByAppendingPathExtension:ext];
+- (IBAction)share:(id)sender {
+    BOOL shouldArchive = ([[self notes] count] > 0 || [[[self mainWindowController] presentationOptions] count] > 0 || [[[self mainWindowController] widgetProperties] count] > 0);
     
-    if ([SKAttachmentEmailer permissionToComposeMessage] == NO) {
-        NSBeep();
-        return;
-    }
+    NSString *typeName = [self fileType];
+    if (shouldArchive == NO && [typeName isEqualToString:SKPDFBundleDocumentType])
+        typeName = SKPDFDocumentType;
+    
+    NSString *typeExt = [self fileNameExtensionForType:typeName saveOperation:NSAutosaveElsewhereOperation];
+    NSString *targetExt = shouldArchive ? @"tgz" : typeExt;
+    NSString *targetFileName = [[self fileURL] lastPathComponentReplacingPathExtension:targetExt];
+    if (targetFileName == nil)
+        targetFileName = [[self displayName] stringByAppendingPathExtension:targetExt];
     
     NSURL *targetDirURL = [[NSFileManager defaultManager] uniqueChewableItemsDirectoryURL];
-    NSURL *targetFileURL = [targetDirURL URLByAppendingPathComponent:fileName];
-    NSURL *tmpURL = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory inDomain:NSUserDomainMask appropriateForURL:targetFileURL create:YES error:NULL];
-    NSString *typeName = [self fileType];
-    NSString *tmpExt = [self fileNameExtensionForType:typeName saveOperation:NSAutosaveElsewhereOperation];
-    NSURL *tmpFileURL = [tmpURL URLByAppendingPathComponent:[[targetFileURL URLReplacingPathExtension:tmpExt] lastPathComponent]];
+    NSURL *targetFileURL = [targetDirURL URLByAppendingPathComponent:targetFileName isDirectory:NO];
+    NSURL *tmpURL = nil;
+    NSURL *fileURL = targetFileURL;
     
-    if ([self writeSafelyToURL:tmpFileURL ofType:typeName forSaveOperation:NSAutosaveElsewhereOperation error:NULL] == NO) {
+    if (shouldArchive) {
+        tmpURL = [[NSFileManager defaultManager] URLForDirectory:NSItemReplacementDirectory inDomain:NSUserDomainMask appropriateForURL:targetFileURL create:YES error:NULL];
+        fileURL = [[tmpURL URLByAppendingPathComponent:targetFileName isDirectory:NO] URLReplacingPathExtension:typeExt];
+    }
+    
+    if ([self writeSafelyToURL:fileURL ofType:typeName forSaveOperation:NSAutosaveElsewhereOperation error:NULL] == NO) {
         NSBeep();
         return;
     }
     
-    NSTask *task = [self taskForWritingArchiveAtURL:targetFileURL fromURL:tmpFileURL];
-    [SKAttachmentEmailer emailAttachmentWithURL:targetFileURL
-                                        subject:[self displayName]
-                                 preparedByTask:task
-                              completionHandler:^(BOOL success){
-            NSFileManager *fm = [[[NSFileManager alloc] init] autorelease];
-            [fm removeItemAtURL:tmpURL error:NULL];
-            if (success == NO) {
-                [fm removeItemAtURL:targetDirURL error:NULL];
-                NSBeep();
-            }
-        }];
+    if (shouldArchive) {
+        NSTask *task = [self taskForWritingArchiveAtURL:targetFileURL fromURL:fileURL];
+        NSSharingService *service = [sender representedObject];
+        [service setSubject:[self displayName]];
+        
+        [SKFileShare shareURL:targetFileURL
+               preparedByTask:task
+                 usingService:service
+            completionHandler:^(BOOL success){
+                NSFileManager *fm = [NSFileManager defaultManager];
+                [fm removeItemAtURL:tmpURL error:NULL];
+                if (success == NO) {
+                    [fm removeItemAtURL:targetDirURL error:NULL];
+                    NSBeep();
+                }
+            }];
+    } else {
+        NSArray *items = [NSArray arrayWithObjects:targetFileURL, nil];
+        NSSharingService *service = [sender representedObject];
+        if ([service canPerformWithItems:items]) {
+            [service setSubject:[self displayName]];
+            [service performWithItems:items];
+        } else {
+            [[NSFileManager defaultManager] removeItemAtURL:targetFileURL error:NULL];
+        }
+    }
 }
 
 - (IBAction)moveToTrash:(id)sender {
     NSURL *fileURL = [self fileURL];
     if ([fileURL checkResourceIsReachableAndReturnError:NULL]) {
-        NSURL *folderURL = [fileURL URLByDeletingLastPathComponent];
-        NSString *fileName = [fileURL lastPathComponent];
-        NSInteger tag = 0;
-        if ([[NSWorkspace sharedWorkspace] performFileOperation:NSWorkspaceRecycleOperation source:[folderURL path] destination:@"" files:[NSArray arrayWithObjects:fileName, nil] tag:&tag])
-            [self close];
-        else NSBeep();
+        [[NSWorkspace sharedWorkspace] recycleURLs:[NSArray arrayWithObjects:fileURL, nil] completionHandler:^(NSDictionary *newuRLs, NSError *error){
+            if (error == nil)
+                [self close];
+            else
+                NSBeep();
+        }];
     } else NSBeep();
 }
 
@@ -1458,6 +1482,8 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
             if ([editorPreset isEqualToString:@""] == NO) {
                 if ((path = [[NSWorkspace sharedWorkspace] fullPathForApplication:editorPreset]) &&
                     (appBundle = [NSBundle bundleWithPath:path])) {
+                    if ((path = [[appBundle bundlePath] stringByAppendingPathComponent:@"Contents"]))
+                        [searchPaths insertObject:path atIndex:0];
                     if ((path = [[[appBundle bundlePath] stringByAppendingPathComponent:@"Contents"] stringByAppendingPathComponent:@"Helpers"]))
                         [searchPaths insertObject:path atIndex:0];
                     if ([editorPreset isEqualToString:@"BBEdit"] == NO &&
@@ -1580,6 +1606,10 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
     return [[self mainWindowController] rating];
 }
 
+- (NSMenu *)notesMenu {
+    return [[self mainWindowController] notesMenu];
+}
+
 #pragma mark Passwords
 
 - (SKPasswordStatus)getPDFPassword:(NSString **)password item:(id *)itemPtr forFileID:(NSString *)fileID {
@@ -1589,9 +1619,9 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
         id oldItem = nil;
         status = [SKKeychain getPassword:password item:&oldItem forService:[@"Skim - " stringByAppendingString:fileID] account:NSUserName()];
         if (status == SKPasswordStatusFound) {
-            // update to new format, unless password == NULL, when this is called from setPDFPassword:...
+            // update to new format, unless password == NULL, when this is called from savePasswordInKeychain:
             if (password)
-                [self setPDFPassword:nil item:oldItem forFileID:fileID];
+                [SKKeychain setPassword:nil item:oldItem forService:SKPDFPasswordServiceName account:fileID label:[@"Skim: " stringByAppendingString:[self displayName]] comment:[[self fileURL] path]];
             if (itemPtr)
                 *itemPtr = oldItem;
         }
@@ -1599,47 +1629,18 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
     return status;
 }
 
-- (void)setPDFPassword:(NSString *)password item:(id)item forFileID:(NSString *)fileID {
-    if (item == nil) {
-        // if we find an old item we should modify that
-        SKPasswordStatus status = [self getPDFPassword:NULL item:&item forFileID:fileID];
-        if (status == SKPasswordStatusError)
-            return;
-    }
-    [SKKeychain setPassword:password item:item forService:SKPDFPasswordServiceName account:fileID label:[@"Skim: " stringByAppendingString:[self displayName]] comment:[[self fileURL] path]];
-}
-
 - (NSString *)fileIDStringForDocument:(PDFDocument *)document {
     return [[document fileIDStrings] lastObject] ?: [pdfData md5String];
 }
 
-- (void)doSavePasswordInKeychain:(NSString *)password {
-    NSString *fileID = [self fileIDStringForDocument:[self pdfDocument]];
-    if (fileID)
-        [self setPDFPassword:password item:nil forFileID:fileID];
-}
-
 - (void)savePasswordInKeychain:(NSString *)password {
-    if ([[self pdfDocument] isLocked])
-        return;
-    
-    NSInteger saveOption = [[NSUserDefaults standardUserDefaults] integerForKey:SKSavePasswordOptionKey];
-    if (saveOption == SKOptionAlways) {
-        [self doSavePasswordInKeychain:password];
-    } else if (saveOption == SKOptionAsk) {
-        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-        [alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"Remember Password?", @"Message in alert dialog"), nil]];
-        [alert setInformativeText:NSLocalizedString(@"Do you want to save this password in your Keychain?", @"Informative text in alert dialog")];
-        [alert addButtonWithTitle:NSLocalizedString(@"Yes", @"Button title")];
-        [alert addButtonWithTitle:NSLocalizedString(@"No", @"Button title")];
-        NSWindow *window = [[self mainWindowController] window];
-        if ([window attachedSheet] == nil)
-            [alert beginSheetModalForWindow:window completionHandler:^(NSInteger returnCode){
-                if (returnCode == NSAlertFirstButtonReturn)
-                    [self doSavePasswordInKeychain:password];
-            }];
-        else if (NSAlertFirstButtonReturn == [alert runModal])
-            [self doSavePasswordInKeychain:password];
+    NSString *fileID = [self fileIDStringForDocument:[self pdfDocument]];
+    if (fileID) {
+        id item = nil;
+        // if we find an old item we should modify that
+        SKPasswordStatus status = [self getPDFPassword:NULL item:&item forFileID:fileID];
+        if (status != SKPasswordStatusError)
+            [SKKeychain setPassword:password item:item forService:SKPDFPasswordServiceName account:fileID label:[@"Skim: " stringByAppendingString:[self displayName]] comment:[[self fileURL] path]];
     }
 }
 
@@ -1693,6 +1694,22 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
         [[self pdfView] removeAnnotation:note];
         [[self undoManager] setActionName:NSLocalizedString(@"Remove Note", @"Undo action name")];
     }
+}
+
+- (NSUInteger)countOfOutlines {
+    return [[[self pdfDocument] outlineRoot] numberOfChildren];
+}
+
+- (PDFOutline *)objectInOutlinesAtIndex:(NSUInteger)idx {
+    return [[[self pdfDocument] outlineRoot] childAtIndex:idx];
+}
+
+- (BOOL)isOutlineExpanded:(PDFOutline *)outline {
+    return [[self mainWindowController] isOutlineExpanded:outline];
+}
+
+- (void)setExpanded:(BOOL)flag forOutline:(PDFOutline *)outline {
+    [[self mainWindowController] setExpanded:flag forOutline:outline];
 }
 
 - (PDFPage *)currentPage {
@@ -1793,14 +1810,15 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
 }
 
 - (NSInteger)scriptingInteractionMode {
-    NSInteger mode = [[self mainWindowController] interactionMode];
-    return mode == SKLegacyFullScreenMode ? SKFullScreenMode : mode;
+    return [[self mainWindowController] interactionMode];
 }
 
 - (void)setScriptingInteractionMode:(NSInteger)mode {
     if (mode == SKNormalMode) {
-        if ([[self mainWindowController] canExitFullscreen] || [[self mainWindowController] canExitPresentation])
+        if ([[self mainWindowController] canExitFullscreen])
             [[self mainWindowController] exitFullscreen];
+        else if ([[self mainWindowController] canExitPresentation])
+            [[self mainWindowController] exitPresentation];
     } else if (mode == SKFullScreenMode) {
         if ([[self mainWindowController] canEnterFullscreen])
             [[self mainWindowController] enterFullscreen];
@@ -1963,9 +1981,24 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
     id location = [args objectForKey:@"To"];
     
     if ([location isKindOfClass:[PDFPage class]]) {
-        [[self pdfView] goToPage:(PDFPage *)location];
+        id pointData = [args objectForKey:@"At"];
+        if ([pointData isKindOfClass:[NSData class]]) {
+            NSPoint point = [(NSData *)pointData pointValueAsQDPoint];
+            [[self pdfView] goToDestination:[[[PDFDestination alloc] initWithPage:(PDFPage *)location atPoint:point] autorelease]];
+        } else {
+            [[self pdfView] goToPage:(PDFPage *)location];
+        }
     } else if ([location isKindOfClass:[PDFAnnotation class]]) {
-        [[self pdfView] scrollAnnotationToVisible:(PDFAnnotation *)location];
+           [[self pdfView] scrollAnnotationToVisible:(PDFAnnotation *)location];
+    } else if ([location isKindOfClass:[PDFOutline class]]) {
+        PDFDestination *dest = [(PDFOutline *)location destination];
+        if (dest) {
+            [[self pdfView] goToDestination:dest];
+        } else {
+            PDFAction *action = [(PDFOutline *)location action];
+            if (action)
+                 [[self pdfView] performAction:action];
+        }
     } else if ([location isKindOfClass:[NSNumber class]]) {
         id source = [args objectForKey:@"Source"];
         BOOL showBar = [[args objectForKey:@"ShowReadingBar"] boolValue];
@@ -2024,9 +2057,8 @@ static void replaceInShellCommand(NSMutableString *cmdString, NSString *find, NS
     
     if ([page isKindOfClass:[PDFPage class]] == NO)
         page = [[self pdfView] currentPage];
-    if ([pointData isKindOfClass:[NSDate class]] && [pointData length] != sizeof(Point)) {
-        const Point *qdPoint = (const Point *)[pointData bytes];
-        point = SKNSPointFromQDPoint(*qdPoint);
+    if ([pointData isKindOfClass:[NSDate class]]) {
+        point = [pointData pointValueAsQDPoint];
     } else {
         NSRect bounds = [page boundsForBox:[[self pdfView] displayBox]];
         point = NSMakePoint(NSMidX(bounds), NSMidY(bounds));

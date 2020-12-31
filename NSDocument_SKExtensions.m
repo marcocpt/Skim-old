@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 5/23/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,8 @@
 #import "PDFPage_SKExtensions.h"
 #import "SKTemplateManager.h"
 #import "NSWindow_SKExtensions.h"
+#import "SKStringConstants.h"
+#import <SkimNotes/SkimNotes.h>
 
 #define SKDisableExportAttributesKey @"SKDisableExportAttributes"
 
@@ -80,7 +82,10 @@ NSString *SKDocumentFileURLDidChangeNotification = @"SKDocumentFileURLDidChangeN
 - (IBAction)copyURL:(id)sender {
     NSURL *fileURL = [self fileURL];
     if (fileURL) {
-        NSURL *skimURL = [NSURL URLWithString:[@"skim" stringByAppendingString:[[[fileURL filePathURL] absoluteString] substringFromIndex:4]]];
+        NSURLComponents *components = [[NSURLComponents alloc] initWithURL:fileURL resolvingAgainstBaseURL:NO];
+        [components setScheme:@"skim"];
+        NSURL *skimURL = [components URL];
+        [components release];
         NSPasteboard *pboard = [NSPasteboard generalPasteboard];
         [pboard clearContents];
         [pboard writeObjects:[NSArray arrayWithObjects:skimURL, nil]];
@@ -89,11 +94,11 @@ NSString *SKDocumentFileURLDidChangeNotification = @"SKDocumentFileURLDidChangeN
     }
 }
 
+- (NSMenu *)notesMenu { return nil; }
+
 #pragma mark Document Setup
 
 - (void)saveRecentDocumentInfo {}
-
-- (void)saveRecentDocumentInfoIfNeeded {}
 
 - (void)applySetup:(NSDictionary *)setup {}
 
@@ -105,12 +110,18 @@ NSString *SKDocumentFileURLDidChangeNotification = @"SKDocumentFileURLDidChangeN
     NSURL *fileURL = [self fileURL];
     
     if (fileURL) {
-        NSData *data = [[SKAlias aliasWithURL:fileURL] data];
-        
         [setup setObject:[fileURL path] forKey:SKDocumentSetupFileNameKey];
-        if(data)
-            [setup setObject:data forKey:SKDocumentSetupAliasKey];
+        
+        SKAlias *alias = [[SKAlias alloc] initWithURL:fileURL];
+        NSData *data = [alias data];
+        if (data)
+            [setup setObject:data forKey:[alias isBookmark] ? SKDocumentSetupBookmarkKey : SKDocumentSetupAliasKey];
+        [alias release];
     }
+    
+    NSWindow *window = [self mainWindow];
+    if (window)
+        [setup setObject:NSStringFromRect([window frame]) forKey:SKDocumentSetupWindowFrameKey];
     
     if (RUNNING_AFTER(10_11)) {
         NSArray *windows = [[NSApp orderedDocuments] valueForKey:@"mainWindow"];
@@ -131,7 +142,7 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
     SKBookmarkSheetController *bookmarkSheetController = [[[SKBookmarkSheetController alloc] init] autorelease];
 	[bookmarkSheetController setStringValue:[self displayName]];
     [bookmarkSheetController beginSheetModalForWindow:[self windowForSheet] completionHandler:^(NSInteger result) {
-            if (result == NSOKButton) {
+            if (result == NSModalResponseOK) {
                 NSString *label = [bookmarkSheetController stringValue];
                 SKBookmark *folder = [bookmarkSheetController selectedFolder] ?: [[SKBookmarkController sharedBookmarkController] bookmarkRoot];
                 SKBookmark *bookmark = nil;
@@ -158,10 +169,34 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
                     default:
                         break;
                 }
-                if (bookmark)
-                    [[SKBookmarkController sharedBookmarkController] insertBookmarks:[NSArray arrayWithObjects:bookmark, nil] atIndexes:[NSIndexSet indexSetWithIndex:[folder countOfChildren]] ofBookmark:folder partial:NO];
+                if (bookmark) {
+                    SKBookmarkController *bookmarks = [SKBookmarkController sharedBookmarkController];
+                    NSUInteger i = [[[folder children] valueForKey:@"label"] indexOfObject:[bookmark label]];
+                    if (i != NSNotFound) {
+                        [[bookmarkSheetController window] orderOut:nil];
+                        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+                        [alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"\"%@\" already exists", @"Message text in alert dialog when getting duplicate bookmark label"), [bookmark label]]];
+                        [alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(@"An item named \"%@\" already exists in this location. Do you want to replace it with this bookmark?", @"Informative text in alert dialog when getting duplicate bookmark label"), [bookmark label]]];
+                        [alert addButtonWithTitle:NSLocalizedString(@"Replace", @"button title")];
+                        [alert addButtonWithTitle:NSLocalizedString(@"Add", @"button title")];
+                        [alert beginSheetModalForWindow:[self windowForSheet] completionHandler:^(NSInteger returnCode){
+                            if (returnCode == NSAlertFirstButtonReturn)
+                                [bookmarks replaceBookmarksAtIndexes:[NSIndexSet indexSetWithIndex:i] withBookmarks:[NSArray arrayWithObjects:bookmark, nil] ofBookmark:folder partial:NO];
+                            else
+                                [bookmarks insertBookmarks:[NSArray arrayWithObjects:bookmark, nil] atIndexes:[NSIndexSet indexSetWithIndex:[folder countOfChildren]] ofBookmark:folder partial:NO];
+                        }];
+                    } else {
+                        [bookmarks insertBookmarks:[NSArray arrayWithObjects:bookmark, nil] atIndexes:[NSIndexSet indexSetWithIndex:[folder countOfChildren]] ofBookmark:folder partial:NO];
+                    }
+                }
             }
         }];
+}
+
+- (void)share:(id)sender {
+    NSSharingService *service = [sender representedObject];
+    [service setSubject:[self displayName]];
+    [service performWithItems:[NSArray arrayWithObjects:[self fileURL], nil]];
 }
 
 #pragma mark PDF Document
@@ -174,9 +209,13 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
 
 - (NSArray *)notes { return nil; }
 
+- (NSArray *)SkimNoteProperties {
+    return [[self notes] valueForKey:@"SkimNoteProperties"];
+}
+
 - (NSData *)notesData {
-    NSArray *array = [[self notes] valueForKey:@"SkimNoteProperties"];
-    return array ? [NSKeyedArchiver archivedDataWithRootObject:array] : nil;
+    NSArray *array = [self SkimNoteProperties];
+    return SKNDataFromSkimNotes(array, [[NSUserDefaults standardUserDefaults] boolForKey:SKWriteSkimNotesAsPlistKey]);
 }
 
 - (NSString *)notesStringForTemplateType:(NSString *)typeName {
@@ -197,7 +236,7 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
         NSURL *templateURL = [[SKTemplateManager sharedManager] URLForTemplateType:typeName];
         NSDictionary *docAttributes = nil;
         NSError *error = nil;
-        NSAttributedString *templateAttrString = [[NSAttributedString alloc] initWithURL:templateURL documentAttributes:&docAttributes];
+        NSAttributedString *templateAttrString = [[NSAttributedString alloc] initWithURL:templateURL options:[NSDictionary dictionary] documentAttributes:&docAttributes error:NULL];
         NSAttributedString *attrString = [SKTemplateParser attributedStringByParsingTemplateAttributedString:templateAttrString usingObject:self];
         if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableExportAttributesKey] == NO) {
             NSMutableDictionary *mutableAttributes = [[docAttributes mutableCopy] autorelease];
@@ -217,7 +256,7 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
     if ([[SKTemplateManager sharedManager] isRichTextBundleTemplateType:typeName]) {
         NSURL *templateURL = [[SKTemplateManager sharedManager] URLForTemplateType:typeName];
         NSDictionary *docAttributes = nil;
-        NSAttributedString *templateAttrString = [[NSAttributedString alloc] initWithURL:templateURL documentAttributes:&docAttributes];
+        NSAttributedString *templateAttrString = [[NSAttributedString alloc] initWithURL:templateURL options:[NSDictionary dictionary] documentAttributes:&docAttributes error:NULL];
         NSAttributedString *attrString = [SKTemplateParser attributedStringByParsingTemplateAttributedString:templateAttrString usingObject:self];
         if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableExportAttributesKey] == NO) {
             NSMutableDictionary *mutableAttributes = [[docAttributes mutableCopy] autorelease];
@@ -273,6 +312,11 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
     [string appendString:@"%%EOF\n"];
     return [string dataUsingEncoding:NSISOLatin1StringEncoding];
 }
+#pragma mark Outlines
+
+- (BOOL)isOutlineExpanded:(PDFOutline *)outline { return NO; }
+
+- (void)setExpanded:(BOOL)flag forOutline:(PDFOutline *)outline {}
 
 #pragma mark Scripting
 
@@ -291,6 +335,10 @@ enum { SKAddBookmarkTypeBookmark, SKAddBookmarkTypeSetup, SKAddBookmarkTypeSessi
 - (PDFPage *)objectInPagesAtIndex:(NSUInteger)theIndex {
     return [[self pdfDocument] pageAtIndex:theIndex];
 }
+
+- (NSUInteger)countOfOutlines { return 0; }
+
+- (PDFOutline *)objectInOutlinesAtIndex:(NSUInteger)idx { return nil; }
 
 - (PDFPage *)currentPage { return nil; }
 

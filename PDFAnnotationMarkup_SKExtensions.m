@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/1/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -122,7 +122,7 @@ static void (*original_dealloc)(id, SEL) = NULL;
 
 + (void)load {
     original_dealloc = (void (*)(id, SEL))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(dealloc), @selector(replacement_dealloc));
-    extraIvarsTable = [[NSMapTable alloc] initWithKeyOptions:NSMapTableZeroingWeakMemory | NSMapTableObjectPointerPersonality valueOptions:NSMapTableStrongMemory | NSMapTableObjectPointerPersonality capacity:0];
+    extraIvarsTable = [[NSMapTable alloc] initWithKeyOptions:NSMapTableWeakMemory | NSMapTableObjectPointerPersonality valueOptions:NSMapTableStrongMemory | NSMapTableObjectPointerPersonality capacity:0];
 }
 
 + (NSColor *)defaultSkimNoteColorForMarkupType:(NSInteger)markupType
@@ -327,22 +327,21 @@ static void (*original_dealloc)(id, SEL) = NULL;
     return bounds;
 }
 
-- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context {
+- (void)drawSelectionHighlightForView:(PDFView *)pdfView inContext:(CGContextRef)context active:(BOOL)active {
     if (NSIsEmptyRect([self bounds]))
         return;
     
-    BOOL active = RUNNING_AFTER(10_12) ? YES : [[pdfView window] isKeyWindow] && [[[pdfView window] firstResponder] isDescendantOf:pdfView];
     NSPointerArray *lines = [self lineRects];
     NSUInteger i, iMax = [lines count];
-    CGFloat lineWidth = [pdfView unitWidthOnPage:[self page]];
     PDFPage *page = [self page];
+    CGFloat lineWidth = [pdfView unitWidthOnPage:page];
     CGColorRef color = [[NSColor selectionHighlightColor:active] CGColor];
     
     CGContextSaveGState(context);
     CGContextSetStrokeColorWithColor(context, color);
     CGContextSetLineWidth(context, lineWidth);
     for (i = 0; i < iMax; i++) {
-        NSRect rect = [pdfView integralRect:[lines rectAtIndex:i] onPage:page];
+        NSRect rect = [pdfView backingAlignedRect:[lines rectAtIndex:i] onPage:page];
         CGContextStrokeRect(context, CGRectInset(NSRectToCGRect(rect), -0.5 * lineWidth, -0.5 * lineWidth));
     }
     CGContextRestoreGState(context);
@@ -386,6 +385,7 @@ static void (*original_dealloc)(id, SEL) = NULL;
         case kPDFMarkupTypeUnderline: return SKUnderlineNoteColorKey;
         case kPDFMarkupTypeStrikeOut: return SKStrikeOutNoteColorKey;
         case kPDFMarkupTypeHighlight: return SKHighlightNoteColorKey;
+        default: return SKHighlightNoteColorKey;
     }
     return nil;
 }

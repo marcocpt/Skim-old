@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,6 @@
     NSButton *deleteButton;
     NSButton *previewButton;
     SKBookmark *bookmarkRoot;
-    /// 上次关闭的会话。在 Bookmark 菜单栏下会生成 ”Restore Previous Session“ 菜单
     SKBookmark *previousSession;
     NSMutableArray *recentDocuments;
     NSUndoManager *undoManager;
@@ -83,9 +82,13 @@
 
 - (void)insertBookmarks:(NSArray *)newBookmarks atIndexes:(NSIndexSet *)indexes ofBookmark:(SKBookmark *)parent partial:(BOOL)isPartial;
 - (void)removeBookmarksAtIndexes:(NSIndexSet *)indexes ofBookmark:(SKBookmark *)parent partial:(BOOL)isPartial;
+- (void)replaceBookmarksAtIndexes:(NSIndexSet *)indexes withBookmarks:(NSArray *)newBookmarks ofBookmark:(SKBookmark *)parent partial:(BOOL)isPartial;
 
 - (void)addRecentDocumentForURL:(NSURL *)fileURL pageIndex:(NSUInteger)pageIndex snapshots:(NSArray *)setups;
 - (NSUInteger)pageIndexForRecentDocumentAtURL:(NSURL *)fileURL;
 - (NSArray *)snapshotsForRecentDocumentAtURL:(NSURL *)fileURL;
+
+- (BOOL)isBookmarkExpanded:(SKBookmark *)bookmark;
+- (void)setExpanded:(BOOL)flag forBookmark:(SKBookmark *)bookmark;
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/30/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -252,7 +252,7 @@ static inline BOOL topAbovePoint(NSRect rect, NSPoint point, NSInteger lineAngle
     [self updateCurrentBounds];
     return YES;
 }
-/// 绘制 reading bar
+
 - (void)drawForPage:(PDFPage *)pdfPage withBox:(PDFDisplayBox)box inContext:(CGContextRef)context {
     BOOL invert = [[NSUserDefaults standardUserDefaults] boolForKey:SKReadingBarInvertKey];
     
@@ -283,6 +283,12 @@ static inline BOOL topAbovePoint(NSRect rect, NSPoint point, NSInteger lineAngle
     
     
     CGContextRestoreGState(context);
+}
+
+- (void)drawForPage:(PDFPage *)pdfPage withBox:(PDFDisplayBox)box active:(BOOL)active {
+    CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+    [pdfPage transformContext:context forBox:box];
+    [self drawForPage:pdfPage withBox:box inContext:context];
 }
 
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/17/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,3 +52,6 @@
 
 extern NSString *SKNSkimTextNotes(NSArray *noteDicts);
 extern NSData *SKNSkimRTFNotes(NSArray *noteDicts);
+
+extern NSArray *SKNSkimNotesFromData(NSData *data);
+extern NSData *SKNDataFromSkimNotes(NSArray *noteDicts, BOOL asPlist);

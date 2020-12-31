@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/24/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,9 @@
 #import "SKStringConstants.h"
 #import "SKMainDocument.h"
 #import "NSPointerArray_SKExtensions.h"
+#import "NSColor_SKExtensions.h"
+
+#define SKIncludeNewlinesFromEnclosedTextKey @"SKIncludeNewlinesFromEnclosedText"
 
 #define ELLIPSIS_CHARACTER (unichar)0x2026
 
@@ -73,47 +76,74 @@
     return [[self safeFirstPage] displayLabel];
 }
 
+- (NSString *)compactedCleanedString {
+    return [[[[[self selectionsByLine] valueForKey:@"string"] componentsJoinedByString:@" "] stringByRemovingAliens] stringByCollapsingWhitespaceAndNewlinesAndRemovingSurroundingWhitespaceAndNewlines];
+}
+
 - (NSString *)cleanedString {
-	return [[[[[self selectionsByLine] valueForKey:@"string"] componentsJoinedByString:@" "] stringByRemovingAliens] stringByCollapsingWhitespaceAndNewlinesAndRemovingSurroundingWhitespaceAndNewlines];
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:SKIncludeNewlinesFromEnclosedTextKey])
+        return [[[self string] stringByRemovingAliens] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    return [self compactedCleanedString];
 }
 
 - (NSAttributedString *)contextString {
-    PDFSelection *extendedSelection = [self copy];
 	NSMutableAttributedString *attributedSample;
-    NSString *searchString = [self cleanedString] ?: @"";
+    NSString *searchString = [self compactedCleanedString] ?: @"";
+    PDFSelection *extendedSelection;
 	NSString *sample;
     NSMutableString *attributedString;
 	NSString *ellipse = [NSString stringWithFormat:@"%C", ELLIPSIS_CHARACTER];
 	NSRange foundRange;
-    NSNumber *fontSizeNumber = [[NSUserDefaults standardUserDefaults] objectForKey:SKTableFontSizeKey];
-	CGFloat fontSize = fontSizeNumber ? [fontSizeNumber doubleValue] : 0.0;
+    CGFloat fontSize = [[NSUserDefaults standardUserDefaults] doubleForKey:SKTableFontSizeKey] - 2.0;
     NSDictionary *attributes = [[NSDictionary alloc] initWithObjectsAndKeys:[NSFont systemFontOfSize:fontSize], NSFontAttributeName, [NSParagraphStyle defaultTruncatingTailParagraphStyle], NSParagraphStyleAttributeName, nil];
+    PDFPage *page = [self safeFirstPage];
+    NSString *pageString = [page string];
+    NSUInteger length = [pageString length];
+    NSUInteger i = [self safeIndexOfFirstCharacterOnPage:page];
+    NSUInteger j = [self safeIndexOfLastCharacterOnPage:page];
+    NSUInteger start = MAX(i, 15) - 15;
+    NSUInteger end = MIN(j + 55, length);
     
-	// Extend selection.
-	[extendedSelection extendSelectionAtStart:10];
-	[extendedSelection extendSelectionAtEnd:50];
-	
+    // Extend selection, try to break at space
+    if (start > 0) {
+        NSUInteger k = NSMaxRange([pageString rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet] options:0 range:NSMakeRange(start, i - start)]);
+        if (k == NSNotFound)
+            start = MAX(i, 10) - 10;
+        else if (k + 5 <= i)
+            start = k;
+    }
+    if (end < length) {
+        NSUInteger k = [pageString rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet] options:NSBackwardsSearch range:NSMakeRange(MAX(j, end - 10), end - MAX(j, end - 10))].location;
+        if (k == NSNotFound)
+            end = MIN(j + 50, length);
+        else if (j + 10 < k)
+            end = k;
+    }
+    extendedSelection = [page selectionForRange:NSMakeRange(start, end - start)];
+    
     // get the cleaned string
-    sample = [extendedSelection cleanedString] ?: @"";
+    sample = [extendedSelection compactedCleanedString] ?: @"";
     
 	// Finally, create attributed string.
     attributedSample = [[NSMutableAttributedString alloc] initWithString:sample attributes:attributes];
-    attributedString = [attributedSample mutableString];
-    [attributedString insertString:ellipse atIndex:0];
-    [attributedString appendString:ellipse];
     
     // Clean.
     [attributes release];
-    [extendedSelection release];
 	
 	// Find instances of search string and "bold" them.
-    foundRange = [sample rangeOfString:searchString options:NSBackwardsSearch range:NSMakeRange(0, MIN([searchString length] + 10, [sample length]))];
+    foundRange = [sample rangeOfString:searchString options:NSBackwardsSearch range:NSMakeRange(0, MIN([searchString length] + i - start, [sample length]))];
     if (foundRange.location == NSNotFound)
         foundRange = [sample rangeOfString:searchString];
     if (foundRange.location != NSNotFound)
-            // Bold the text range where the search term was found.
-            [attributedSample addAttribute:NSFontAttributeName value:[NSFont boldSystemFontOfSize:fontSize] range:NSMakeRange(foundRange.location + 1, foundRange.length)];
-	
+        // Use bold font for the text range where the search term was found.
+        [attributedSample addAttribute:NSFontAttributeName value:[NSFont boldSystemFontOfSize:fontSize] range:foundRange];
+    
+    attributedString = [attributedSample mutableString];
+    if (start > 0)
+        [attributedString insertString:ellipse atIndex:0];
+    if (end < length)
+        [attributedString appendString:ellipse];
+    
 	return [attributedSample autorelease];
 }
 

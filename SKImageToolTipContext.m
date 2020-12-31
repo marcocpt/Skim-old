@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/6/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,6 @@
 #import "NSGraphics_SKExtensions.h"
 #import "PDFSelection_SKExtensions.h"
 #import "NSCharacterSet_SKExtensions.h"
-#import "NSImage_SKExtensions.h"
 #import "NSColor_SKExtensions.h"
 #import "NSAttributedString_SKExtensions.h"
 
@@ -66,24 +65,25 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
 
 @implementation NSAttributedString (SKImageToolTipContext)
 
-- (NSImage *)toolTipImageIsOpaque:(BOOL *)isOpaque {
+- (NSImage *)toolTipImage {
     NSAttributedString *attrString = [self attributedStringByAddingControlTextColorAttribute];
     CGFloat width = [[NSUserDefaults standardUserDefaults] doubleForKey:SKToolTipWidthKey] - 2.0 * TEXT_MARGIN_X;
     CGFloat height = [[NSUserDefaults standardUserDefaults] doubleForKey:SKToolTipHeightKey] - 2.0 * TEXT_MARGIN_Y;
     NSRect textRect = [self boundingRectWithSize:NSMakeSize(width, height) options:NSStringDrawingUsesLineFragmentOrigin];
+    NSSize size;
     
     textRect.origin = NSMakePoint(TEXT_MARGIN_X, TEXT_MARGIN_Y);
     textRect.size.height = fmin(NSHeight(textRect), height);
-    textRect = NSInsetRect(NSIntegralRect(textRect), -TEXT_MARGIN_X, -TEXT_MARGIN_Y);
+    size = NSInsetRect(NSIntegralRect(textRect), -TEXT_MARGIN_X, -TEXT_MARGIN_Y).size;
     
-    NSImage *image = [NSImage bitmapImageWithSize:textRect.size drawingHandler:^(NSRect rect){
-        SKRunWithAppearance(NSApp, ^{
-            [attrString drawWithRect:NSInsetRect(rect, TEXT_MARGIN_X, TEXT_MARGIN_Y) options:NSStringDrawingUsesLineFragmentOrigin];
-        });
-                            
-    }];
+    NSImage *image = [[[NSImage alloc] initWithSize:size] autorelease];
+    [image lockFocus];
+    SKRunWithAppearance(NSApp, ^{
+        [attrString drawWithRect:textRect options:NSStringDrawingUsesLineFragmentOrigin];
+    });
+    [image unlockFocus];
     
-    if (isOpaque) *isOpaque = NO;
+    [[[image representations] firstObject] setOpaque:NO];
     return image;
 }
 
@@ -91,12 +91,12 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
 
 
 @interface PDFDestination (SKImageToolTipContextExtension)
-- (NSImage *)toolTipImageWithOffset:(NSPoint)offset;
+- (NSImage *)toolTipImageWithOffset:(NSPoint)offset selections:(NSArray *)selections;
 @end
 
 @implementation PDFDestination (SKImageToolTipContext)
 
-- (NSImage *)toolTipImageWithOffset:(NSPoint)offset {
+- (NSImage *)toolTipImageWithOffset:(NSPoint)offset selections:(NSArray *)selections {
     static NSDictionary *labelAttributes = nil;
     static NSColor *labelColor = nil;
     if (labelAttributes == nil)
@@ -105,11 +105,11 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
         labelColor = [[NSColor colorWithCalibratedWhite:0.5 alpha:0.8] retain];
     
     PDFPage *page = [self page];
-    NSImage *pageImage = [page thumbnailWithSize:0.0 forBox:kPDFDisplayBoxCropBox shadowBlurRadius:0.0 readingBar:nil];
+    NSImage *pageImage = [page thumbnailWithSize:0.0 forBox:kPDFDisplayBoxCropBox shadowBlurRadius:0.0 highlights:selections];
     NSRect pageImageRect = {NSZeroPoint, [pageImage size]};
     NSRect bounds = [page boundsForBox:kPDFDisplayBoxCropBox];
     NSRect sourceRect = NSZeroRect;
-    PDFSelection *selection = [page selectionForRect:bounds];
+    PDFSelection *pageSelection = [page selectionForRect:bounds];
     NSAffineTransform *transform = [page affineTransformForBox:kPDFDisplayBoxCropBox];
     
     sourceRect.size.width = [[NSUserDefaults standardUserDefaults] doubleForKey:SKToolTipWidthKey];
@@ -118,8 +118,8 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
     sourceRect.origin.y -= NSHeight(sourceRect);
     
     
-    if ([selection hasCharacters]) {
-        NSRect selBounds = [selection boundsForPage:page];
+    if ([pageSelection hasCharacters]) {
+        NSRect selBounds = [pageSelection boundsForPage:page];
         selBounds = SKRectFromPoints([transform transformPoint:SKBottomLeftPoint(selBounds)], [transform transformPoint:SKTopRightPoint(selBounds)]);
         CGFloat top = ceil(fmax(NSMaxY(selBounds), NSMinY(selBounds) + NSHeight(sourceRect)));
         CGFloat left = floor(fmin(NSMinX(selBounds), NSMaxX(selBounds) - NSWidth(sourceRect)));
@@ -131,6 +131,9 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
     
     sourceRect = SKConstrainRect(sourceRect, pageImageRect);
     
+    NSRect targetRect = sourceRect;
+    targetRect.origin = NSZeroPoint;
+    
     NSAttributedString *labelString = [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:NSLocalizedString(@"Page %@", @"Tool tip label format"), [page displayLabel]] attributes:labelAttributes];
     NSRect labelRect = [labelString boundingRectWithSize:NSZeroSize options:NSStringDrawingUsesLineFragmentOrigin];
     
@@ -140,33 +143,63 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
     labelRect.origin.y = TEXT_MARGIN_Y;
     labelRect = NSIntegralRect(labelRect);
     
-    NSImage *image = [NSImage bitmapImageWithSize:sourceRect.size drawingHandler:^(NSRect rect){
-        
-        [pageImage drawInRect:rect fromRect:sourceRect operation:NSCompositeCopy fraction:1.0];
-        
-        CGFloat radius = 0.5 * NSHeight(labelRect);
-        NSBezierPath *path = [NSBezierPath bezierPath];
-        
-        [path moveToPoint:SKTopLeftPoint(labelRect)];
-        [path appendBezierPathWithArcWithCenter:NSMakePoint(NSMinX(labelRect), NSMidY(labelRect)) radius:radius startAngle:90.0 endAngle:270.0];
-        [path appendBezierPathWithArcWithCenter:NSMakePoint(NSMaxX(labelRect), NSMidY(labelRect)) radius:radius startAngle:-90.0 endAngle:90.0];
-        [path closePath];
-        
-        [labelColor setFill];
-        [path fill];
-        
-        [labelString drawWithRect:labelRect options:NSStringDrawingUsesLineFragmentOrigin];
-        
-    }];
+    NSImage *image = [[[NSImage alloc] initWithSize:sourceRect.size] autorelease];
+    
+    [image lockFocus];
+    
+    [pageImage drawInRect:targetRect fromRect:sourceRect operation:NSCompositeCopy fraction:1.0];
+    
+    CGFloat radius = 0.5 * NSHeight(labelRect);
+    NSBezierPath *path = [NSBezierPath bezierPath];
+    
+    [path moveToPoint:SKTopLeftPoint(labelRect)];
+    [path appendBezierPathWithArcWithCenter:NSMakePoint(NSMinX(labelRect), NSMidY(labelRect)) radius:radius startAngle:90.0 endAngle:270.0];
+    [path appendBezierPathWithArcWithCenter:NSMakePoint(NSMaxX(labelRect), NSMidY(labelRect)) radius:radius startAngle:-90.0 endAngle:90.0];
+    [path closePath];
+    
+    [labelColor setFill];
+    [path fill];
+    
+    [labelString drawWithRect:labelRect options:NSStringDrawingUsesLineFragmentOrigin];
+    
+    [image unlockFocus];
     
     [labelString release];
     
     return image;
 }
 
-- (NSImage *)toolTipImageIsOpaque:(BOOL *)isOpaque {
-    if (isOpaque) *isOpaque = YES;
-    return [self toolTipImageWithOffset:NSMakePoint(-50.0, 20.0)];
+- (NSImage *)toolTipImage {
+    NSImage *image = [self toolTipImageWithOffset:NSMakePoint(-50.0, 20.0) selections:nil];
+    [[[image representations] firstObject] setOpaque:YES];
+    return image;
+}
+
+@end
+
+
+@implementation PDFSelection (SKImageToolTipContext)
+
+- (NSImage *)toolTipImage {
+    PDFSelection *sel = [self copy];
+    [sel setColor:[NSColor searchHighlightColor]];
+    NSArray *selections = [NSArray arrayWithObject:sel];
+    [sel release];
+    return [[self destination] toolTipImageWithOffset:NSMakePoint(-50.0, 20.0) selections:selections];
+}
+
+@end
+
+
+@implementation SKGroupedSearchResult (SKImageToolTipContext)
+
+- (NSImage *)toolTipImage {
+    NSArray *selections = [[[NSArray alloc] initWithArray:[self matches] copyItems:YES] autorelease];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    [selections setValue:[NSColor findHighlightColor] forKey:@"color"];
+#pragma clang diagnostic pop
+    return [[[selections firstObject] destination] toolTipImageWithOffset:NSMakePoint(-50.0, 20.0) selections:selections];
 }
 
 @end
@@ -174,20 +207,20 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
 
 @implementation PDFAnnotation (SKImageToolTipContext)
 
-- (NSImage *)toolTipImageIsOpaque:(BOOL *)isOpaque {
+- (NSImage *)toolTipImage {
     
     if ([self isLink]) {
-        NSImage *image = [[self linkDestination] toolTipImageWithOffset:NSZeroPoint];
+        NSImage *image = [[self linkDestination] toolTipImageWithOffset:NSZeroPoint selections:nil];
         if (image == nil) {
             NSURL *url = [self linkURL];
             if (url) {
                 NSAttributedString *attrString = toolTipAttributedString([url absoluteString]);
                 if ([attrString length])
-                    image = [attrString toolTipImageIsOpaque:isOpaque];
+                    image = [attrString toolTipImage];
             }
         }
         if (image) {
-            if (isOpaque) *isOpaque = YES;
+            [[[image representations] firstObject] setOpaque:YES];
             return image;
         }
     }
@@ -214,7 +247,7 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
             attrString = [attrString attributedSubstringFromRange:r];
     }
     
-    return [attrString length] ? [attrString toolTipImageIsOpaque:isOpaque] : nil;
+    return [attrString length] ? [attrString toolTipImage] : nil;
 }
 
 @end
@@ -222,9 +255,10 @@ static NSAttributedString *toolTipAttributedString(NSString *string) {
 
 @implementation PDFPage (SKImageToolTipContext)
 
-- (NSImage *)toolTipImageIsOpaque:(BOOL *)isOpaque {
-    if (isOpaque) *isOpaque = YES;
-    return [self thumbnailWithSize:256.0 forBox:kPDFDisplayBoxCropBox shadowBlurRadius:0.0 readingBar:nil];
+- (NSImage *)toolTipImage {
+    NSImage *image = [self thumbnailWithSize:256.0 forBox:kPDFDisplayBoxCropBox shadowBlurRadius:0.0 highlights:nil];
+    [[[image representations] firstObject] setOpaque:YES];
+    return image;
 }
 
 @end

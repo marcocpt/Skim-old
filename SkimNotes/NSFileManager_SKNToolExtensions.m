@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/17/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -156,9 +156,7 @@
     [self removeSkimNotesAtPath:path error:NULL];
     if ([notesData length]) {
         if (textNotes == nil || rtfNotesData == nil) {
-            NSArray *notes = nil;
-            @try { notes = [NSKeyedUnarchiver unarchiveObjectWithData:notesData]; }
-            @catch (id e) {}
+            NSArray *notes = SKNSkimNotesFromData(notesData);
             if ([notes count]) {
                 if (textNotes == nil)
                     textNotes = SKNSkimTextNotes(notes);

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/14/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,6 @@
 @class SKColorSwatch;
 
 @interface SKDisplayPreferences : SKViewController <SKPreferencePane> {
-    NSSlider *pagesSlider;
-    NSSlider *snapshotsSlider;
     NSColorWell *normalColorWell;
     NSColorWell *fullScreenColorWell;
     SKColorSwatch *colorSwatch;
@@ -52,8 +50,6 @@
     BOOL changingColors;
 }
 
-@property (nonatomic, retain) IBOutlet NSSlider *pagesSlider;
-@property (nonatomic, retain) IBOutlet NSSlider *snapshotsSlider;
 @property (nonatomic, retain) IBOutlet NSColorWell *normalColorWell;
 @property (nonatomic, retain) IBOutlet NSColorWell *fullScreenColorWell;
 @property (nonatomic, retain) IBOutlet SKColorSwatch *colorSwatch;
@@ -61,8 +57,6 @@
 
 - (NSUInteger)countOfSizes;
 - (NSNumber *)objectInSizesAtIndex:(NSUInteger)anIndex;
-
-- (IBAction)changeDiscreteThumbnailSizes:(id)sender;
 
 - (IBAction)changeBackgroundColor:(id)sender;
 - (IBAction)changeFullScreenBackgroundColor:(id)sender;

@@ -4,7 +4,7 @@
 //
 //  Created by Adam Maxwell on 07/23/05.
 /*
- This software is Copyright (c) 2005-2019
+ This software is Copyright (c) 2005-2020
  Adam Maxwell. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 #import <Cocoa/Cocoa.h>
 #import <Quartz/Quartz.h>
 
+@protocol SKSnapshotPDFViewDelegate;
 
 @interface SKSnapshotPDFView : PDFView {
     NSPopUpButton *scalePopUpButton;
@@ -58,4 +59,13 @@
 
 - (void)resetHistory;
 
+- (id <SKSnapshotPDFViewDelegate>)delegate;
+- (void)setDelegate:(id <SKSnapshotPDFViewDelegate>)newDelegate;
+
 @end
+
+@protocol SKSnapshotPDFViewDelegate <PDFViewDelegate>
+@optional
+- (void)PDFView:(PDFView *)sender goToExternalDestination:(PDFDestination *)destination;
+@end
+

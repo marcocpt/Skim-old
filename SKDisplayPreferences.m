@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/14/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,7 @@
 #import "NSColor_SKExtensions.h"
 #import "NSValueTransformer_SKExtensions.h"
 #import "SKColorSwatch.h"
+#import "PDFView_SKExtensions.h"
 
 static CGFloat SKDefaultFontSizes[] = {8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 16.0, 18.0, 20.0, 24.0, 28.0, 32.0, 48.0, 64.0};
 
@@ -58,7 +59,7 @@ static char SKDisplayPreferencesColorSwatchObservationContext;
     
 @implementation SKDisplayPreferences
 
-@synthesize pagesSlider, snapshotsSlider, normalColorWell, fullScreenColorWell, colorSwatch, addRemoveColorButton;
+@synthesize normalColorWell, fullScreenColorWell, colorSwatch, addRemoveColorButton;
 
 - (void)dealloc {
     if (RUNNING_AFTER(10_13)) {
@@ -68,8 +69,6 @@ static char SKDisplayPreferencesColorSwatchObservationContext;
         }
         @catch(id e) {}
     }
-    SKDESTROY(pagesSlider);
-    SKDESTROY(snapshotsSlider);
     SKDESTROY(normalColorWell);
     SKDESTROY(fullScreenColorWell);
     SKDESTROY(colorSwatch);
@@ -84,12 +83,12 @@ static char SKDisplayPreferencesColorSwatchObservationContext;
 - (void)loadView {
     [super loadView];
     
-    NSDictionary *options = [NSDictionary dictionaryWithObject:SKUnarchiveFromDataArrayTransformerName forKey:NSValueTransformerNameBindingOption];
+    NSValueTransformer *transformer = [NSValueTransformer arrayTransformerWithValueTransformerForName:NSUnarchiveFromDataTransformerName];
+    NSDictionary *options = [NSDictionary dictionaryWithObject:transformer forKey:NSValueTransformerBindingOption];
     [colorSwatch bind:@"colors" toObject:[NSUserDefaultsController sharedUserDefaultsController] withKeyPath:[@"values." stringByAppendingString:SKSwatchColorsKey] options:options];
     [colorSwatch sizeToFit];
     [colorSwatch setSelects:YES];
-    if (!RUNNING_BEFORE(10_10))
-        [colorSwatch setFrame:NSOffsetRect([colorSwatch frame], 0.0, 1.0)];
+    [colorSwatch setFrame:NSOffsetRect([colorSwatch frame], 0.0, 1.0)];
     [colorSwatch addObserver:self forKeyPath:@"selectedColorIndex" options:0 context:&SKDisplayPreferencesColorSwatchObservationContext];
     
     if (RUNNING_AFTER(10_13)) {
@@ -120,24 +119,6 @@ static char SKDisplayPreferencesColorSwatchObservationContext;
 }
 
 #pragma mark Actions
-
-- (IBAction)changeDiscreteThumbnailSizes:(id)sender {
-    if ([(NSButton *)sender state] == NSOnState) {
-        [pagesSlider setNumberOfTickMarks:8];
-        [snapshotsSlider setNumberOfTickMarks:8];
-        [pagesSlider setAllowsTickMarkValuesOnly:YES];
-        [snapshotsSlider setAllowsTickMarkValuesOnly:YES];
-    } else {
-        [[pagesSlider superview] setNeedsDisplayInRect:[pagesSlider frame]];
-        [[snapshotsSlider superview] setNeedsDisplayInRect:[snapshotsSlider frame]];
-        [pagesSlider setNumberOfTickMarks:0];
-        [snapshotsSlider setNumberOfTickMarks:0];
-        [pagesSlider setAllowsTickMarkValuesOnly:NO];
-        [snapshotsSlider setAllowsTickMarkValuesOnly:NO];
-    }
-    [pagesSlider sizeToFit];
-    [snapshotsSlider sizeToFit];
-}
 
 - (IBAction)changeBackgroundColor:(id)sender {
     NSString *key = SKHasDarkAppearance(NSApp) ? SKDarkBackgroundColorKey : SKBackgroundColorKey;
@@ -183,19 +164,19 @@ static char SKDisplayPreferencesColorSwatchObservationContext;
 #pragma mark Private
 
 - (void)updateBackgroundColors {
+    NSColor *color = nil;
+    NSColor *fsColor = nil;
     NSUserDefaults *sud = [NSUserDefaults standardUserDefaults];
-    NSColor *backgroundColor = nil;
-    NSColor *fullScreenBackgroundColor = nil;
     if (SKHasDarkAppearance(NSApp)) {
-        backgroundColor = [sud colorForKey:SKDarkBackgroundColorKey];
-        fullScreenBackgroundColor = [sud colorForKey:SKDarkFullScreenBackgroundColorKey];
+        color = [sud colorForKey:SKDarkBackgroundColorKey];
+        fsColor = [sud colorForKey:SKDarkFullScreenBackgroundColorKey];
     }
-    if (backgroundColor == nil)
-        backgroundColor = [sud colorForKey:SKBackgroundColorKey];
-    if (fullScreenBackgroundColor == nil)
-        fullScreenBackgroundColor = [sud colorForKey:SKFullScreenBackgroundColorKey];
-    [normalColorWell setColor:backgroundColor];
-    [fullScreenColorWell setColor:fullScreenBackgroundColor];
+    if (color == nil)
+        color = [sud colorForKey:SKBackgroundColorKey];
+    if (fsColor == nil)
+        fsColor = [sud colorForKey:SKFullScreenBackgroundColorKey];
+    [normalColorWell setColor:color];
+    [fullScreenColorWell setColor:fsColor];
 }
 
 @end

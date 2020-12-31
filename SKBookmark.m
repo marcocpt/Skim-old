@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/15/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@
 #import "NSError_SKExtensions.h"
 #import "NSShadow_SKExtensions.h"
 #import "SKBookmarkController.h"
+#import "NSCharacterSet_SKExtensions.h"
 
 #define BOOKMARK_STRING     @"bookmark"
 #define SESSION_STRING      @"session"
@@ -56,6 +57,7 @@
 #define LABEL_KEY       @"label"
 #define PAGEINDEX_KEY   @"pageIndex"
 #define ALIASDATA_KEY   @"_BDAlias"
+#define BOOKMARK_KEY    @"bookmark"
 #define TYPE_KEY        @"type"
 
 @interface SKPlaceholderBookmark : SKBookmark
@@ -63,19 +65,13 @@
 
 @interface SKFileBookmark : SKBookmark {
     SKAlias *alias;
-    NSData *aliasData;
     NSString *label;
     NSUInteger pageIndex;
     NSDictionary *setup;
 }
-/// ✅ 初始化
-- (id)initWithAliasData:(NSData *)aData pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel;
-- (SKAlias *)alias;
-- (NSData *)aliasData;
 @end
 
 @interface SKFolderBookmark : SKBookmark {
-    /// Menu item label
     NSString *label;
     NSMutableArray *children;
 }
@@ -95,17 +91,17 @@
 @implementation SKBookmark
 
 @synthesize parent;
-@dynamic properties, bookmarkType, label, icon, alternateIcon, fileURL, fileURLToOpen, fileDescription, toolTip, pageIndex, pageNumber, hasSetup, tabs, containingBookmarks, scriptingParent, entireContents, skimURL;
+@dynamic properties, bookmarkType, label, icon, alternateIcon, fileURL, fileURLToOpen, fileDescription, toolTip, pageIndex, pageNumber, hasSetup, tabs, containingBookmarks, scriptingParent, entireContents, expanded, skimURL;
 
 static SKPlaceholderBookmark *defaultPlaceholderBookmark = nil;
 static Class SKBookmarkClass = Nil;
-/// ✅ 实现单利？
+
 + (void)initialize {
     SKINITIALIZE;
     SKBookmarkClass = self;
     defaultPlaceholderBookmark = (SKPlaceholderBookmark *)NSAllocateObject([SKPlaceholderBookmark class], 0, NSDefaultMallocZone());
 }
-/// ✅
+
 + (id)allocWithZone:(NSZone *)aZone {
     return SKBookmarkClass == self ? defaultPlaceholderBookmark : [super allocWithZone:aZone];
 }
@@ -142,7 +138,7 @@ static Class SKBookmarkClass = Nil;
         NSString *label = nil;
         [url getResourceValue:&label forKey:NSURLLocalizedNameKey error:NULL];
         if ([[NSWorkspace sharedWorkspace] type:fileType conformsToType:SKFolderDocumentType]) {
-            NSArray *children = [self bookmarksForURLs:[fm contentsOfDirectoryAtURL:url includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL]];
+            NSArray *children = [self bookmarksForURLs:[fm contentsOfDirectoryAtURL:url includingPropertiesForKeys:[NSArray array] options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL]];
             if ([children count] && (bookmark = [[self alloc] initFolderWithChildren:children label:label])) {
                 [array addObject:bookmark];
                 [bookmark release];
@@ -208,7 +204,7 @@ static Class SKBookmarkClass = Nil;
 }
 
 - (NSDictionary *)properties { return nil; }
-/// 书签类型
+
 - (SKBookmarkType)bookmarkType { return SKBookmarkTypeSeparator; }
 
 - (NSImage *)icon { return nil; }
@@ -233,7 +229,7 @@ static Class SKBookmarkClass = Nil;
 - (BOOL)hasSetup { return NO; }
 
 - (NSArray *)containingBookmarks { return [NSArray array]; }
-/// ✅ 子节点
+
 - (NSArray *)children { return nil; }
 - (NSUInteger)countOfChildren { return 0; }
 - (SKBookmark *)objectInChildrenAtIndex:(NSUInteger)anIndex { return nil; }
@@ -265,6 +261,14 @@ static Class SKBookmarkClass = Nil;
 }
 
 - (NSArray *)entireContents { return nil; }
+
+- (BOOL)isExpanded {
+    return [[SKBookmarkController sharedBookmarkController] isBookmarkExpanded:self];
+}
+
+- (void)setExpanded:(BOOL)flag {
+    [[SKBookmarkController sharedBookmarkController] setExpanded:flag forBookmark:self];
+}
 
 - (NSArray *)bookmarks {
     return [self children];
@@ -308,14 +312,20 @@ static Class SKBookmarkClass = Nil;
     if ([self bookmarkType] == SKBookmarkTypeSeparator)
         return nil;
     SKBookmark *bookmark = self;
-    NSMutableArray *components = [NSMutableArray array];
+    NSMutableString *path = [NSMutableString string];
     while ([bookmark parent] != nil) {
-        NSString *component = [(id)CFURLCreateStringByAddingPercentEscapes(NULL, (CFStringRef)[bookmark label], NULL, CFSTR(";[]?/"), kCFStringEncodingUTF8) autorelease];
-        [components insertObject:component atIndex:0];
+        NSString *component = [[bookmark label] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLBookmarkNameAllowedCharacterSet]];
+        [path replaceCharactersInRange:NSMakeRange(0, 0) withString:component];
+        [path replaceCharactersInRange:NSMakeRange(0, 0) withString:@"/"];
         bookmark = [bookmark parent];
     }
-    NSString *skimURLString = [@"skim://bookmarks/" stringByAppendingString:[components componentsJoinedByString:@"/"]];
-    return [NSURL URLWithString:skimURLString];
+    NSURLComponents *components = [[NSURLComponents alloc] init];
+    [components setScheme:@"skim"];
+    [components setHost:@"bookmarks"];
+    [components setPath:path];
+    NSURL *url = [components URL];
+    [components release];
+    return url;
 }
 
 @end
@@ -343,7 +353,7 @@ static Class SKBookmarkClass = Nil;
 - (id)initFolderWithLabel:(NSString *)aLabel {
     return [self initFolderWithChildren:nil label:aLabel];
 }
-/// ✅ 使用 SKBookmarksIdentifier 域中保存的 bookmarks 转换为 SKBookmark 来初始化
+
 - (id)initRootWithChildrenProperties:(NSArray *)childrenProperties {
     NSMutableArray *aChildren = [NSMutableArray array];
     SKBookmark *child;
@@ -388,11 +398,8 @@ static Class SKBookmarkClass = Nil;
                 NSLog(@"Failed to read child bookmark: %@", dict);
         }
         return (id)[[bookmarkClass alloc] initFolderWithChildren:newChildren label:[dictionary objectForKey:LABEL_KEY]];
-    } else if ([dictionary objectForKey:@"windowFrame"]) {
-        return (id)[[SKFileBookmark alloc] initWithSetup:dictionary label:[dictionary objectForKey:LABEL_KEY]];
     } else {
-        NSNumber *pageIndex = [dictionary objectForKey:PAGEINDEX_KEY];
-        return (id)[[SKFileBookmark alloc] initWithAliasData:[dictionary objectForKey:ALIASDATA_KEY] pageIndex:(pageIndex ? [pageIndex unsignedIntegerValue] : NSNotFound) label:[dictionary objectForKey:LABEL_KEY]];
+        return (id)[[SKFileBookmark alloc] initWithSetup:dictionary label:[dictionary objectForKey:LABEL_KEY]];
     }
 }
 
@@ -419,18 +426,46 @@ static Class SKBookmarkClass = Nil;
     return keyPaths;
 }
 
-+ (NSImage *)missingFileImage {
-    static NSImage *image = nil;
-    if (image == nil) {
-        image = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) drawingHandler:^(NSRect rect) {
-            NSImage *genericDocImage = [[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kGenericDocumentIcon)];
-            NSImage *questionMark = [[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kQuestionMarkIcon)];
-            [genericDocImage drawInRect:rect fromRect:NSZeroRect operation:NSCompositeCopy fraction:0.7];
-            [questionMark drawInRect:NSMakeRect(3.0, 2.0, 10.0, 10.0) fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:0.7];
-            return YES;
-        }] retain];
++ (NSImage *)iconForFileType:(NSString *)type hasSetup:(BOOL)hasSetup {
+    NSImage *icon = nil;
+    if (hasSetup) {
+        static NSMutableDictionary *setupFileTypeIcons = nil;
+        icon = [setupFileTypeIcons objectForKey:type ?: @""];
+        if (icon == nil) {
+            if (setupFileTypeIcons == nil)
+                setupFileTypeIcons = [[NSMutableDictionary alloc] init];
+            icon = [self iconForFileType:type hasSetup:NO];
+            NSImage *badge = [NSImage imageNamed:NSImageNameSmartBadgeTemplate];
+            icon = [NSImage imageWithSize:NSMakeSize(16.0, 16.0) flipped:NO drawingHandler:^(NSRect rect) {
+                [[NSColor darkGrayColor] setFill];
+                [NSBezierPath fillRect:NSMakeRect(8.0, 0.0, 8.0, 8.0)];
+                [badge drawInRect:NSMakeRect(8.0, 0.0, 8.0, 8.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
+                [icon drawInRect:rect fromRect:NSZeroRect operation:NSCompositeDestinationOver fraction:1.0];
+                return YES;
+            }];
+            [setupFileTypeIcons setObject:icon forKey:type ?: @""];
+        }
+    } else {
+        static NSMutableDictionary *fileTypeIcons = nil;
+        icon = [fileTypeIcons objectForKey:type ?: @""];
+        if (icon == nil) {
+            if (fileTypeIcons == nil)
+                fileTypeIcons = [[NSMutableDictionary alloc] init];
+            if (type)
+                icon = [[NSWorkspace sharedWorkspace] iconForFileType:type];
+            if (icon == nil) {
+                NSImage *genericDocImage = [[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kGenericDocumentIcon)];
+                NSImage *questionMark = [[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kQuestionMarkIcon)];
+                icon = [NSImage imageWithSize:NSMakeSize(16.0, 16.0) flipped:NO drawingHandler:^(NSRect rect) {
+                    [genericDocImage drawInRect:rect fromRect:NSZeroRect operation:NSCompositeCopy fraction:0.7];
+                    [questionMark drawInRect:NSMakeRect(3.0, 2.0, 10.0, 10.0) fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:0.7];
+                    return YES;
+                }];
+            }
+            [fileTypeIcons setObject:icon forKey:type ?: @""];
+        }
     }
-    return image;
+    return icon;
 }
 
 - (id)initWithURL:(NSURL *)aURL pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel {
@@ -438,24 +473,6 @@ static Class SKBookmarkClass = Nil;
     if (self) {
         alias = [[SKAlias alloc] initWithURL:aURL];
         if (alias) {
-            aliasData = [[alias data] retain];
-            pageIndex = aPageIndex;
-            label = [aLabel copy];
-            setup = nil;
-        } else {
-            [self release];
-            self = nil;
-        }
-    }
-    return self;
-}
-
-- (id)initWithAliasData:(NSData *)aData pageIndex:(NSUInteger)aPageIndex label:(NSString *)aLabel {
-    self = [super init];
-    if (self) {
-        alias = [[SKAlias alloc] initWithData:aData];
-        if (aData && alias) {
-            aliasData = [aData retain];
             pageIndex = aPageIndex;
             label = [aLabel copy];
             setup = nil;
@@ -468,17 +485,28 @@ static Class SKBookmarkClass = Nil;
 }
 
 - (id)initWithSetup:(NSDictionary *)aSetupDict label:(NSString *)aLabel {
-    NSNumber *pageIndexNumber = [aSetupDict objectForKey:PAGEINDEX_KEY];
-    self = [self initWithAliasData:[aSetupDict objectForKey:ALIASDATA_KEY] pageIndex:(pageIndexNumber ? [pageIndexNumber unsignedIntegerValue] : NSNotFound) label:aLabel];
+    self = [super init];
     if (self) {
-        setup = [aSetupDict copy];
+        NSData *data;
+        if ((data = [aSetupDict objectForKey:ALIASDATA_KEY]))
+            alias = [[SKAlias alloc] initWithAliasData:data];
+        else if ((data = [aSetupDict objectForKey:BOOKMARK_KEY]))
+            alias = [[SKAlias alloc] initWithBookmarkData:data];
+        if (alias) {
+            NSNumber *pageIndexNumber = [aSetupDict objectForKey:PAGEINDEX_KEY];
+            pageIndex = pageIndexNumber ? [pageIndexNumber unsignedIntegerValue] : NSNotFound;
+            label = [aLabel retain];
+            setup = [aSetupDict objectForKey:SKDocumentSetupWindowFrameKey] ? [aSetupDict copy] : nil;
+        } else {
+            [self release];
+            self = nil;
+        }
     }
     return self;
 }
 
 - (void)dealloc {
     SKDESTROY(alias);
-    SKDESTROY(aliasData);
     SKDESTROY(label);
     SKDESTROY(setup);
     [super dealloc];
@@ -490,7 +518,10 @@ static Class SKBookmarkClass = Nil;
 
 - (NSDictionary *)properties {
     NSMutableDictionary *properties = [NSMutableDictionary dictionaryWithDictionary:setup];
-    [properties addEntriesFromDictionary:[NSDictionary dictionaryWithObjectsAndKeys:BOOKMARK_STRING, TYPE_KEY, [self aliasData], ALIASDATA_KEY, [NSNumber numberWithUnsignedInteger:pageIndex], PAGEINDEX_KEY, label, LABEL_KEY, nil]];
+    NSData *data = [alias data];
+    NSString *dataKey = [alias isBookmark] ? BOOKMARK_KEY : ALIASDATA_KEY;
+    [properties removeObjectForKey:[dataKey isEqualToString:ALIASDATA_KEY] ? BOOKMARK_KEY : ALIASDATA_KEY];
+    [properties addEntriesFromDictionary:[NSDictionary dictionaryWithObjectsAndKeys:BOOKMARK_STRING, TYPE_KEY, data, dataKey, [NSNumber numberWithUnsignedInteger:pageIndex], PAGEINDEX_KEY, label, LABEL_KEY, nil]];
     return properties;
 }
 
@@ -520,20 +551,10 @@ static Class SKBookmarkClass = Nil;
     return [[self fileURL] path];
 }
 
-- (SKAlias *)alias {
-    return alias;
-}
-
-- (NSData *)aliasData {
-    NSData *data = nil;
-    if ([self fileURL])
-        data = [alias data];
-    return data ?: aliasData;
-}
-
 - (NSImage *)icon {
     NSURL *fileURL = [self fileURL];
-    return fileURL ? [[NSWorkspace sharedWorkspace] iconForFile:[fileURL path]] : [[self class] missingFileImage];
+    NSString *type = fileURL ? [[NSWorkspace  sharedWorkspace] typeOfFile:[fileURL path] error:NULL] : nil;
+    return [[self class] iconForFileType:type hasSetup:[self hasSetup]];
 }
 
 - (NSUInteger)pageIndex {
@@ -583,7 +604,7 @@ static Class SKBookmarkClass = Nil;
 #pragma mark -
 
 @implementation SKFolderBookmark
-/// KVO 中遇到 key 是 "fileDescription" 和 "toolTip" 就增加 "children"
+
 + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
     NSSet *keyPaths = [super keyPathsForValuesAffectingValueForKey:key];
     if ([key isEqualToString:@"fileDescription"] || [key isEqualToString:@"toolTip"])
@@ -702,7 +723,7 @@ static Class SKBookmarkClass = Nil;
 - (id)newScriptingObjectOfClass:(Class)objectClass forValueForKey:(NSString *)key withContentsValue:(id)contentsValue properties:(NSDictionary *)properties {
     if ([key isEqualToString:@"bookmarks"]) {
         SKBookmark *bookmark = nil;
-        NSURL *aURL = [properties objectForKey:@"scriptingFile"] ?: contentsValue;
+        NSURL *aURL = [properties objectForKey:@"fileURL"] ?: contentsValue;
         NSString *aLabel = [properties objectForKey:@"label"];
         NSNumber *aType = [properties objectForKey:@"bookmarkType"];
         NSInteger type;
@@ -743,7 +764,7 @@ static Class SKBookmarkClass = Nil;
             {
                 NSArray *aChildren = nil;
                 if (aURL) {
-                    aChildren = [SKBookmark bookmarksForURLs:[[NSFileManager defaultManager] contentsOfDirectoryAtURL:aURL includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL]];
+                    aChildren = [SKBookmark bookmarksForURLs:[[NSFileManager defaultManager] contentsOfDirectoryAtURL:aURL includingPropertiesForKeys:[NSArray array] options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL]];
                     if (aLabel == nil)
                         [aURL getResourceValue:&aLabel forKey:NSURLLocalizedNameKey error:NULL];
                 }
@@ -778,7 +799,7 @@ static Class SKBookmarkClass = Nil;
 - (NSImage *)icon {
     static NSImage *menuIcon = nil;
     if (menuIcon == nil) {
-        menuIcon = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) drawingHandler:^(NSRect rect){
+        menuIcon = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) flipped:NO drawingHandler:^(NSRect rect){
             [[NSColor colorWithCalibratedWhite:0.0 alpha:0.2] set];
             [NSBezierPath fillRect:NSMakeRect(1.0, 1.0, 14.0, 13.0)];
             [NSGraphicsContext saveGraphicsState];
@@ -791,7 +812,7 @@ static Class SKBookmarkClass = Nil;
             [path lineToPoint:NSMakePoint(14.0, 2.0)];
             [path closePath];
             [[NSColor whiteColor] set];
-            [NSShadow setShadowWithColor:[NSColor colorWithCalibratedWhite:0.0 alpha:0.33333] blurRadius:2.0 yOffset:-1.0];
+            [NSShadow setShadowWithWhite:0.0 alpha:0.33333 blurRadius:2.0 yOffset:-1.0];
             [path fill];
             [NSGraphicsContext restoreGraphicsState];
             [[NSColor colorWithCalibratedRed:0.162 green:0.304 blue:0.755 alpha:1.0] set];

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/4/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,18 @@
 - (PDFPage *)page;
 - (NSString *)pageLabel;
 
+- (NSInteger)deepestLevel;
+
 - (void)clearDocument;
+
+- (id)objectSpecifier;
+- (PDFOutline *)scriptingParent;
+- (NSArray *)entireContents;
+- (NSUInteger)countOfOutlines;
+- (PDFOutline *)objectInOutlinesAtIndex:(NSUInteger)idx;
+- (NSString *)scriptingURL;
+- (NSURL *)scriptingFile;
+- (BOOL)isExpanded;
+- (void)setExpanded:(BOOL)flag;
 
 @end

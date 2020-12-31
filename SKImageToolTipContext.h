@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/6/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -38,10 +38,11 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Quartz/Quartz.h>
+#import "SKGroupedSearchResult.h"
 
 
 @protocol SKImageToolTipContext <NSObject>
-- (NSImage *)toolTipImageIsOpaque:(BOOL *)isOpaque;
+- (NSImage *)toolTipImage;
 @end
 
 
@@ -49,6 +50,12 @@
 @end
 
 @interface PDFDestination (SKImageToolTipContext) <SKImageToolTipContext>
+@end
+
+@interface PDFSelection (SKImageToolTipContext) <SKImageToolTipContext>
+@end
+
+@interface SKGroupedSearchResult (SKImageToolTipContext) <SKImageToolTipContext>
 @end
 
 @interface PDFAnnotation (SKImageToolTipContext) <SKImageToolTipContext>

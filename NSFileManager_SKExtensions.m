@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/4/09.
 /*
- This software is Copyright (c) 2009-2019
+ This software is Copyright (c) 2009-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,7 @@
         NSMutableArray *urlArray = [NSMutableArray array];
         NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString *)kCFBundleNameKey];
         for (NSURL *url in [self URLsForDirectory:NSApplicationSupportDirectory inDomains:NSAllDomainsMask])
-            [urlArray addObject:[url URLByAppendingPathComponent:appName]];
+            [urlArray addObject:[url URLByAppendingPathComponent:appName isDirectory:YES]];
         applicationSupportDirectoryURLs = [urlArray copy];
     }
     return applicationSupportDirectoryURLs;
@@ -58,10 +58,13 @@
     static NSURL *chewableItemsDirectoryURL = nil;
     if (chewableItemsDirectoryURL == nil) {
         FSRef chewableRef;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (noErr == FSFindFolder(kUserDomain, kChewableItemsFolderType, TRUE, &chewableRef)) {
             NSURL *chewableURL = (NSURL *)CFURLCreateFromFSRef(kCFAllocatorDefault, &chewableRef);
+#pragma clang diagnostic pop
             NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString *)kCFBundleNameKey];
-            chewableItemsDirectoryURL = [[chewableURL URLByAppendingPathComponent:appName] copy];
+            chewableItemsDirectoryURL = [[chewableURL URLByAppendingPathComponent:appName isDirectory:YES] copy];
             if ([chewableItemsDirectoryURL checkResourceIsReachableAndReturnError:NULL] == NO)
                 [self createDirectoryAtPath:[chewableItemsDirectoryURL path] withIntermediateDirectories:NO attributes:nil error:NULL];
             [chewableURL release];
@@ -72,7 +75,7 @@
     
     do {
         CFUUIDRef uuid = CFUUIDCreate(NULL);
-        uniqueURL = [chewableItemsDirectoryURL URLByAppendingPathComponent:[(NSString *)CFUUIDCreateString(NULL, uuid) autorelease]];
+        uniqueURL = [chewableItemsDirectoryURL URLByAppendingPathComponent:[(NSString *)CFUUIDCreateString(NULL, uuid) autorelease] isDirectory:YES];
         CFRelease(uuid);
     } while ([uniqueURL checkResourceIsReachableAndReturnError:NULL]);
     

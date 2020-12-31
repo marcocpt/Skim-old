@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/21/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -37,11 +37,6 @@
  */
 
 #import "NSScreen_SKExtensions.h"
-
-#if SDK_BEFORE(10_9)
-@interface NSScreen (SKMavericksDeclarations)
-+ (BOOL)screensHaveSeparateSpaces;
-#endif
 
 @implementation NSScreen (SKExtensions)
 
@@ -86,7 +81,7 @@ static inline CGFloat SKSquaredDistanceFromPointToRect(NSPoint point, NSRect rec
 }
 
 + (BOOL)screenForWindowHasMenuBar:(NSWindow *)window {
-    if ([self respondsToSelector:@selector(screensHaveSeparateSpaces)] && [self screensHaveSeparateSpaces])
+    if ([self screensHaveSeparateSpaces])
         return YES;
     return [[window screen] isEqual:[[self screens] firstObject]];
 }

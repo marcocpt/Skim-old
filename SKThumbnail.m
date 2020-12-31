@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 @implementation SKThumbnail
 
 @synthesize delegate, dirty, image, label, pageIndex;
-@dynamic size;
+@dynamic size, page;
 
 - (id)initWithImage:(NSImage *)anImage label:(NSString *)aLabel pageIndex:(NSUInteger)anIndex {
     self = [super init];
@@ -74,6 +74,10 @@
 
 - (NSSize)size {
     return [image size];
+}
+
+- (PDFPage *)page {
+    return [delegate pageForThumbnail:self];
 }
 
 - (void)setDirty:(BOOL)newDirty {

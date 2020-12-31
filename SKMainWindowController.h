@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/6/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -43,9 +43,6 @@
 #import "NSDocument_SKExtensions.h"
 #import "SKPDFView.h"
 #import "SKPDFDocument.h"
-#import <IOKit/pwr_mgt/IOPMLib.h>
-
-extern NSString *SKTypeImageTransformerName;
 
 typedef NS_ENUM(NSInteger, SKLeftSidePaneState) {
     SKSidePaneStateThumbnail,
@@ -69,7 +66,7 @@ enum {
 };
 
 @class PDFAnnotation, PDFSelection, SKGroupedSearchResult, SKFloatMapTable;
-@class SKPDFView, SKSecondaryPDFView, SKStatusBar, SKFindController, SKSplitView, SKFieldEditor, SKSideWindow;
+@class SKPDFView, SKSecondaryPDFView, SKStatusBar, SKFindController, SKSplitView, SKFieldEditor, SKOverviewView, SKSideWindow;
 @class SKLeftSideViewController, SKRightSideViewController, SKMainToolbarController, SKMainTouchBarController, SKProgressController, SKPresentationOptionsSheetController, SKNoteTypeSheetController, SKSnapshotWindowController;
 
 @interface SKMainWindowController : NSWindowController <SKSnapshotWindowControllerDelegate, SKThumbnailDelegate, SKFindControllerDelegate, SKPDFViewDelegate, SKPDFDocumentDelegate, NSTouchBarDelegate> {
@@ -88,7 +85,10 @@ enum {
     SKMainToolbarController             *toolbarController;
     
     SKMainTouchBarController            *touchBarController;
-
+    
+    SKOverviewView                      *overviewView;
+    NSVisualEffectView                  *overviewContentView;
+    
     NSView                              *leftSideContentView;
     NSView                              *rightSideContentView;
     
@@ -110,6 +110,9 @@ enum {
     NSMutableArray                      *notes;
     SKFloatMapTable                     *rowHeights;
     
+    NSMapTable                          *widgets;
+    NSMapTable                          *widgetValues;
+    
     NSMutableArray                      *snapshots;
     NSMutableArray                      *dirtySnapshots;
     NSTimer                             *snapshotTimer;
@@ -119,8 +122,7 @@ enum {
     double                              rating;
     
     NSWindow                            *mainWindow;
-    SKSideWindow                        *leftSideWindow;
-    SKSideWindow                        *rightSideWindow;
+    SKSideWindow                        *sideWindow;
     NSMutableArray                      *blankingWindows;
     
     SKInteractionMode                   interactionMode;
@@ -150,7 +152,7 @@ enum {
     
     NSPointerArray                      *lastViewedPages;
     
-    IOPMAssertionID                     activityAssertionID;
+    id                                  activity;
     
     NSMutableDictionary                 *savedNormalSetup;
     
@@ -163,8 +165,8 @@ enum {
     
     NSMapTable                          *undoGroupOldPropertiesPerNote;
     
-    NSArray                             *tmpNoteProperties;
     PDFDocument                         *placeholderPdfDocument;
+    NSArray                             *placeholderWidgetProperties;
 
     struct _mwcFlags {
         unsigned int leftSidePaneState:1;
@@ -173,7 +175,7 @@ enum {
         unsigned int findPaneState:1;
         unsigned int caseInsensitiveSearch:1;
         unsigned int wholeWordSearch:1;
-        unsigned int caseInsensitiveNoteSearch:1;
+        unsigned int caseInsensitiveFilter:1;
         unsigned int autoResizeNoteRows:1;
         unsigned int addOrRemoveNotesInBulk:1;
         unsigned int updatingOutlineSelection:1;
@@ -212,6 +214,8 @@ enum {
 
 - (void)displaySearchResultsForString:(NSString *)string;
 
+@property (nonatomic, readonly) NSString *searchString;
+
 - (void)showSnapshotAtPageNumber:(NSInteger)pageNum forRect:(NSRect)rect scaleFactor:(CGFloat)scaleFactor autoFits:(BOOL)autoFits;
 - (void)showSnapshotsWithSetups:(NSArray *)setups;
 - (void)showNote:(PDFAnnotation *)annotation;
@@ -224,6 +228,8 @@ enum {
 
 @property (nonatomic, readonly) PDFDocument *placeholderPdfDocument;
 
+@property (nonatomic, readonly) NSArray *widgetProperties;
+
 - (NSArray *)notes;
 - (NSUInteger)countOfNotes;
 - (PDFAnnotation *)objectInNotesAtIndex:(NSUInteger)theIndex;
@@ -233,11 +239,7 @@ enum {
 - (void)removeAllObjectsFromNotes;
 
 - (NSArray *)thumbnails;
-- (NSUInteger)countOfThumbnails;
-- (SKThumbnail *)objectInThumbnailsAtIndex:(NSUInteger)theIndex;
-- (void)insertObject:(SKThumbnail *)thumbnail inThumbnailsAtIndex:(NSUInteger)theIndex;
-- (void)removeObjectFromThumbnailsAtIndex:(NSUInteger)theIndex;
-- (void)removeAllObjectsFromThumbnails;
+- (void)setThumbnails:(NSArray *)newThumbnails;
 
 - (NSArray *)snapshots;
 - (NSUInteger)countOfSnapshots;
@@ -286,6 +288,14 @@ enum {
 
 @property (nonatomic) BOOL recentInfoNeedsUpdate;
 
+@property (nonatomic, readonly) NSMenu *notesMenu;
+
+@property (nonatomic) BOOL hasOverview;
+
+- (void)showOverviewAnimating:(BOOL)animate;
+- (void)hideOverviewAnimating:(BOOL)animate;
+- (void)hideOverviewAnimating:(BOOL)animate completionHandler:(void (^)(void))handler;
+
 - (void)displayTocViewAnimating:(BOOL)animate;
 - (void)displayThumbnailViewAnimating:(BOOL)animate;
 - (void)displayFindViewAnimating:(BOOL)animate;
@@ -301,6 +311,9 @@ enum {
 
 - (void)updateNoteSelection;
 
+- (BOOL)isOutlineExpanded:(PDFOutline *)outline;
+- (void)setExpanded:(BOOL)flag forOutline:(PDFOutline *)outline;
+
 - (void)updateThumbnailSelection;
 - (void)resetThumbnails;
 - (void)resetThumbnailSizeIfNeeded;
@@ -315,6 +328,8 @@ enum {
 - (void)updateSnapshot:(NSTimer *)timer;
 
 - (void)addAnnotationsFromDictionaries:(NSArray *)noteDicts removeAnnotations:(NSArray *)notesToRemove autoUpdate:(BOOL)autoUpdate;
+
+- (void)registerWidgetValues;
 
 - (void)applySetup:(NSDictionary *)setup;
 - (NSDictionary *)currentSetup;

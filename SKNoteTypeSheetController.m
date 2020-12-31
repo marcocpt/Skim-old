@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 3/25/10.
 /*
- This software is Copyright (c) 2010-2019
+ This software is Copyright (c) 2010-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,17 +52,19 @@
 
 @implementation SKNoteTypeSheetController
 
-@synthesize matrix, delegate, noteTypeMenu;
+@synthesize delegate, noteTypeMenu;
 @dynamic noteTypes;
 
 - (id)init {
     self = [super initWithWindowNibName:@"NoteTypeSheet"];
     if (self) {
-        noteTypeMenu = [[NSMenu allocWithZone:[NSMenu menuZone]] init];
+        noteTypeMenu = [[NSMenu alloc] init];
         NSArray *noteTypes = [NSArray arrayWithObjects:SKNFreeTextString, SKNNoteString, SKNCircleString, SKNSquareString, SKNHighlightString, SKNUnderlineString, SKNStrikeOutString, SKNLineString, SKNInkString, nil];
         NSMenuItem *menuItem;
+        NSInteger tag = 0;
         for (NSString *type in noteTypes) {
             menuItem = [noteTypeMenu addItemWithTitle:[type typeName] action:@selector(toggleDisplayNoteType:) target:self];
+            [menuItem setTag:tag++];
             [menuItem setRepresentedObject:type];
             [menuItem setState:NSOnState];
         }
@@ -76,15 +78,22 @@
 - (void)dealloc {
     delegate = nil;
     SKDESTROY(noteTypeMenu);
-    SKDESTROY(matrix);
     [super dealloc];
+}
+
+- (NSButton *)switchForTag:(NSInteger)tag {
+    for (NSView *view in [[[self window] contentView] subviews]) {
+        if ([view isKindOfClass:[NSButton class]] && [(NSButton *)view action] == NULL && [(NSButton *)view tag] == tag)
+            return (NSButton *)view;
+    }
+    return nil;
 }
 
 - (void)windowDidLoad {
     NSUInteger i;
     for (i = 0; i < NOTETYPES_COUNT; i++)
-        [[matrix cellWithTag:i] setTitle:[[noteTypeMenu itemAtIndex:i] title]];
-    [matrix sizeToFit];
+        [[self switchForTag:i] setTitle:[[noteTypeMenu itemAtIndex:i] title]];
+    //[matrix sizeToFit];
 }
 
 - (NSArray *)noteTypes {
@@ -131,7 +140,8 @@
 }
 
 - (void)toggleDisplayNoteType:(id)sender {
-    [(NSMenuItem *)sender setState:NO == [(NSMenuItem *)sender state]];
+    NSMenuItem *item = [noteTypeMenu itemWithTag:[sender tag]];
+    [item setState:NO == [item state]];
     [delegate noteTypeSheetControllerNoteTypesDidChange:self];
 }
 
@@ -147,13 +157,13 @@
     
     NSUInteger i;
     for (i = 0; i < NOTETYPES_COUNT; i++)
-        [[matrix cellWithTag:i] setState:[[noteTypeMenu itemAtIndex:i] state]];
+        [[self switchForTag:i] setState:[[noteTypeMenu itemAtIndex:i] state]];
 	
     [self beginSheetModalForWindow:[delegate windowForNoteTypeSheetController:self] completionHandler:^(NSInteger result) {
-            if (result == NSOKButton) {
+            if (result == NSModalResponseOK) {
                 NSUInteger idx;
                 for (idx = 0; idx < NOTETYPES_COUNT; idx++)
-                    [[noteTypeMenu itemAtIndex:idx] setState:[(NSCell *)[matrix cellWithTag:idx] state]];
+                    [[noteTypeMenu itemAtIndex:idx] setState:[[self switchForTag:idx] state]];
                 [delegate noteTypeSheetControllerNoteTypesDidChange:self];
             }
         }];

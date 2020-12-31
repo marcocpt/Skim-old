@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/16/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -52,24 +52,6 @@
 #define WINDOW_LEVEL            ((NSWindowLevel)104)
 #endif
 
-#if SDK_BEFORE(10_10)
-typedef NS_ENUM(NSInteger, NSVisualEffectMaterial) {
-    NSVisualEffectMaterialLight = 1,
-    NSVisualEffectMaterialDark = 2,
-    NSVisualEffectMaterialTitlebar = 3,
-    NSVisualEffectMaterialSelection = 4
-};
-typedef NS_ENUM(NSInteger, NSVisualEffectState) {
-    NSVisualEffectStateFollowsWindowActiveState,
-    NSVisualEffectStateActive,
-    NSVisualEffectStateInactive,
-};
-@class NSVisualEffectView : NSView
-@property NSVisualEffectMaterial material;
-@property NSVisualEffectState state;
-@end
-#endif
-
 @implementation SKImageToolTipWindow
 
 @synthesize currentImageContext=context;
@@ -94,14 +76,6 @@ static SKImageToolTipWindow *sharedToolTipWindow = nil;
         [self setLevel:WINDOW_LEVEL];
         [self setDefaultAlphaValue:ALPHA_VALUE];
         [self setAutoHideTimeInterval:AUTO_HIDE_TIME_INTERVAL];
-        
-        imageView = [[NSImageView alloc] initWithFrame:[[self contentView] bounds]];
-        [imageView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-        [imageView setEditable:NO];
-        [imageView setImageFrameStyle:NSImageFrameNone];
-        [imageView setImageScaling:NSImageScaleProportionallyUpOrDown];
-        [[self contentView] addSubview:imageView];
-        
         context = nil;
         point = NSZeroPoint;
         
@@ -126,32 +100,35 @@ static SKImageToolTipWindow *sharedToolTipWindow = nil;
 - (void)showDelayed {
     NSPoint thePoint = NSEqualPoints(point, NSZeroPoint) ? [NSEvent mouseLocation] : point;
     NSRect contentRect = NSZeroRect, screenRect = [[NSScreen screenForPoint:thePoint] frame];
-    BOOL isOpaque = YES;
-    NSImage *image = [context toolTipImageIsOpaque:&isOpaque];
+    NSImage *image = [context toolTipImage];
+    BOOL isOpaque = [[[image representations] firstObject] isOpaque];
     
     if (image) {
-        [imageView setImage:image];
+        [self setBackgroundImage:image];
         
         if (RUNNING_AFTER(10_13)) {
             if (isOpaque) {
                 if ([backgroundView window])
-                    [backgroundView removeFromSuperview];
+                    [self setContentView:[[[NSView alloc] init] autorelease]];
             } else if ([backgroundView window] == nil) {
                 if (backgroundView == nil) {
-                    backgroundView = [[NSClassFromString(@"NSVisualEffectView") alloc] init];
+                    backgroundView = [[NSVisualEffectView alloc] init];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+                    [backgroundView setMaterial:NSVisualEffectMaterialToolTip];
+#pragma clang diagnostic push
+                    [backgroundView setState:NSVisualEffectStateActive];
                     [backgroundView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-                    [(NSVisualEffectView *)backgroundView setMaterial:17];
-                    [(NSVisualEffectView *)backgroundView setState:NSVisualEffectStateActive];
+                    [self setOpaque:NO];
                 }
-                [backgroundView setFrame:[[self contentView] bounds]];
-                [[self contentView] addSubview:backgroundView positioned:NSWindowBelow relativeTo:nil];
+                [self setContentView:backgroundView];
             }
         } else if (isOpaque) {
             [self setBackgroundColor:[NSColor whiteColor]];
         } else {
             static NSColor *backgroundColor = nil;
             if (backgroundColor == nil)
-                backgroundColor = RUNNING_AFTER(10_9) ? [NSColor colorWithCalibratedRed:0.95 green:0.95 blue:0.95 alpha:1.0] : [NSColor colorWithCalibratedRed:1.0 green:1.0 blue:0.75 alpha:1.0];
+                backgroundColor = [[NSColor colorWithCalibratedRed:0.95 green:0.95 blue:0.95 alpha:1.0] retain];
             [self setBackgroundColor:backgroundColor];
         }
         

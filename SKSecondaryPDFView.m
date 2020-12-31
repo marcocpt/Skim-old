@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 9/19/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -51,8 +51,9 @@
 #import "NSMenu_SKExtensions.h"
 #import "NSImage_SKExtensions.h"
 #import "SKPDFView.h"
-#import "SKGradientView.h"
+#import "SKTopBarView.h"
 #import "NSColor_SKExtensions.h"
+#import "NSGraphics_SKExtensions.h"
 
 
 @interface SKSecondaryPDFView (SKPrivate)
@@ -71,12 +72,11 @@
 - (void)startObservingSynchronizedPDFView;
 - (void)stopObservingSynchronizedPDFView;
 
-- (void)handleScrollViewFrameDidChange:(NSNotification *)notification;
-
 - (void)handleSynchronizedScaleChangedNotification:(NSNotification *)notification;
 - (void)handlePageChangedNotification:(NSNotification *)notification;
 - (void)handleDocumentDidUnlockNotification:(NSNotification *)notification;
 - (void)handlePDFViewScaleChangedNotification:(NSNotification *)notification;
+- (void)handleScrollerStyleChangedNotification:(NSNotification *)notification;
 
 @end
 
@@ -100,6 +100,12 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.0, 0.1, 0.2, 0.25, 0.35, 0.
     synchronizeZoom = NO;
     selectsText = [[NSUserDefaults standardUserDefaults] boolForKey:SKLastSecondarySelectsTextKey];
     
+    SKSetHasDefaultAppearance(self);
+    SKSetHasLightAppearance([[self scrollView] contentView]);
+    [self handleScrollerStyleChangedNotification:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScrollerStyleChangedNotification:)
+                                                 name:NSPreferredScrollerStyleDidChangeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePageChangedNotification:)
                                                  name:PDFViewPageChangedNotification object:self];
     if ([PDFView instancesRespondToSelector:@selector(magnifyWithEvent:)] == NO || [PDFView instanceMethodForSelector:@selector(magnifyWithEvent:)] == [NSView instanceMethodForSelector:@selector(magnifyWithEvent:)])
@@ -146,7 +152,10 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.0, 0.1, 0.2, 0.25, 0.35, 0.
 - (void)setDocument:(PDFDocument *)document {
     if ([self document])
         [[NSNotificationCenter defaultCenter] removeObserver:self name:PDFDocumentDidUnlockNotification object:[self document]];
+    BOOL savedSwitching = switching;
+    switching = YES;
     [super setDocument:document];
+    switching = savedSwitching;
     [self reloadPagePopUpButton];
     if (document && [document isLocked])
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDocumentDidUnlockNotification:) 
@@ -155,41 +164,24 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.0, 0.1, 0.2, 0.25, 0.35, 0.
 
 #pragma mark Popup buttons
 
-static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anIndex) {
-    NSUInteger i = [popUpButton indexOfSelectedItem];
-    [popUpButton selectItemAtIndex:anIndex];
-    [popUpButton sizeToFit];
-    [popUpButton setFrameSize:NSMakeSize(NSWidth([popUpButton frame]) - CONTROL_WIDTH_OFFSET, CONTROL_HEIGHT)];
-    [popUpButton selectItemAtIndex:i];
-}
-
 - (void)reloadPagePopUpButton {
     NSArray *labels = [[self document] pageLabels];
     NSUInteger count = [pagePopUpButton numberOfItems];
-    NSSize size = NSMakeSize(1000.0, 1000.0);
-    NSDictionary *attrs = [NSDictionary dictionaryWithObjectsAndKeys:[pagePopUpButton font], NSFontAttributeName, nil];
-    __block CGFloat maxWidth = 0.0;
-    __block NSUInteger maxIndex = 0;
     
     while (count--)
         [pagePopUpButton removeItemAtIndex:count];
     
     if ([labels count] > 0) {
-        [labels enumerateObjectsUsingBlock:^(id label, NSUInteger i, BOOL *stop) {
-            CGFloat width = NSWidth([label boundingRectWithSize:size options:0 attributes:attrs]);
-            if (width > maxWidth) {
-                maxWidth = width;
-                maxIndex = i;
-            }
+        for (NSString *label in labels)
             [pagePopUpButton addItemWithTitle:label];
-        }];
         
-        sizePopUpToItemAtIndex(pagePopUpButton, maxIndex);
+        [pagePopUpButton sizeToFit];
+        [pagePopUpButton setFrameSize:NSMakeSize(NSWidth([pagePopUpButton frame]) - CONTROL_WIDTH_OFFSET, CONTROL_HEIGHT)];
         
         [pagePopUpButton selectItemAtIndex:[[self currentPage] pageIndex]];
         
         if (controlView)
-            [(SKGradientView *)controlView setMinSize:NSMakeSize(NSWidth([toolModeButton frame]) + NSWidth([pagePopUpButton frame]) + NSWidth([scalePopUpButton frame]), CONTROL_HEIGHT)];
+            [(SKTopBarView *)controlView setMinSize:NSMakeSize(NSWidth([toolModeButton frame]) + NSWidth([pagePopUpButton frame]) + NSWidth([scalePopUpButton frame]), CONTROL_HEIGHT)];
         
         if (scalePopUpButton)
             [scalePopUpButton setFrameOrigin:NSMakePoint(NSMaxX([pagePopUpButton frame]), 0.0)];
@@ -213,19 +205,10 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
         NSUInteger cnt, numberOfDefaultItems = SKDefaultScaleMenuFactorsCount;
         id curItem;
         NSString *label;
-        CGFloat width, maxWidth = 0.0;
-        NSSize size = NSMakeSize(1000.0, 1000.0);
-        NSDictionary *attrs = [NSDictionary dictionaryWithObjectsAndKeys:[scalePopUpButton font], NSFontAttributeName, nil];
-        NSUInteger maxIndex = 0;
         
         // fill it
         for (cnt = 0; cnt < numberOfDefaultItems; cnt++) {
             label = [[NSBundle mainBundle] localizedStringForKey:SKDefaultScaleMenuLabels[cnt] value:@"" table:@"ZoomValues"];
-            width = NSWidth([label boundingRectWithSize:size options:0 attributes:attrs]);
-            if (width > maxWidth) {
-                maxWidth = width;
-                maxIndex = cnt;
-            }
             [scalePopUpButton addItemWithTitle:label];
             curItem = [scalePopUpButton itemAtIndex:cnt];
             [curItem setRepresentedObject:(SKDefaultScaleMenuFactors[cnt] > 0.0 ? [NSNumber numberWithDouble:SKDefaultScaleMenuFactors[cnt]] : nil)];
@@ -239,8 +222,9 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
             [self setScaleFactor:[self scaleFactor] adjustPopup:YES];
 
         // Make sure the popup is big enough to fit the largest cell
-        sizePopUpToItemAtIndex(scalePopUpButton, maxIndex);
-
+        [scalePopUpButton sizeToFit];
+        [scalePopUpButton setFrameSize:NSMakeSize(NSWidth([scalePopUpButton frame]) - CONTROL_WIDTH_OFFSET, CONTROL_HEIGHT)];
+        
 		// don't let it become first responder
 		[scalePopUpButton setRefusesFirstResponder:YES];
 
@@ -308,9 +292,12 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
         NSRect scaleRect = [scalePopUpButton frame];
         NSRect rect = NSMakeRect(0.0, 0.0, NSWidth(toolRect) + NSWidth(pageRect) + NSWidth(scaleRect), CONTROL_HEIGHT);
         
-        SKGradientView *gradientView = [[SKGradientView alloc] initWithFrame:rect];
-        [gradientView setMinSize:rect.size];
-        [gradientView setBackgroundColors:[NSArray arrayWithObjects:[NSColor pdfControlBackgroundColor], nil]];
+        SKTopBarView *topBar = [[SKTopBarView alloc] initWithFrame:rect];
+        [topBar setMinSize:rect.size];
+        if (RUNNING_BEFORE(10_14)) {
+            [topBar setBackgroundColors:[NSArray arrayWithObjects:[NSColor pdfControlBackgroundColor], nil]];
+            [topBar setAlternateBackgroundColors:nil];
+        }
         
         NSDivideRect(rect, &toolRect, &rect, NSWidth(toolRect), NSMinXEdge);
         NSDivideRect(rect, &pageRect, &scaleRect, NSWidth(pageRect), NSMinXEdge);
@@ -320,25 +307,24 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
         [toolModeButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
         [pagePopUpButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
         [scalePopUpButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
-        [gradientView addSubview:toolModeButton];
-        [gradientView addSubview:pagePopUpButton];
-        [gradientView addSubview:scalePopUpButton];
+        [topBar addSubview:toolModeButton];
+        [topBar addSubview:pagePopUpButton];
+        [topBar addSubview:scalePopUpButton];
         
-        controlView = gradientView;
+        controlView = topBar;
+        [controlView setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
         
-        [self handleScrollViewFrameDidChange:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScrollViewFrameDidChange:) name:NSViewFrameDidChangeNotification object:[self scrollView]];
+        [self updateTrackingAreas];
         
     }
 }
 
 - (void)showControlView {
-    NSScrollView *scrollView = [self scrollView];
-    NSRect rect = [scrollView bounds];
-    rect = SKSliceRect(rect, NSHeight([controlView frame]), NSMinYEdge);
+    NSRect rect = [self bounds];
+    rect = SKSliceRect(rect, NSHeight([controlView frame]), [self isFlipped] ? NSMinYEdge : NSMaxYEdge);
     [controlView setFrame:rect];
     [controlView setAlphaValue:0.0];
-    [scrollView addSubview:controlView positioned:NSWindowAbove relativeTo:[[scrollView subviews] lastObject]];
+    [self addSubview:controlView positioned:NSWindowAbove relativeTo:nil];
     [[controlView animator] setAlphaValue:1.0];
 }
 
@@ -364,15 +350,17 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
     }
 }
 
-- (void)handleScrollViewFrameDidChange:(NSNotification *)notification {
-    NSScrollView *scrollView = [self scrollView];
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
     if (trackingArea)
-        [scrollView removeTrackingArea:trackingArea];
-    NSRect rect = [scrollView bounds];
-    if (NSHeight(rect) > NSHeight([controlView frame])) {
-        rect = SKSliceRect(rect, NSHeight([controlView frame]), [scrollView isFlipped] ? NSMinYEdge : NSMaxYEdge);
-        trackingArea = [[NSTrackingArea alloc] initWithRect:rect options:NSTrackingActiveInKeyWindow | NSTrackingMouseEnteredAndExited owner:self userInfo:nil];
-        [scrollView addTrackingArea:trackingArea];
+        [self removeTrackingArea:trackingArea];
+    if (controlView) {
+        NSRect rect = [self bounds];
+        if (NSHeight(rect) > NSHeight([controlView frame])) {
+            rect = SKSliceRect(rect, NSHeight([controlView frame]), [self isFlipped] ? NSMinYEdge : NSMaxYEdge);
+            trackingArea = [[NSTrackingArea alloc] initWithRect:rect options:NSTrackingActiveInKeyWindow | NSTrackingMouseEnteredAndExited owner:self userInfo:nil];
+            [self addTrackingArea:trackingArea];
+        }
     }
 }
 
@@ -505,7 +493,7 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
     if (newSelectsText != selectsText) {
         selectsText = newSelectsText;
         if (selectsText == NO)
-            [self setCurrentSelection:RUNNING(10_12) ? [[[PDFSelection alloc] initWithDocument:[self document]] autorelease] : nil];
+            [self setCurrentSelection:nil];
         [toolModeButton setState:selectsText ? NSOnState : NSOffState];
         [[NSUserDefaults standardUserDefaults] setBool:selectsText forKey:SKLastSecondarySelectsTextKey];
     }
@@ -541,7 +529,7 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
 
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent { return NO; }
 
-- (IBAction)toggleDisplayAsBookFromMenu:(id)sender {
+- (IBAction)toggleDisplaysAsBookFromMenu:(id)sender {
     [self setDisplaysAsBook:[self displaysAsBook] == NO];
 }
 
@@ -574,26 +562,46 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
         selectionActions = [[NSSet alloc] initWithObjects:@"copy:", @"_searchInSpotlight:", @"_searchInGoogle:", @"_searchInDictionary:", @"_revealSelection:", nil];
     NSMenu *menu = [super menuForEvent:theEvent];
     NSMenuItem *item;
+    NSInteger i = 0;
+    
+    if ([[menu itemAtIndex:0] view] != nil) {
+        [menu removeItemAtIndex:0];
+        if ([[menu itemAtIndex:0] isSeparatorItem])
+            [menu removeItemAtIndex:0];
+    }
     
     if ([self selectsText] == NO) {
-        [self setCurrentSelection:RUNNING(10_12) ? [[[PDFSelection alloc] initWithDocument:[self document]] autorelease] : nil];
-        while ([menu numberOfItems]) {
-            item = [menu itemAtIndex:0];
-            if ([item isSeparatorItem] || [self validateMenuItem:item] == NO || [selectionActions containsObject:NSStringFromSelector([item action])])
-                [menu removeItemAtIndex:0];
-            else
-                break;
+        [self setCurrentSelection:nil];
+        while ([menu numberOfItems] > i) {
+            item = [menu itemAtIndex:i];
+            BOOL allowsSeparator = NO;
+            while ([menu numberOfItems] > i) {
+                item = [menu itemAtIndex:i];
+                if ([item isSeparatorItem]) {
+                    if (allowsSeparator) {
+                        i++;
+                        allowsSeparator = NO;
+                    } else {
+                        [menu removeItemAtIndex:i];
+                    }
+                } else if ([self validateMenuItem:item] == NO || [selectionActions containsObject:NSStringFromSelector([item action])]) {
+                    [menu removeItemAtIndex:i];
+                } else {
+                    i++;
+                    allowsSeparator = YES;
+                }
+            }
         }
     }
     
-    NSInteger i = [menu indexOfItemWithTarget:self andAction:NSSelectorFromString(@"_setDoublePageScrolling:")];
+    i = [menu indexOfItemWithTarget:self andAction:NSSelectorFromString(@"_setDoublePageScrolling:")];
     if (i == -1)
         i = [menu indexOfItemWithTarget:self andAction:NSSelectorFromString(@"_toggleContinuous:")];
     if (i != -1) {
         PDFDisplayMode displayMode = [self displayMode];
         [menu insertItem:[NSMenuItem separatorItem] atIndex:++i];
         if (displayMode == kPDFDisplayTwoUp || displayMode == kPDFDisplayTwoUpContinuous) { 
-            item = [menu insertItemWithTitle:NSLocalizedString(@"Book Mode", @"Menu item title") action:@selector(toggleDisplayAsBookFromMenu:) keyEquivalent:@"" atIndex:++i];
+            item = [menu insertItemWithTitle:NSLocalizedString(@"Book Mode", @"Menu item title") action:@selector(toggleDisplaysAsBookFromMenu:) keyEquivalent:@"" atIndex:++i];
             [item setTarget:self];
         }
         item = [menu insertItemWithTitle:NSLocalizedString(@"Page Breaks", @"Menu item title") action:@selector(toggleDisplayPageBreaksFromMenu:) keyEquivalent:@"" atIndex:++i];
@@ -618,7 +626,7 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
-    if ([menuItem action] == @selector(toggleDisplayAsBookFromMenu:)) {
+    if ([menuItem action] == @selector(toggleDisplaysAsBookFromMenu:)) {
         [menuItem setState:[self displaysAsBook] ? NSOnState : NSOffState];
         return YES;
     } else if ([menuItem action] == @selector(toggleDisplayPageBreaksFromMenu:)) {
@@ -637,6 +645,18 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
         return [super validateMenuItem:menuItem];
     }
     return YES;
+}
+
+- (void)keyDown:(NSEvent *)theEvent {
+    if ([theEvent firstCharacter] == '?' && ([theEvent standardModifierFlags] & ~NSShiftKeyMask) == 0) {
+        [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(showControlView) object:nil];
+        if ([controlView superview])
+            [controlView removeFromSuperview];
+        else
+            [self showControlView];
+    } else {
+        [super keyDown:theEvent];
+    }
 }
 
 #pragma mark Gestures
@@ -742,6 +762,31 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
         [super setCursorForAreaOfInterest:area];
 }
 
+#pragma mark Services
+
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pboard types:(NSArray *)types {
+    if ([[self currentSelection] hasCharacters]) {
+        if ([types containsObject:NSPasteboardTypeRTF] || [types containsObject:NSRTFPboardType]) {
+            [pboard clearContents];
+            [pboard writeObjects:[NSArray arrayWithObjects:[[self currentSelection] attributedString], nil]];
+            return YES;
+        } else if ([types containsObject:NSPasteboardTypeString] || [types containsObject:NSStringPboardType]) {
+            [pboard clearContents];
+            [pboard writeObjects:[NSArray arrayWithObjects:[[self currentSelection] string], nil]];
+            return YES;
+        }
+    }
+    if ([[SKSecondaryPDFView superclass] instancesRespondToSelector:_cmd])            [super writeSelectionToPasteboard:pboard types:types];
+    return NO;
+}
+
+- (id)validRequestorForSendType:(NSString *)sendType returnType:(NSString *)returnType {
+    if ([[self currentSelection] hasCharacters] && returnType == nil && ([sendType isEqualToString:NSPasteboardTypeString] || [sendType isEqualToString:NSPasteboardTypeRTF])) {
+        return self;
+    }
+    return [super validRequestorForSendType:sendType returnType:returnType];
+}
+
 #pragma mark Notification handling
 
 - (void)startObservingSynchronizedPDFView {
@@ -771,6 +816,16 @@ static void sizePopUpToItemAtIndex(NSPopUpButton *popUpButton, NSUInteger anInde
 - (void)handlePDFViewScaleChangedNotification:(NSNotification *)notification {
     if ([self autoScales] == NO && [self synchronizeZoom] == NO)
         [self setScaleFactor:fmax([self scaleFactor], SKMinDefaultScaleMenuFactor) adjustPopup:YES];
+}
+
+- (void)handleScrollerStyleChangedNotification:(NSNotification *)notification {
+    if ([NSScroller preferredScrollerStyle] == NSScrollerStyleLegacy) {
+        SKSetHasDefaultAppearance([[self scrollView] verticalScroller]);
+        SKSetHasDefaultAppearance([[self scrollView] horizontalScroller]);
+    } else {
+        SKSetHasLightAppearance([[self scrollView] verticalScroller]);
+        SKSetHasLightAppearance([[self scrollView] horizontalScroller]);
+    }
 }
 
 @end

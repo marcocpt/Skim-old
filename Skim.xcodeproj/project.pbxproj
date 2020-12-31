@@ -39,6 +39,7 @@
 		CE0463CB0B84D24300C11E4A /* SKApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = CE0463CA0B84D24300C11E4A /* SKApplication.m */; };
 		CE05A7380E9024ED0060BB07 /* SKPresentationOptionsSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE05A7360E9024ED0060BB07 /* SKPresentationOptionsSheetController.m */; };
 		CE05A86F0E90ED950060BB07 /* SKTextFieldSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE05A86D0E90ED950060BB07 /* SKTextFieldSheetController.m */; };
+		CE05DAA12524C32200BB9288 /* SKColorList.m in Sources */ = {isa = PBXBuildFile; fileRef = CE05DAA02524C32200BB9288 /* SKColorList.m */; };
 		CE07158B0B8A3D6500733CC8 /* NoteDocument.icns in Resources */ = {isa = PBXBuildFile; fileRef = CE0715890B8A3D6300733CC8 /* NoteDocument.icns */; };
 		CE07158C0B8A3D6500733CC8 /* PDFDocument.icns in Resources */ = {isa = PBXBuildFile; fileRef = CE07158A0B8A3D6300733CC8 /* PDFDocument.icns */; };
 		CE0859D20DAE912500760AFC /* SKSnapshotPageCell.m in Sources */ = {isa = PBXBuildFile; fileRef = CE0859D10DAE912500760AFC /* SKSnapshotPageCell.m */; };
@@ -54,6 +55,7 @@
 		CE0A3C8E0EBF3AAA00526C74 /* NSResponder_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE0A3C8D0EBF3AAA00526C74 /* NSResponder_SKExtensions.m */; };
 		CE0A9F9C11564AE1004E6BBF /* XDVDocument.icns in Resources */ = {isa = PBXBuildFile; fileRef = CE0A9F9B11564AE1004E6BBF /* XDVDocument.icns */; };
 		CE0AEDC3107A137C000C075E /* SKColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = CE0AEDC2107A137C000C075E /* SKColorCell.m */; };
+		CE0D371924323E2100451593 /* SpeedSheet.strings in Resources */ = {isa = PBXBuildFile; fileRef = CE0D370724323E2100451593 /* SpeedSheet.strings */; };
 		CE0E84CE114D516F00E37F38 /* SyncPreferences.strings in Resources */ = {isa = PBXBuildFile; fileRef = CE0E84C6114D516F00E37F38 /* SyncPreferences.strings */; };
 		CE0E84CF114D516F00E37F38 /* NotesPreferences.strings in Resources */ = {isa = PBXBuildFile; fileRef = CE0E84C8114D516F00E37F38 /* NotesPreferences.strings */; };
 		CE0E84D0114D516F00E37F38 /* GeneralPreferences.strings in Resources */ = {isa = PBXBuildFile; fileRef = CE0E84CA114D516F00E37F38 /* GeneralPreferences.strings */; };
@@ -70,6 +72,7 @@
 		CE1248C513FEDCF200FFAE20 /* SKTemplateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1248C413FEDCF200FFAE20 /* SKTemplateManager.m */; };
 		CE12A73E134F215F003AED67 /* SKSelectCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = CE12A73D134F215F003AED67 /* SKSelectCommand.m */; };
 		CE139A171450207500E9C069 /* NSGraphics_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE139A161450207500E9C069 /* NSGraphics_SKExtensions.m */; };
+		CE13EC13255F41CA000F47CF /* ViewSettings.strings in Resources */ = {isa = PBXBuildFile; fileRef = CE13EC01255F41CA000F47CF /* ViewSettings.strings */; };
 		CE171E3512C3AC1600291179 /* SKFileUpdateChecker.m in Sources */ = {isa = PBXBuildFile; fileRef = CE171E3412C3AC1600291179 /* SKFileUpdateChecker.m */; };
 		CE19446310627483007E8770 /* BookmarksWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE19445C10627483007E8770 /* BookmarksWindow.xib */; };
 		CE19446410627483007E8770 /* ConversionProgressWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE19445D10627483007E8770 /* ConversionProgressWindow.xib */; };
@@ -79,21 +82,27 @@
 		CE19446810627483007E8770 /* ReleaseNotes.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE19446110627483007E8770 /* ReleaseNotes.xib */; };
 		CE19446910627483007E8770 /* SnapshotWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE19446210627483007E8770 /* SnapshotWindow.xib */; };
 		CE19641516E811D40027E2CF /* SKSnapshotWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = CE19641416E811D40027E2CF /* SKSnapshotWindow.m */; };
+		CE1991E0256C70CD00FC4E25 /* SKRecentDocumentInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1991DF256C70CD00FC4E25 /* SKRecentDocumentInfo.m */; };
 		CE199DFD0D957A16009B2055 /* SKAnnotationTypeImageCell.m in Sources */ = {isa = PBXBuildFile; fileRef = CE199DFC0D957A16009B2055 /* SKAnnotationTypeImageCell.m */; };
 		CE1ADEBF0C4C341100071840 /* SKTransitionController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1ADEBE0C4C341100071840 /* SKTransitionController.m */; };
 		CE1C77B6123FB41E00C73F1A /* SKNoteTextView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1C77B5123FB41E00C73F1A /* SKNoteTextView.m */; };
 		CE1CC5BE1143C57300F6B208 /* NoteWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE1CC5BD1143C57300F6B208 /* NoteWindow.xib */; };
 		CE1CC6121143DDFD00F6B208 /* LineInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE1CC6111143DDFD00F6B208 /* LineInspector.xib */; };
 		CE1CC6B91143F05D00F6B208 /* TransitionSheet.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE1CC6B81143F05D00F6B208 /* TransitionSheet.xib */; };
-		CE1D28D122E7B2150061D93F /* NSAlert_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1D28D022E7B2150061D93F /* NSAlert_SKExtensions.m */; };
+		CE1CF47223FAA1D7005B5B40 /* SKThumbnailItem.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1CF47123FAA1D7005B5B40 /* SKThumbnailItem.m */; };
+		CE1CF48523FAA2DD005B5B40 /* SKThumbnailView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1CF48423FAA2DD005B5B40 /* SKThumbnailView.m */; };
 		CE1D798F129FE44E00EA3AF0 /* NSScriptCommand_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1D798E129FE44E00EA3AF0 /* NSScriptCommand_SKExtensions.m */; };
+		CE1DFA3D244CF04700D64C83 /* SKShareMenuController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1DFA3C244CF04700D64C83 /* SKShareMenuController.m */; };
 		CE1E2B290BDAB6180011D9DD /* SKPDFSynchronizer.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1E2B270BDAB6180011D9DD /* SKPDFSynchronizer.m */; };
 		CE1E301D0BDB9D5C0011D9DD /* NSScanner_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1E301B0BDB9D5C0011D9DD /* NSScanner_SKExtensions.m */; };
 		CE1E30290BDB9D8E0011D9DD /* NSCharacterSet_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE1E30270BDB9D8E0011D9DD /* NSCharacterSet_SKExtensions.m */; };
+		CE1E82212460D0F60004801E /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE1E82102460D0F60004801E /* OpenGL.framework */; };
 		CE2083E416ADFFD600BC5AFB /* SKAlias.m in Sources */ = {isa = PBXBuildFile; fileRef = CE2083E316ADFFD600BC5AFB /* SKAlias.m */; };
-		CE2093910C5F9A8D009D3EFB /* SKGradientView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE20938F0C5F9A8D009D3EFB /* SKGradientView.m */; };
+		CE2093910C5F9A8D009D3EFB /* SKTopBarView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE20938F0C5F9A8D009D3EFB /* SKTopBarView.m */; };
 		CE209FAA0C9D38C6007C72F9 /* SKProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE209FA80C9D38C6007C72F9 /* SKProgressController.m */; };
 		CE20B1950C9F23CC007C72F9 /* NSView_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE20B1930C9F23CC007C72F9 /* NSView_SKExtensions.m */; };
+		CE21F736239944990078B257 /* SKColorMenuView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE21F735239944990078B257 /* SKColorMenuView.m */; };
+		CE24644124314B34000466C8 /* SpeedSheet.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE24643024314B34000466C8 /* SpeedSheet.xib */; };
 		CE24875C112C9651006B4FA5 /* NSFont_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE24875B112C9651006B4FA5 /* NSFont_SKExtensions.m */; };
 		CE25BB6B163FFB770046A348 /* Skim.help in Resources */ = {isa = PBXBuildFile; fileRef = CE25BB43163FFB770046A348 /* Skim.help */; };
 		CE26175F16CCFC4900BDCE7C /* SKSyncDot.m in Sources */ = {isa = PBXBuildFile; fileRef = CE26175E16CCFC4900BDCE7C /* SKSyncDot.m */; };
@@ -124,6 +133,8 @@
 		CE41A6CC0B975E5000ECF819 /* Skim.sdef in Resources */ = {isa = PBXBuildFile; fileRef = CE41A6CB0B975E5000ECF819 /* Skim.sdef */; };
 		CE41B2A70C08CFA900E36EB7 /* NSArray_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE41B2A50C08CFA900E36EB7 /* NSArray_SKExtensions.m */; };
 		CE41B2CC0C08D17100E36EB7 /* NSValue_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE41B2CA0C08D17100E36EB7 /* NSValue_SKExtensions.m */; };
+		CE426FB6255ED08800465569 /* ViewSettings.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE426FB5255ED08800465569 /* ViewSettings.xib */; };
+		CE426FC9255EDBDE00465569 /* SKViewSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE426FC8255EDBDE00465569 /* SKViewSettingsController.m */; };
 		CE4294A30BBD29120016FDC2 /* SKReadingBar.m in Sources */ = {isa = PBXBuildFile; fileRef = CE4294A20BBD29120016FDC2 /* SKReadingBar.m */; };
 		CE42B8EC106996C60091F588 /* NSPointerArray_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE42B8EB106996C60091F588 /* NSPointerArray_SKExtensions.m */; };
 		CE4373B40BB5440E00A56987 /* PSDocument.icns in Resources */ = {isa = PBXBuildFile; fileRef = CE4373B30BB5440E00A56987 /* PSDocument.icns */; };
@@ -173,7 +184,6 @@
 		CE7469180B7F40B700CBF969 /* Skim.icns in Resources */ = {isa = PBXBuildFile; fileRef = CE7469170B7F40B600CBF969 /* Skim.icns */; };
 		CE7611650EA49D1400301E45 /* SKPrintableView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE7611630EA49D1400301E45 /* SKPrintableView.m */; };
 		CE792F74226D12C40005BE9F /* SKLevelIndicator.m in Sources */ = {isa = PBXBuildFile; fileRef = CE792F73226D12C40005BE9F /* SKLevelIndicator.m */; };
-		CE7A30481822B950007E3D25 /* SKTextNoteField.m in Sources */ = {isa = PBXBuildFile; fileRef = CE7A30471822B950007E3D25 /* SKTextNoteField.m */; };
 		CE7A3A2D2269CBDE00F1B89B /* SKControlTableCellView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE7A3A2C2269CBDE00F1B89B /* SKControlTableCellView.m */; };
 		CE7A3A402269CC5E00F1B89B /* SKProgressTableCellView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE7A3A3F2269CC5E00F1B89B /* SKProgressTableCellView.m */; };
 		CE7C20500C259A5D0059E08C /* NSColor_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE7C204E0C259A5D0059E08C /* NSColor_SKExtensions.m */; };
@@ -183,6 +193,7 @@
 		CE820AEF21A04EB100AD34BE /* NSWindow_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE820AEE21A04EB100AD34BE /* NSWindow_SKExtensions.m */; };
 		CE8388BC115BC61F00DB1AD7 /* SKNoteTypeSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE8388BB115BC61F00DB1AD7 /* SKNoteTypeSheetController.m */; };
 		CE85D73F2280814B0022C560 /* SKMainTouchBarController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE85D73E2280814B0022C560 /* SKMainTouchBarController.m */; };
+		CE863881250FDB9A004C7526 /* SKReflectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = CE863880250FDB9A004C7526 /* SKReflectionView.m */; };
 		CE8978CE0CBFC70B00EA2D98 /* SKTemplateTag.m in Sources */ = {isa = PBXBuildFile; fileRef = CE8978CC0CBFC70B00EA2D98 /* SKTemplateTag.m */; };
 		CE898F060C843A8B008A0856 /* PDFDDocument.icns in Resources */ = {isa = PBXBuildFile; fileRef = CE898F050C843A8B008A0856 /* PDFDDocument.icns */; };
 		CE8B46E90C29CA00005CE7F1 /* SKLineInspector.m in Sources */ = {isa = PBXBuildFile; fileRef = CE8B46E70C29CA00005CE7F1 /* SKLineInspector.m */; };
@@ -191,7 +202,10 @@
 		CE8BF02A115F7C5C0029020F /* SKRightSideViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE8BF029115F7C5C0029020F /* SKRightSideViewController.m */; };
 		CE8BF069115F859A0029020F /* LeftSideView.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE8BF068115F859A0029020F /* LeftSideView.xib */; };
 		CE8BF070115F892A0029020F /* RightSideView.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE8BF06F115F892A0029020F /* RightSideView.xib */; };
+		CE8DC47024620A7E00BD5D50 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE8DC45E24620A7E00BD5D50 /* MetalKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		CE8DC47124620A7E00BD5D50 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE8DC46F24620A7E00BD5D50 /* Metal.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		CE8DEF0820D2702A00A10FFE /* NSDate_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CE8DEF0720D2702A00A10FFE /* NSDate_SKExtensions.m */; };
+		CE91C7962449F56600D04039 /* SKFileShare.m in Sources */ = {isa = PBXBuildFile; fileRef = CE91C7952449F56600D04039 /* SKFileShare.m */; };
 		CE94D17B125535DE0053A520 /* synctex_parser_utils.m in Sources */ = {isa = PBXBuildFile; fileRef = CE94D17A125535DE0053A520 /* synctex_parser_utils.m */; };
 		CE9768831161195C008DCB8F /* SKDownloadPreferenceController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE9768821161195C008DCB8F /* SKDownloadPreferenceController.m */; };
 		CE97688711611A3D008DCB8F /* DownloadPreferenceSheet.xib in Resources */ = {isa = PBXBuildFile; fileRef = CE97688611611A3D008DCB8F /* DownloadPreferenceSheet.xib */; };
@@ -202,6 +216,7 @@
 		CEA2045F1050233E008E082B /* SKPrintAccessoryController.m in Sources */ = {isa = PBXBuildFile; fileRef = CE816AA30D718C8C008D807D /* SKPrintAccessoryController.m */; };
 		CEA3DF6E106BDAC1002FB3DB /* SKFloatMapTable.m in Sources */ = {isa = PBXBuildFile; fileRef = CEA3DF6D106BDAC1002FB3DB /* SKFloatMapTable.m */; };
 		CEA575CE0B9206E60003D2E7 /* SKNoteOutlineView.m in Sources */ = {isa = PBXBuildFile; fileRef = CEA575CD0B9206E60003D2E7 /* SKNoteOutlineView.m */; };
+		CEA5BAFE2424CAE100801B2E /* SKOverviewView.m in Sources */ = {isa = PBXBuildFile; fileRef = CEA5BAFD2424CAE100801B2E /* SKOverviewView.m */; };
 		CEA8FCD60D89C34A00E8A6F4 /* SKAnimatedBorderlessWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = CEA8FCD50D89C34A00E8A6F4 /* SKAnimatedBorderlessWindow.m */; };
 		CEAA55800C6DE030006BD633 /* SKDownloadController.m in Sources */ = {isa = PBXBuildFile; fileRef = CEAA557E0C6DE030006BD633 /* SKDownloadController.m */; };
 		CEAA559E0C6DE235006BD633 /* SKDownload.m in Sources */ = {isa = PBXBuildFile; fileRef = CEAA559C0C6DE235006BD633 /* SKDownload.m */; };
@@ -219,14 +234,13 @@
 		CECDD2990C5B68580026AAEC /* SKCenteredTextFieldCell.m in Sources */ = {isa = PBXBuildFile; fileRef = CECDD2970C5B68580026AAEC /* SKCenteredTextFieldCell.m */; };
 		CECE6C3F2188AE9A00F6179D /* SKSelectionCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = CECE6C3E2188AE9A00F6179D /* SKSelectionCommand.m */; };
 		CECF61FF0DB258D600587D96 /* SKFontWell.m in Sources */ = {isa = PBXBuildFile; fileRef = CECF61FE0DB258D600587D96 /* SKFontWell.m */; };
-		CED270C9133785DE0097F1AF /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE1ADB170C4BC6DE00071840 /* OpenGL.framework */; };
 		CED76F011A1825DE00D1ACA4 /* SKScrollView.m in Sources */ = {isa = PBXBuildFile; fileRef = CED76F001A1825DE00D1ACA4 /* SKScrollView.m */; };
 		CEDA057B2295BEBA00881DE1 /* SkimTransitions.plugin in CopyFiles */ = {isa = PBXBuildFile; fileRef = CEDA056B2295BE8300881DE1 /* SkimTransitions.plugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CEDB6A7A228F596000F93C87 /* SKColorPicker.m in Sources */ = {isa = PBXBuildFile; fileRef = CEDB6A78228F596000F93C87 /* SKColorPicker.m */; };
 		CEDE68E5201FDCB5000D881A /* SKKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = CEDE68E3201FDCB4000D881A /* SKKeychain.m */; };
 		CEE0F5EB0EBB3DEC000A7A8C /* SKLevelIndicatorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE0F5EA0EBB3DEC000A7A8C /* SKLevelIndicatorCell.m */; };
 		CEE106150BCBB72C00BF2D3E /* SKNotesDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE106140BCBB72C00BF2D3E /* SKNotesDocument.m */; };
-		CEE176E40DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE176E30DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.m */; };
+		CEE176E40DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE176E30DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.m */; };
 		CEE229390BFB7CE9002B746B /* ReleaseNotes.rtf in Resources */ = {isa = PBXBuildFile; fileRef = CE54AA8E0BBC037400008750 /* ReleaseNotes.rtf */; };
 		CEE22EA30BFB8672002B746B /* displayline in Copy Files: Shared Support */ = {isa = PBXBuildFile; fileRef = CE1E2F120BDB86A10011D9DD /* displayline */; };
 		CEE54D880DA2E37B0037169F /* PDFAnnotation_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE54D870DA2E37B0037169F /* PDFAnnotation_SKExtensions.m */; };
@@ -239,6 +253,9 @@
 		CEE54F700DA3FBE00037169F /* NSSegmentedControl_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE54F6F0DA3FBE00037169F /* NSSegmentedControl_SKExtensions.m */; };
 		CEE54F900DA3FE9A0037169F /* NSValueTransformer_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE54F8F0DA3FE9A0037169F /* NSValueTransformer_SKExtensions.m */; };
 		CEE73ECE106CEC1900419544 /* SKSeparatorView.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE73ECD106CEC1900419544 /* SKSeparatorView.m */; };
+		CEE7E76524426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE7E76424426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.m */; };
+		CEE7E77824426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE7E77724426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.m */; };
+		CEE7E77B24426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = CEE7E77A24426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.m */; };
 		CEE8DFC80E5C806400EFA97F /* SkimNotes.framework in Copy Files: Frameworks */ = {isa = PBXBuildFile; fileRef = CE7DC7320E09286500D6D76D /* SkimNotes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		CEE8DFC90E5C806400EFA97F /* Sparkle.framework in Copy Files: Frameworks */ = {isa = PBXBuildFile; fileRef = CE2BD8200BD4127A00A5F4DB /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		CEE8DFCE0E5C809C00EFA97F /* SkimNotes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE7DC7320E09286500D6D76D /* SkimNotes.framework */; };
@@ -577,6 +594,8 @@
 		CE05A7360E9024ED0060BB07 /* SKPresentationOptionsSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKPresentationOptionsSheetController.m; sourceTree = "<group>"; };
 		CE05A86C0E90ED950060BB07 /* SKTextFieldSheetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKTextFieldSheetController.h; sourceTree = "<group>"; };
 		CE05A86D0E90ED950060BB07 /* SKTextFieldSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKTextFieldSheetController.m; sourceTree = "<group>"; };
+		CE05DA9F2524C32200BB9288 /* SKColorList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKColorList.h; sourceTree = "<group>"; };
+		CE05DAA02524C32200BB9288 /* SKColorList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKColorList.m; sourceTree = "<group>"; };
 		CE0715890B8A3D6300733CC8 /* NoteDocument.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = NoteDocument.icns; sourceTree = "<group>"; };
 		CE07158A0B8A3D6300733CC8 /* PDFDocument.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = PDFDocument.icns; sourceTree = "<group>"; };
 		CE0859D00DAE912500760AFC /* SKSnapshotPageCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKSnapshotPageCell.h; sourceTree = "<group>"; };
@@ -597,6 +616,17 @@
 		CE0A9F9B11564AE1004E6BBF /* XDVDocument.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = XDVDocument.icns; sourceTree = "<group>"; };
 		CE0AEDC1107A137C000C075E /* SKColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKColorCell.h; sourceTree = "<group>"; };
 		CE0AEDC2107A137C000C075E /* SKColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKColorCell.m; sourceTree = "<group>"; };
+		CE0D370824323E2100451593 /* en */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D371A24323E3900451593 /* nl */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D371B24323E3E00451593 /* fr */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D371C24323E4000451593 /* de */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D371D24323E4200451593 /* it */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D371E24323E4500451593 /* ru */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D371F24323E4900451593 /* es */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D372124323E5200451593 /* pl */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D372224323E5400451593 /* ja */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D37242432410700451593 /* zh_CN */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = zh_CN; path = zh_CN.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
+		CE0D37252432411900451593 /* zh_TW */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = zh_TW; path = zh_TW.lproj/SpeedSheet.strings; sourceTree = "<group>"; };
 		CE0E84C7114D516F00E37F38 /* en */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/SyncPreferences.strings; sourceTree = "<group>"; };
 		CE0E84C9114D516F00E37F38 /* en */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/NotesPreferences.strings; sourceTree = "<group>"; };
 		CE0E84CB114D516F00E37F38 /* en */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/GeneralPreferences.strings; sourceTree = "<group>"; };
@@ -659,6 +689,17 @@
 		CE12A73D134F215F003AED67 /* SKSelectCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKSelectCommand.m; sourceTree = "<group>"; };
 		CE139A151450207500E9C069 /* NSGraphics_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSGraphics_SKExtensions.h; sourceTree = "<group>"; };
 		CE139A161450207500E9C069 /* NSGraphics_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSGraphics_SKExtensions.m; sourceTree = "<group>"; };
+		CE13EC02255F41CA000F47CF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC14255F41D5000F47CF /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC15255F41EC000F47CF /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC16255F41EE000F47CF /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC17255F41F0000F47CF /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC18255F41F2000F47CF /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC19255F41F6000F47CF /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC1A255F41F7000F47CF /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC1B255F4200000F47CF /* zh_TW */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh_TW; path = zh_TW.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC1D255F42DA000F47CF /* zh_CN */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh_CN; path = zh_CN.lproj/ViewSettings.strings; sourceTree = "<group>"; };
+		CE13EC1E255F42E9000F47CF /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/ViewSettings.strings; sourceTree = "<group>"; };
 		CE157ED212D4EBC000515B85 /* ja */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/BookmarkSheet.strings; sourceTree = "<group>"; };
 		CE157ED312D4EBC000515B85 /* ja */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/BookmarksWindow.strings; sourceTree = "<group>"; };
 		CE157ED512D4EBC000515B85 /* ja */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/DisplayPreferences.strings; sourceTree = "<group>"; };
@@ -723,6 +764,8 @@
 		CE19446210627483007E8770 /* SnapshotWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = SnapshotWindow.xib; sourceTree = "<group>"; };
 		CE19641316E811D40027E2CF /* SKSnapshotWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKSnapshotWindow.h; sourceTree = "<group>"; };
 		CE19641416E811D40027E2CF /* SKSnapshotWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKSnapshotWindow.m; sourceTree = "<group>"; };
+		CE1991DE256C70CD00FC4E25 /* SKRecentDocumentInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKRecentDocumentInfo.h; sourceTree = "<group>"; };
+		CE1991DF256C70CD00FC4E25 /* SKRecentDocumentInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKRecentDocumentInfo.m; sourceTree = "<group>"; };
 		CE199DFB0D957A16009B2055 /* SKAnnotationTypeImageCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKAnnotationTypeImageCell.h; sourceTree = "<group>"; };
 		CE199DFC0D957A16009B2055 /* SKAnnotationTypeImageCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKAnnotationTypeImageCell.m; sourceTree = "<group>"; };
 		CE1ADB170C4BC6DE00071840 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
@@ -732,10 +775,14 @@
 		CE1CC5BD1143C57300F6B208 /* NoteWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = NoteWindow.xib; sourceTree = "<group>"; };
 		CE1CC6111143DDFD00F6B208 /* LineInspector.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = LineInspector.xib; sourceTree = "<group>"; };
 		CE1CC6B81143F05D00F6B208 /* TransitionSheet.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = TransitionSheet.xib; sourceTree = "<group>"; };
-		CE1D28CF22E7B2150061D93F /* NSAlert_SKExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSAlert_SKExtensions.h; sourceTree = "<group>"; };
-		CE1D28D022E7B2150061D93F /* NSAlert_SKExtensions.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NSAlert_SKExtensions.m; sourceTree = "<group>"; };
+		CE1CF47023FAA1D7005B5B40 /* SKThumbnailItem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKThumbnailItem.h; sourceTree = "<group>"; };
+		CE1CF47123FAA1D7005B5B40 /* SKThumbnailItem.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKThumbnailItem.m; sourceTree = "<group>"; };
+		CE1CF48323FAA2DD005B5B40 /* SKThumbnailView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKThumbnailView.h; sourceTree = "<group>"; };
+		CE1CF48423FAA2DD005B5B40 /* SKThumbnailView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKThumbnailView.m; sourceTree = "<group>"; };
 		CE1D798D129FE44E00EA3AF0 /* NSScriptCommand_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSScriptCommand_SKExtensions.h; sourceTree = "<group>"; };
 		CE1D798E129FE44E00EA3AF0 /* NSScriptCommand_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSScriptCommand_SKExtensions.m; sourceTree = "<group>"; };
+		CE1DFA3B244CF04700D64C83 /* SKShareMenuController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKShareMenuController.h; sourceTree = "<group>"; };
+		CE1DFA3C244CF04700D64C83 /* SKShareMenuController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKShareMenuController.m; sourceTree = "<group>"; };
 		CE1E2B260BDAB6180011D9DD /* SKPDFSynchronizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKPDFSynchronizer.h; sourceTree = "<group>"; };
 		CE1E2B270BDAB6180011D9DD /* SKPDFSynchronizer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKPDFSynchronizer.m; sourceTree = "<group>"; };
 		CE1E2F120BDB86A10011D9DD /* displayline */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = displayline; sourceTree = "<group>"; };
@@ -743,17 +790,21 @@
 		CE1E301B0BDB9D5C0011D9DD /* NSScanner_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSScanner_SKExtensions.m; sourceTree = "<group>"; };
 		CE1E30260BDB9D8E0011D9DD /* NSCharacterSet_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSCharacterSet_SKExtensions.h; sourceTree = "<group>"; };
 		CE1E30270BDB9D8E0011D9DD /* NSCharacterSet_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSCharacterSet_SKExtensions.m; sourceTree = "<group>"; };
+		CE1E82102460D0F60004801E /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		CE1F60111A822BC8002C3942 /* texi2html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = texi2html; sourceTree = "<group>"; };
 		CE1F60131A822BD8002C3942 /* stopwords-nl.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "stopwords-nl.txt"; sourceTree = "<group>"; };
 		CE1F67FD0E37552400E07E76 /* SKRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKRuntime.h; sourceTree = "<group>"; };
 		CE2083E216ADFFD600BC5AFB /* SKAlias.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKAlias.h; sourceTree = "<group>"; };
 		CE2083E316ADFFD600BC5AFB /* SKAlias.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKAlias.m; sourceTree = "<group>"; };
-		CE20938E0C5F9A8D009D3EFB /* SKGradientView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKGradientView.h; sourceTree = "<group>"; };
-		CE20938F0C5F9A8D009D3EFB /* SKGradientView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKGradientView.m; sourceTree = "<group>"; };
+		CE20938E0C5F9A8D009D3EFB /* SKTopBarView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKTopBarView.h; sourceTree = "<group>"; };
+		CE20938F0C5F9A8D009D3EFB /* SKTopBarView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKTopBarView.m; sourceTree = "<group>"; };
 		CE209FA70C9D38C6007C72F9 /* SKProgressController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKProgressController.h; sourceTree = "<group>"; };
 		CE209FA80C9D38C6007C72F9 /* SKProgressController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKProgressController.m; sourceTree = "<group>"; };
 		CE20B1920C9F23CC007C72F9 /* NSView_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSView_SKExtensions.h; sourceTree = "<group>"; };
 		CE20B1930C9F23CC007C72F9 /* NSView_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSView_SKExtensions.m; sourceTree = "<group>"; };
+		CE21F734239944990078B257 /* SKColorMenuView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKColorMenuView.h; sourceTree = "<group>"; };
+		CE21F735239944990078B257 /* SKColorMenuView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKColorMenuView.m; sourceTree = "<group>"; };
+		CE24643024314B34000466C8 /* SpeedSheet.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SpeedSheet.xib; sourceTree = "<group>"; };
 		CE24875A112C9651006B4FA5 /* NSFont_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSFont_SKExtensions.h; sourceTree = "<group>"; };
 		CE24875B112C9651006B4FA5 /* NSFont_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSFont_SKExtensions.m; sourceTree = "<group>"; };
 		CE25BB43163FFB770046A348 /* Skim.help */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Skim.help; sourceTree = "<group>"; };
@@ -808,7 +859,6 @@
 		CE3ED11F218CAA7900474EF3 /* NSScroller_SKExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSScroller_SKExtensions.h; sourceTree = "<group>"; };
 		CE3ED120218CAA7900474EF3 /* NSScroller_SKExtensions.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NSScroller_SKExtensions.m; sourceTree = "<group>"; };
 		CE406978228B20F700C4F958 /* NSScrubber_SKForwardDeclarations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSScrubber_SKForwardDeclarations.h; sourceTree = "<group>"; };
-		CE406989228B257100C4F958 /* NSURLSession_SKForwardDeclarations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSURLSession_SKForwardDeclarations.h; sourceTree = "<group>"; };
 		CE40D6141677A9DC00573882 /* SKTextNoteEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKTextNoteEditor.h; sourceTree = "<group>"; };
 		CE40D6151677A9DC00573882 /* SKTextNoteEditor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKTextNoteEditor.m; sourceTree = "<group>"; };
 		CE41A6CB0B975E5000ECF819 /* Skim.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.sdef; path = Skim.sdef; sourceTree = "<group>"; };
@@ -816,6 +866,9 @@
 		CE41B2A50C08CFA900E36EB7 /* NSArray_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSArray_SKExtensions.m; sourceTree = "<group>"; };
 		CE41B2C90C08D17100E36EB7 /* NSValue_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSValue_SKExtensions.h; sourceTree = "<group>"; };
 		CE41B2CA0C08D17100E36EB7 /* NSValue_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSValue_SKExtensions.m; sourceTree = "<group>"; };
+		CE426FB5255ED08800465569 /* ViewSettings.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ViewSettings.xib; sourceTree = "<group>"; };
+		CE426FC7255EDBDE00465569 /* SKViewSettingsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKViewSettingsController.h; sourceTree = "<group>"; };
+		CE426FC8255EDBDE00465569 /* SKViewSettingsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKViewSettingsController.m; sourceTree = "<group>"; };
 		CE4294A10BBD29120016FDC2 /* SKReadingBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKReadingBar.h; sourceTree = "<group>"; };
 		CE4294A20BBD29120016FDC2 /* SKReadingBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKReadingBar.m; sourceTree = "<group>"; };
 		CE42B8EA106996C60091F588 /* NSPointerArray_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSPointerArray_SKExtensions.h; sourceTree = "<group>"; };
@@ -885,6 +938,8 @@
 		CE54898D0B35D50E00F8AFB6 /* SKInfoWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKInfoWindowController.h; sourceTree = "<group>"; };
 		CE54898E0B35D50E00F8AFB6 /* SKInfoWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKInfoWindowController.m; sourceTree = "<group>"; };
 		CE54AA8E0BBC037400008750 /* ReleaseNotes.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = ReleaseNotes.rtf; sourceTree = "<group>"; };
+		CE5545BF248DA3B000BEEAF0 /* en */ = {isa = PBXFileReference; lastKnownFileType = text; name = en; path = Skim.help/Contents/Resources/en.lproj/skim.texi; sourceTree = SOURCE_ROOT; };
+		CE5545D1248DA3C200BEEAF0 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text; name = nl; path = ../Skim.help/Contents/Resources/nl.lproj/skim.texi; sourceTree = "<group>"; };
 		CE5A822E0E6C429D008C0AA9 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = it; path = it.lproj/Credits.rtf; sourceTree = "<group>"; };
 		CE5A822F0E6C42A7008C0AA9 /* it */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		CE5A82300E6C42B1008C0AA9 /* it */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -928,8 +983,6 @@
 		CE7611630EA49D1400301E45 /* SKPrintableView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKPrintableView.m; sourceTree = "<group>"; };
 		CE792F72226D12C40005BE9F /* SKLevelIndicator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKLevelIndicator.h; sourceTree = "<group>"; };
 		CE792F73226D12C40005BE9F /* SKLevelIndicator.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKLevelIndicator.m; sourceTree = "<group>"; };
-		CE7A30461822B950007E3D25 /* SKTextNoteField.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKTextNoteField.h; sourceTree = "<group>"; };
-		CE7A30471822B950007E3D25 /* SKTextNoteField.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKTextNoteField.m; sourceTree = "<group>"; };
 		CE7A3A2B2269CBDE00F1B89B /* SKControlTableCellView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKControlTableCellView.h; sourceTree = "<group>"; };
 		CE7A3A2C2269CBDE00F1B89B /* SKControlTableCellView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKControlTableCellView.m; sourceTree = "<group>"; };
 		CE7A3A3E2269CC5E00F1B89B /* SKProgressTableCellView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKProgressTableCellView.h; sourceTree = "<group>"; };
@@ -949,6 +1002,8 @@
 		CE85D73D2280814B0022C560 /* SKMainTouchBarController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKMainTouchBarController.h; sourceTree = "<group>"; };
 		CE85D73E2280814B0022C560 /* SKMainTouchBarController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKMainTouchBarController.m; sourceTree = "<group>"; };
 		CE85D7502280A4F10022C560 /* NSTouchBar_SKForwardDeclarations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSTouchBar_SKForwardDeclarations.h; sourceTree = "<group>"; };
+		CE86387F250FDB9A004C7526 /* SKReflectionView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKReflectionView.h; sourceTree = "<group>"; };
+		CE863880250FDB9A004C7526 /* SKReflectionView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKReflectionView.m; sourceTree = "<group>"; };
 		CE8978CB0CBFC70B00EA2D98 /* SKTemplateTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKTemplateTag.h; sourceTree = "<group>"; };
 		CE8978CC0CBFC70B00EA2D98 /* SKTemplateTag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKTemplateTag.m; sourceTree = "<group>"; };
 		CE898F050C843A8B008A0856 /* PDFDDocument.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = PDFDDocument.icns; sourceTree = "<group>"; };
@@ -962,8 +1017,12 @@
 		CE8BF029115F7C5C0029020F /* SKRightSideViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKRightSideViewController.m; sourceTree = "<group>"; };
 		CE8BF068115F859A0029020F /* LeftSideView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = LeftSideView.xib; sourceTree = "<group>"; };
 		CE8BF06F115F892A0029020F /* RightSideView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = RightSideView.xib; sourceTree = "<group>"; };
+		CE8DC45E24620A7E00BD5D50 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		CE8DC46F24620A7E00BD5D50 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		CE8DEF0620D2702A00A10FFE /* NSDate_SKExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSDate_SKExtensions.h; sourceTree = "<group>"; };
 		CE8DEF0720D2702A00A10FFE /* NSDate_SKExtensions.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NSDate_SKExtensions.m; sourceTree = "<group>"; };
+		CE91C7942449F56600D04039 /* SKFileShare.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKFileShare.h; sourceTree = "<group>"; };
+		CE91C7952449F56600D04039 /* SKFileShare.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKFileShare.m; sourceTree = "<group>"; };
 		CE94D179125535DE0053A520 /* synctex_parser_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = synctex_parser_utils.h; sourceTree = "<group>"; };
 		CE94D17A125535DE0053A520 /* synctex_parser_utils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = synctex_parser_utils.m; sourceTree = "<group>"; };
 		CE9768811161195C008DCB8F /* SKDownloadPreferenceController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKDownloadPreferenceController.h; sourceTree = "<group>"; };
@@ -986,6 +1045,8 @@
 		CEA3DF6D106BDAC1002FB3DB /* SKFloatMapTable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKFloatMapTable.m; sourceTree = "<group>"; };
 		CEA575CC0B9206E60003D2E7 /* SKNoteOutlineView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKNoteOutlineView.h; sourceTree = "<group>"; };
 		CEA575CD0B9206E60003D2E7 /* SKNoteOutlineView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKNoteOutlineView.m; sourceTree = "<group>"; };
+		CEA5BAFC2424CAE100801B2E /* SKOverviewView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SKOverviewView.h; sourceTree = "<group>"; };
+		CEA5BAFD2424CAE100801B2E /* SKOverviewView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SKOverviewView.m; sourceTree = "<group>"; };
 		CEA8FCD40D89C34A00E8A6F4 /* SKAnimatedBorderlessWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKAnimatedBorderlessWindow.h; sourceTree = "<group>"; };
 		CEA8FCD50D89C34A00E8A6F4 /* SKAnimatedBorderlessWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKAnimatedBorderlessWindow.m; sourceTree = "<group>"; };
 		CEAA557D0C6DE02F006BD633 /* SKDownloadController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKDownloadController.h; sourceTree = "<group>"; };
@@ -1046,8 +1107,8 @@
 		CEE0F5EA0EBB3DEC000A7A8C /* SKLevelIndicatorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKLevelIndicatorCell.m; sourceTree = "<group>"; };
 		CEE106130BCBB72C00BF2D3E /* SKNotesDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKNotesDocument.h; sourceTree = "<group>"; };
 		CEE106140BCBB72C00BF2D3E /* SKNotesDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKNotesDocument.m; sourceTree = "<group>"; };
-		CEE176E20DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDFDisplayView_SKExtensions.h; sourceTree = "<group>"; };
-		CEE176E30DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PDFDisplayView_SKExtensions.m; sourceTree = "<group>"; };
+		CEE176E20DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDFDocumentView_SKExtensions.h; sourceTree = "<group>"; };
+		CEE176E30DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PDFDocumentView_SKExtensions.m; sourceTree = "<group>"; };
 		CEE54D860DA2E37B0037169F /* PDFAnnotation_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDFAnnotation_SKExtensions.h; sourceTree = "<group>"; };
 		CEE54D870DA2E37B0037169F /* PDFAnnotation_SKExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PDFAnnotation_SKExtensions.m; sourceTree = "<group>"; };
 		CEE54D910DA2E5E10037169F /* PDFAnnotationCircle_SKExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDFAnnotationCircle_SKExtensions.h; sourceTree = "<group>"; };
@@ -1069,6 +1130,12 @@
 		CEE73ECC106CEC1900419544 /* SKSeparatorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKSeparatorView.h; sourceTree = "<group>"; };
 		CEE73ECD106CEC1900419544 /* SKSeparatorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKSeparatorView.m; sourceTree = "<group>"; };
 		CEE7B7451F7A84E800004238 /* synctex_parser_local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = synctex_parser_local.h; sourceTree = "<group>"; };
+		CEE7E76324426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PDFAnnotationTextWidget_SKExtensions.h; sourceTree = "<group>"; };
+		CEE7E76424426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PDFAnnotationTextWidget_SKExtensions.m; sourceTree = "<group>"; };
+		CEE7E77624426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PDFAnnotationButtonWidget_SKExtensions.h; sourceTree = "<group>"; };
+		CEE7E77724426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PDFAnnotationButtonWidget_SKExtensions.m; sourceTree = "<group>"; };
+		CEE7E77924426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PDFAnnotationChoiceWidget_SKExtensions.h; sourceTree = "<group>"; };
+		CEE7E77A24426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PDFAnnotationChoiceWidget_SKExtensions.m; sourceTree = "<group>"; };
 		CEE9BC0614CDD98100262718 /* SKBookmarkSheetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKBookmarkSheetController.h; sourceTree = "<group>"; };
 		CEE9BC0714CDD98100262718 /* SKBookmarkSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SKBookmarkSheetController.m; sourceTree = "<group>"; };
 		CEEB32811AC30ECA00BDB4E8 /* SKScroller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SKScroller.h; sourceTree = "<group>"; };
@@ -1307,11 +1374,13 @@
 			files = (
 				8D15AC340486D014006FF6A4 /* Cocoa.framework in Frameworks */,
 				455989F80B2662FF00E5419B /* Quartz.framework in Frameworks */,
-				CE5F43730BF8A3410069D89C /* IOKit.framework in Frameworks */,
-				CEA1CD1B0C9864470061A6D4 /* Security.framework in Frameworks */,
-				CED270C9133785DE0097F1AF /* OpenGL.framework in Frameworks */,
 				CEE8DFCE0E5C809C00EFA97F /* SkimNotes.framework in Frameworks */,
 				CEE8DFCF0E5C809C00EFA97F /* Sparkle.framework in Frameworks */,
+				CEA1CD1B0C9864470061A6D4 /* Security.framework in Frameworks */,
+				CE5F43730BF8A3410069D89C /* IOKit.framework in Frameworks */,
+				CE1E82212460D0F60004801E /* OpenGL.framework in Frameworks */,
+				CE8DC47124620A7E00BD5D50 /* Metal.framework in Frameworks */,
+				CE8DC47024620A7E00BD5D50 /* MetalKit.framework in Frameworks */,
 				CE3364320E2761EF005F99E6 /* libz.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1420,6 +1489,9 @@
 		2A37F4C3FDCFA73011CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				CE8DC46F24620A7E00BD5D50 /* Metal.framework */,
+				CE8DC45E24620A7E00BD5D50 /* MetalKit.framework */,
+				CE1E82102460D0F60004801E /* OpenGL.framework */,
 				CE0998CA0EC8EC2A006CD0F7 /* Linked Libraries */,
 				1058C7A6FEA54F5311CA2CBB /* Linked Frameworks */,
 				CE2BB81B0E0DB4FA0090E848 /* Embedded Frameworks */,
@@ -1475,7 +1547,6 @@
 				CE38ECD20B8093B200A1B779 /* NSString_SKExtensions.m */,
 				CEAA67230C70A882006BD633 /* NSURL_SKExtensions.h */,
 				CEAA67240C70A882006BD633 /* NSURL_SKExtensions.m */,
-				CE406989228B257100C4F958 /* NSURLSession_SKForwardDeclarations.h */,
 				CE7F438F0DE1F1980061A839 /* NSUserDefaults_SKExtensions.h */,
 				CE7F43900DE1F1980061A839 /* NSUserDefaults_SKExtensions.m */,
 				CE41B2C90C08D17100E36EB7 /* NSValue_SKExtensions.h */,
@@ -1523,7 +1594,9 @@
 				CE19446110627483007E8770 /* ReleaseNotes.xib */,
 				CE090543113EDA72004B85C6 /* ScaleSheet.xib */,
 				CE19446210627483007E8770 /* SnapshotWindow.xib */,
+				CE24643024314B34000466C8 /* SpeedSheet.xib */,
 				CE1CC6B81143F05D00F6B208 /* TransitionSheet.xib */,
+				CE426FB5255ED08800465569 /* ViewSettings.xib */,
 				CEF60F8A114C5FC00074ACC4 /* GeneralPreferences.xib */,
 				CEF60F90114C61300074ACC4 /* DisplayPreferences.xib */,
 				CEF60F98114C63710074ACC4 /* NotesPreferences.xib */,
@@ -1556,8 +1629,10 @@
 				CEF60D4A114C0DA60074ACC4 /* PrintAccessoryView.strings */,
 				CEF60D46114C0DA60074ACC4 /* ReleaseNotes.strings */,
 				CEF60D44114C0DA60074ACC4 /* ScaleSheet.strings */,
+				CE0D370724323E2100451593 /* SpeedSheet.strings */,
 				CE0E84C6114D516F00E37F38 /* SyncPreferences.strings */,
 				CEF60D40114C0DA60074ACC4 /* TransitionSheet.strings */,
+				CE13EC01255F41CA000F47CF /* ViewSettings.strings */,
 			);
 			name = "XIB Strings";
 			sourceTree = "<group>";
@@ -1651,12 +1726,14 @@
 				CE1248C413FEDCF200FFAE20 /* SKTemplateManager.m */,
 				CE05A86C0E90ED950060BB07 /* SKTextFieldSheetController.h */,
 				CE05A86D0E90ED950060BB07 /* SKTextFieldSheetController.m */,
-				CE40D6141677A9DC00573882 /* SKTextNoteEditor.h */,
-				CE40D6151677A9DC00573882 /* SKTextNoteEditor.m */,
+				CE1CF47023FAA1D7005B5B40 /* SKThumbnailItem.h */,
+				CE1CF47123FAA1D7005B5B40 /* SKThumbnailItem.m */,
 				CEB72B890C4A189D000350F9 /* SKTransitionController.h */,
 				CE1ADEBE0C4C341100071840 /* SKTransitionController.m */,
 				CEF60CF7114C08350074ACC4 /* SKViewController.h */,
 				CEF60CF8114C08350074ACC4 /* SKViewController.m */,
+				CE426FC7255EDBDE00465569 /* SKViewSettingsController.h */,
+				CE426FC8255EDBDE00465569 /* SKViewSettingsController.m */,
 				CEF60CF0114C07D90074ACC4 /* SKWindowController.h */,
 				CEF60CF1114C07D90074ACC4 /* SKWindowController.m */,
 				CEF60F26114C53B40074ACC4 /* SKGeneralPreferences.h */,
@@ -1709,6 +1786,8 @@
 				CECDD2970C5B68580026AAEC /* SKCenteredTextFieldCell.m */,
 				CE0AEDC1107A137C000C075E /* SKColorCell.h */,
 				CE0AEDC2107A137C000C075E /* SKColorCell.m */,
+				CE21F734239944990078B257 /* SKColorMenuView.h */,
+				CE21F735239944990078B257 /* SKColorMenuView.m */,
 				CE4D97FA0C3C2BFF002C20CB /* SKColorSwatch.h */,
 				CE4D97FB0C3C2BFF002C20CB /* SKColorSwatch.m */,
 				CE3A41560B790C56006B64D3 /* SKDragImageView.h */,
@@ -1717,8 +1796,6 @@
 				CE2DED6B0B86334900D0DA12 /* SKFieldEditor.m */,
 				CECF61FD0DB258D600587D96 /* SKFontWell.h */,
 				CECF61FE0DB258D600587D96 /* SKFontWell.m */,
-				CE20938E0C5F9A8D009D3EFB /* SKGradientView.h */,
-				CE20938F0C5F9A8D009D3EFB /* SKGradientView.m */,
 				CE454B4F226E33150034FD6B /* SKHighlightingTableRowView.h */,
 				CE454B50226E33150034FD6B /* SKHighlightingTableRowView.m */,
 				CE792F72226D12C40005BE9F /* SKLevelIndicator.h */,
@@ -1735,12 +1812,16 @@
 				CE1C77B5123FB41E00C73F1A /* SKNoteTextView.m */,
 				CE5BF8400C7CC24A00EBDCF7 /* SKOutlineView.h */,
 				CE5BF8410C7CC24A00EBDCF7 /* SKOutlineView.m */,
+				CEA5BAFC2424CAE100801B2E /* SKOverviewView.h */,
+				CEA5BAFD2424CAE100801B2E /* SKOverviewView.m */,
 				4530DCF50B27CACE007C59F4 /* SKPDFView.h */,
 				4530DCF60B27CACE007C59F4 /* SKPDFView.m */,
 				CE7611620EA49D1400301E45 /* SKPrintableView.h */,
 				CE7611630EA49D1400301E45 /* SKPrintableView.m */,
 				CE7A3A3E2269CC5E00F1B89B /* SKProgressTableCellView.h */,
 				CE7A3A3F2269CC5E00F1B89B /* SKProgressTableCellView.m */,
+				CE86387F250FDB9A004C7526 /* SKReflectionView.h */,
+				CE863880250FDB9A004C7526 /* SKReflectionView.m */,
 				CEEB32811AC30ECA00BDB4E8 /* SKScroller.h */,
 				CEEB32821AC30ECA00BDB4E8 /* SKScroller.m */,
 				CED76EFF1A1825DE00D1ACA4 /* SKScrollView.h */,
@@ -1759,8 +1840,12 @@
 				CEAF079B0C4139EB00C3ECBB /* SKStatusBar.m */,
 				CE5BF7FE0C7CBF6300EBDCF7 /* SKTableView.h */,
 				CE5BF7FF0C7CBF6300EBDCF7 /* SKTableView.m */,
-				CE7A30461822B950007E3D25 /* SKTextNoteField.h */,
-				CE7A30471822B950007E3D25 /* SKTextNoteField.m */,
+				CE40D6141677A9DC00573882 /* SKTextNoteEditor.h */,
+				CE40D6151677A9DC00573882 /* SKTextNoteEditor.m */,
+				CE1CF48323FAA2DD005B5B40 /* SKThumbnailView.h */,
+				CE1CF48423FAA2DD005B5B40 /* SKThumbnailView.m */,
+				CE20938E0C5F9A8D009D3EFB /* SKTopBarView.h */,
+				CE20938F0C5F9A8D009D3EFB /* SKTopBarView.m */,
 			);
 			name = "Views and Cells";
 			sourceTree = "<group>";
@@ -1770,10 +1855,10 @@
 			children = (
 				CE2083E216ADFFD600BC5AFB /* SKAlias.h */,
 				CE2083E316ADFFD600BC5AFB /* SKAlias.m */,
-				CE5347121645DD3000737191 /* SKAttachmentEmailer.h */,
-				CE5347131645DD3000737191 /* SKAttachmentEmailer.m */,
 				CEBD52EA0C9C0AE500FBF6A4 /* SKBookmark.h */,
 				CEBD52EB0C9C0AE500FBF6A4 /* SKBookmark.m */,
+				CE05DA9F2524C32200BB9288 /* SKColorList.h */,
+				CE05DAA02524C32200BB9288 /* SKColorList.m */,
 				CEAA559B0C6DE235006BD633 /* SKDownload.h */,
 				CEAA559C0C6DE235006BD633 /* SKDownload.m */,
 				CEA3DF6C106BDAC1002FB3DB /* SKFloatMapTable.h */,
@@ -1794,6 +1879,8 @@
 				CE3366DE0E28BCFA005F99E6 /* SKPDFSyncRecord.m */,
 				CE4294A10BBD29120016FDC2 /* SKReadingBar.h */,
 				CE4294A20BBD29120016FDC2 /* SKReadingBar.m */,
+				CE1991DE256C70CD00FC4E25 /* SKRecentDocumentInfo.h */,
+				CE1991DF256C70CD00FC4E25 /* SKRecentDocumentInfo.m */,
 				CE26175D16CCFC4900BDCE7C /* SKSyncDot.h */,
 				CE26175E16CCFC4900BDCE7C /* SKSyncDot.m */,
 				CE2DE4900B85D48F00D0DA12 /* SKThumbnail.h */,
@@ -1878,6 +1965,7 @@
 				CEF1D626117EFB760069E249 /* applehelp.init */,
 				CE1F60111A822BC8002C3942 /* texi2html */,
 				CE1F60131A822BD8002C3942 /* stopwords-nl.txt */,
+				CE5545BE248DA3B000BEEAF0 /* skim.texi */,
 			);
 			name = "Help Tools";
 			path = SkimHelp;
@@ -1925,14 +2013,20 @@
 		CEC0ABED118307F900384CFD /* View Helpers */ = {
 			isa = PBXGroup;
 			children = (
+				CE5347121645DD3000737191 /* SKAttachmentEmailer.h */,
+				CE5347131645DD3000737191 /* SKAttachmentEmailer.m */,
 				CE455392111DA4290060CAC9 /* SKImageToolTipContext.h */,
 				CE455393111DA4290060CAC9 /* SKImageToolTipContext.m */,
+				CE91C7942449F56600D04039 /* SKFileShare.h */,
+				CE91C7952449F56600D04039 /* SKFileShare.m */,
 				CEF60CE1114C01CA0074ACC4 /* SKLocalization.h */,
 				CEF60CE2114C01CA0074ACC4 /* SKLocalization.m */,
 				CE46458F0DF8140200CFD8D2 /* SKNumberArrayFormatter.h */,
 				CE4645900DF8140200CFD8D2 /* SKNumberArrayFormatter.m */,
 				CE121AC61180644A00951425 /* SKScriptMenu.h */,
 				CE121AC71180644A00951425 /* SKScriptMenu.m */,
+				CE1DFA3B244CF04700D64C83 /* SKShareMenuController.h */,
+				CE1DFA3C244CF04700D64C83 /* SKShareMenuController.m */,
 				CE4972880BDE8B2900D7F1D2 /* SKToolbarItem.h */,
 				CE4972890BDE8B2900D7F1D2 /* SKToolbarItem.m */,
 				CE5BD6710C7ADF1500EBDCF7 /* SKTypeSelectHelper.h */,
@@ -1971,8 +2065,6 @@
 		CEE1776D0DBDF54000E6C317 /* AppKit Categories */ = {
 			isa = PBXGroup;
 			children = (
-				CE1D28CF22E7B2150061D93F /* NSAlert_SKExtensions.h */,
-				CE1D28D022E7B2150061D93F /* NSAlert_SKExtensions.m */,
 				CE3A45510B7A04A4006B64D3 /* NSBezierPath_SKExtensions.h */,
 				CE3A45520B7A04A4006B64D3 /* NSBezierPath_SKExtensions.m */,
 				F968C5A00C036E9D000BD1B2 /* NSBitmapImageRep_SKExtensions.h */,
@@ -2038,10 +2130,16 @@
 				CEE54D970DA2E6FC0037169F /* PDFAnnotationSquare_SKExtensions.m */,
 				CE4642E30DF5CBD900CFD8D2 /* PDFAnnotationText_SKExtensions.h */,
 				CE4642E40DF5CBD900CFD8D2 /* PDFAnnotationText_SKExtensions.m */,
+				CEE7E76324426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.h */,
+				CEE7E76424426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.m */,
+				CEE7E77624426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.h */,
+				CEE7E77724426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.m */,
+				CEE7E77924426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.h */,
+				CEE7E77A24426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.m */,
 				CE3A3D2A0B78C0A0006B64D3 /* SKNPDFAnnotationNote_SKExtensions.h */,
 				CE3A3D2B0B78C0A0006B64D3 /* SKNPDFAnnotationNote_SKExtensions.m */,
-				CEE176E20DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.h */,
-				CEE176E30DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.m */,
+				CEE176E20DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.h */,
+				CEE176E30DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.m */,
 				CE6DC7B90D689138003A072F /* PDFDocument_SKExtensions.h */,
 				CE6DC7BA0D689138003A072F /* PDFDocument_SKExtensions.m */,
 				CE5BAF4210511A0F00161B87 /* PDFOutline_SKExtensions.h */,
@@ -2149,7 +2247,7 @@
 		2A37F4A9FDCFA73011CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1030;
+				LastUpgradeCheck = 1230;
 			};
 			buildConfigurationList = C05733CB08A9546B00998B17 /* Build configuration list for PBXProject "Skim" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -2168,6 +2266,8 @@
 				zh_TW,
 				pl,
 				zh_CN,
+				"zh-Hant",
+				"zh-Hans",
 			);
 			mainGroup = 2A37F4AAFDCFA73011CA2CEA /* Skim */;
 			projectDirPath = "";
@@ -2336,6 +2436,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				45B113C00B329A7E00DE0660 /* LICENSE in Resources */,
+				CE24644124314B34000466C8 /* SpeedSheet.xib in Resources */,
 				45A3BD390B4F097D002B297F /* InitialUserDefaults.plist in Resources */,
 				8D15AC2C0486D014006FF6A4 /* Credits.rtf in Resources */,
 				8D15AC2F0486D014006FF6A4 /* InfoPlist.strings in Resources */,
@@ -2353,6 +2454,7 @@
 				CE6DC9940D699F21003A072F /* TransitionMask.jpg in Resources */,
 				CEB34A530F5C1B7E0037E086 /* dsa_pub.pem in Resources */,
 				CE19446310627483007E8770 /* BookmarksWindow.xib in Resources */,
+				CE426FB6255ED08800465569 /* ViewSettings.xib in Resources */,
 				CE19446410627483007E8770 /* ConversionProgressWindow.xib in Resources */,
 				CE19446510627483007E8770 /* MainWindow.xib in Resources */,
 				CE19446610627483007E8770 /* NotesDocument.xib in Resources */,
@@ -2360,6 +2462,7 @@
 				CE19446810627483007E8770 /* ReleaseNotes.xib in Resources */,
 				CE19446910627483007E8770 /* SnapshotWindow.xib in Resources */,
 				CEFE71951129AAA30018CD74 /* ServicesMenu.strings in Resources */,
+				CE13EC13255F41CA000F47CF /* ViewSettings.strings in Resources */,
 				CEFC7EDA1137FDE20055D1E2 /* NotesPanel.xib in Resources */,
 				CE090544113EDA72004B85C6 /* BookmarkSheet.xib in Resources */,
 				CE090545113EDA72004B85C6 /* PageSheet.xib in Resources */,
@@ -2409,6 +2512,7 @@
 				CEFBB33913AA737B00162F75 /* FindBar.strings in Resources */,
 				CE109796161320A500C4FA18 /* ExportAccessoryView.xib in Resources */,
 				CE1098F11613CFC800C4FA18 /* ExportAccessoryView.strings in Resources */,
+				CE0D371924323E2100451593 /* SpeedSheet.strings in Resources */,
 				CE25BB6B163FFB770046A348 /* Skim.help in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2428,7 +2532,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "IDENTITY=\"Skim Signing Certificate\"\n\n# have to sign frameworks first\nLOCATION=\"${BUILT_PRODUCTS_DIR}\"/\"${FRAMEWORKS_FOLDER_PATH}\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/SkimNotes.framework/Versions/A\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/Sparkle.framework/Versions/A\"\n\nLOCATION=\"${BUILT_PRODUCTS_DIR}\"/\"${EXECUTABLE_PATH}\"\nif ! /usr/bin/codesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}\"\nthen\n\t# lie about exit status so developers aren't forced to have a cert\n\techo \"warning: codesign failed\" >&2\n\techo \"warning: you need a certificate named \\\"${IDENTITY}\\\"\" >&2\n\texit 0\nfi\n";
+			shellScript = "IDENTITY=\"Skim Signing Certificate\"\n\n# have to sign frameworks first\nLOCATION=\"${BUILT_PRODUCTS_DIR}\"/\"${FRAMEWORKS_FOLDER_PATH}\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/SkimNotes.framework/Versions/A\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/Sparkle.framework/Versions/A\"\n\nLOCATION=\"${BUILT_PRODUCTS_DIR}\"/\"${CONTENTS_FOLDER_PATH}\"/\"Library\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/Spotlight/SkimImporter.mdimporter/Contents/Frameworks/SkimNotesBase.framework/Versions/A\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/Spotlight/SkimImporter.mdimporter/Contents/MacOS/SkimImporter\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/QuickLook/Skim.qlgenerator/Contents/MacOS/Skim\"\n\nLOCATION=\"${BUILT_PRODUCTS_DIR}\"/\"${CONTENTS_FOLDER_PATH}\"/\"SharedSupport\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/skimnotes\"\ncodesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}/skimpdf\"\n\nLOCATION=\"${BUILT_PRODUCTS_DIR}\"/\"${EXECUTABLE_PATH}\"\nif ! /usr/bin/codesign --verbose --force --sign \"${IDENTITY}\" \"${LOCATION}\"\nthen\n\t# lie about exit status so developers aren't forced to have a cert\n\techo \"warning: codesign failed\" >&2\n\techo \"warning: you need a certificate named \\\"${IDENTITY}\\\"\" >&2\n\texit 0\nfi\n";
 		};
 		CE4B67590BF4DC3000A73E42 /* Run Script: Strip headers and .DS_Store */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2442,7 +2546,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ ${BUILD_STYLE} = \"Debug\" -o \"${CONFIGURATION}\" = \"Debug\" ]; then\nexit 0\nfi\n\necho \"*** stripping header files from frameworks ***\"\nfind \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\" -type file -name \"*.h\" -delete\nfind \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\" \\( -type d -or -type l \\) -name Headers -delete\n\necho \"*** removing .DS_Store files ***\"\nfind \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\" -type file -name \".DS_Store\" -delete\n";
+			shellScript = "if [ \"${BUILD_STYLE}\" = \"Debug\" -o \"${CONFIGURATION}\" = \"Debug\" ]; then\nexit 0\nfi\n\necho \"*** stripping header files from frameworks ***\"\nfind \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\" -type file -name \"*.h\" -delete\nfind \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\" \\( -type d -or -type l \\) \\( -name Headers -or -name PrivateHeaders \\) -delete\n\necho \"*** removing .DS_Store files ***\"\nfind \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\" -type file -name \".DS_Store\" -delete\n";
 		};
 		CE592C630B9239E300C113DF /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2455,7 +2559,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# app name, also image name\nNAME=Skim\n\n# app bundle to copy\nSRC_BUNDLE=\"${BUILT_PRODUCTS_DIR}/${NAME}.app\"\n\n# template image in source folder\nSRC_IMAGE=\"${SOURCE_ROOT}/${NAME}.dmg\"\n\n# temporary image\nDST_IMAGE=\"/tmp/${NAME}.dmg\"\n\n# temporary volume\nDST_VOLUME=\"/Volumes/${NAME}\"\n\n# version\nVERSION=$(/usr/bin/defaults read \"${SRC_BUNDLE}/Contents/Info\" CFBundleShortVersionString)\n\n# distribution name\nDIST_NAME=\"${NAME}-${VERSION}\"\n\n# final distribution image\nFINAL_IMAGE=\"${HOME}/Desktop/${DIST_NAME}.dmg\"\n\n# see if this file already exists and bail\nif [ -f \"${FINAL_IMAGE}\" ]; then\n\techo \"error: ${FINAL_IMAGE} exists\"\n\texit 1\nfi\n\n# see if a volume is already mounted or a\n# previous cp operation was botched\nif [ -e \"${DST_VOLUME}\" ]; then\n\techo \"error: ${DST_VOLUME} exists\"\n\techo \"warning: opening ${DST_VOLUME} in Finder\"\n\t/usr/bin/open ${DST_VOLUME}\n\texit 1\nfi\n\n# remove temp image from a previous run\nif [ -f \"${DST_IMAGE}\" ]; then\n\techo \"warning: removing ${DST_IMAGE}\"\n\t/bin/rm \"${DST_IMAGE}\"\n\tif [ $? != 0 ]; then\n\t\techo \"error: failed to remove ${DST_IMAGE}\"\n\t\texit 1\n\tfi\nfi\n\n# stored zipped in svn, so unzip if needed\n# pass o to overwrite, or unzip waits for stdin\n# when trying to unpack the resource fork/EA\n\nif [ ! -f \"${SRC_IMAGE}\" ]; then\n\techo \"Unzipping disk image ${SRC_IMAGE}.zip\"\n\t/usr/bin/unzip -uo \"${SRC_IMAGE}.zip\"\n\tif [ $? != 0 ]; then\n\t\techo \"error: failed to unzip ${SRC_IMAGE}.zip\"\n\t\texit 1\n\tfi\nfi\n\n# copy empty image to /tmp\necho \"Copying disk image ${SRC_IMAGE} to ${DST_IMAGE}\"\n/bin/cp \"${SRC_IMAGE}\" \"${DST_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to copy ${SRC_IMAGE} to ${DST_IMAGE}\"\n\texit 1\nfi\n\n# mount image\necho \"Mounting disk image ${DST_IMAGE}\"\n/usr/bin/hdiutil attach -nobrowse -noautoopen \"${DST_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to mount ${DST_IMAGE}\"\n\texit 1\nfi\n\n# use cp to copy all files\necho \"Copying build product from ${SRC_BUNDLE} to ${DST_VOLUME}\"\n/bin/cp -R \"${SRC_BUNDLE}\" \"${DST_VOLUME}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to copy ${SRC_BUNDLE}\"\n\texit 1\nfi\n\n# tell finder to set the icon position\necho \"Moving build product in disk image\"\n/usr/bin/osascript -e \"tell application \\\"Finder\\\" to set the position of application file \\\"${NAME}.app\\\" of disk named \\\"${NAME}\\\" to {90, 206}\"\nif [ $? != 0 ]; then\n\techo \"error: Finder failed to set position\"\n\texit 1\nfi\n\n# data is copied, so unmount the volume, we may need to wait when the volume is in use\necho \"Ejecting disk image ${DST_VOLUME}\"\nN_TRIES=0\n/usr/sbin/diskutil eject \"${DST_VOLUME}\"\nwhile [ $? != 0 ]; do\n\tif [ $((++N_TRIES)) -gt 12 ]; then\n\t\techo \"error: failed to eject ${DST_VOLUME}\"\n\t\texit 1\n\telse\n\t\tsleep 5\n\t\t/usr/sbin/diskutil eject \"${DST_VOLUME}\"\n\tfi\ndone\n\n# resize image to fit\necho \"Resizing disk image ${DST_IMAGE}\"\n/usr/bin/hdiutil resize -size $(/usr/bin/hdiutil resize \"${DST_IMAGE}\" | cut -f -1 -)b \"${DST_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to resize ${DST_IMAGE}\"\n\texit 1\nfi\n\n# convert image to read only and compress\necho \"Converting disk image ${DST_IMAGE} to read only disk image at ${FINAL_IMAGE}\"\n/usr/bin/hdiutil convert \"${DST_IMAGE}\" -format UDZO -imagekey zlib-level=9 -o \"${FINAL_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to convert ${DST_IMAGE}\"\n\texit 1\nfi\n\n# set internet-enable bit for Safari, even\n# though I dislike internet-enabled images...\necho \"Internet-enable disk image ${FINAL_IMAGE}\"\n/usr/bin/hdiutil internet-enable -YES \"${FINAL_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to internet-enable ${DST_IMAGE}\"\n\texit 1\nfi\n\n# remove temp image and source image\necho \"Removing temporary disk images ${DST_IMAGE} and ${SRC_IMAGE}\"\n/bin/rm -f \"${DST_IMAGE}\" \"${SRC_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"warning: failed to remove ${DST_IMAGE} or ${SRC_IMAGE}\"\nfi\n\n# create the Sparkle appcast\n# see http://www.entropy.ch/blog/Developer/2008/09/22/Sparkle-Appcast-Automation-in-Xcode.html\n\necho \"Creating appcast for Sparkle...\"\n\nDATE=$(/bin/date +\"%a, %d %b %Y %T %z\")\nSIZE=$(/usr/bin/stat -f %z \"${FINAL_IMAGE}\")\nVERSION_NUMBER=$(/usr/bin/defaults read \"${SRC_BUNDLE}/Contents/Info\" CFBundleVersion)\nURL=\"https://sourceforge.net/projects/skim-app/files/${NAME}/${DIST_NAME}/${DIST_NAME}.dmg/download\"\nAPPCAST=\"${HOME}/Desktop/${DIST_NAME}.xml\"\nKEY_NAME=\"${NAME} Sparkle Key\"\nSIGNATURE=$(/usr/bin/openssl dgst -sha1 -binary < \"${FINAL_IMAGE}\" | /usr/bin/openssl dgst -dss1 -sign <(security find-generic-password -g -s \"${KEY_NAME}\" 2>&1 1>/dev/null | perl -pe '($_) = /\"(.+)\"/; s/\\\\012/\\n/g') | /usr/bin/openssl enc -base64)\nif [ $? != 0 ]; then\n\techo \"warning: failed to generate signature.  You need the private key in a secure note named \\\"${KEY_NAME}\\\"\" >&2\nfi\n\n/bin/cat > \"${APPCAST}\" << EOF\n<?xml version=\"1.0\" encoding=\"utf-8\"?> \n<rss version=\"2.0\" xmlns:sparkle=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"  xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n    <channel> \n        <title>${NAME} Changelog</title>\n        <link>https://skim-app.sourceforge.io</link>\n        <description>PDF reader and note-taker</description>\n        <item>\n            <title>Version ${VERSION}</title>\n            <description><![CDATA[\n<h1>Version ${VERSION}</h1>\n\n<h2>New Features</h2>\n<ul>\n<li></li>\n</ul>\n\n<h2>Bugs Fixed</h2>\n<ul>\n<li></li>\n</ul>\n\t\t\t]]></description>\n            <pubDate>${DATE}</pubDate>\n            <sparkle:minimumSystemVersion>10.7.0</sparkle:minimumSystemVersion>\n            <enclosure sparkle:version=\"${VERSION_NUMBER}\" sparkle:shortVersionString=\"${VERSION}\" url=\"${URL}\" sparkle:dsaSignature=\"${SIGNATURE}\" length=\"${SIZE}\" type=\"application/x-apple-diskimage\"/>\n        </item>\n\n    </channel>\n</rss>\nEOF\n\n# reveal the disk image\necho \"Revealing disk image\"\n/usr/bin/open -R \"${FINAL_IMAGE}\"\n\nexit 0\n";
+			shellScript = "# app name, also image name\nNAME=Skim\n\n# app bundle to copy\nSRC_BUNDLE=\"${BUILT_PRODUCTS_DIR}/${NAME}.app\"\n\n# template image in source folder\nSRC_IMAGE=\"${SOURCE_ROOT}/${NAME}.dmg\"\n\n# temporary image\nDST_IMAGE=\"/tmp/${NAME}.dmg\"\n\n# temporary volume\nDST_VOLUME=\"/Volumes/${NAME}\"\n\n# version\nVERSION=$(/usr/bin/defaults read \"${SRC_BUNDLE}/Contents/Info\" CFBundleShortVersionString)\n\n# distribution name\nDIST_NAME=\"${NAME}-${VERSION}\"\n\n# final distribution image\nFINAL_IMAGE=\"${HOME}/Desktop/${DIST_NAME}.dmg\"\n\n# see if this file already exists and bail\nif [ -f \"${FINAL_IMAGE}\" ]; then\n\techo \"error: ${FINAL_IMAGE} exists\"\n\texit 1\nfi\n\n# see if a volume is already mounted or a\n# previous cp operation was botched\nif [ -e \"${DST_VOLUME}\" ]; then\n\techo \"error: ${DST_VOLUME} exists\"\n\techo \"warning: opening ${DST_VOLUME} in Finder\"\n\t/usr/bin/open ${DST_VOLUME}\n\texit 1\nfi\n\n# remove temp image from a previous run\nif [ -f \"${DST_IMAGE}\" ]; then\n\techo \"warning: removing ${DST_IMAGE}\"\n\t/bin/rm \"${DST_IMAGE}\"\n\tif [ $? != 0 ]; then\n\t\techo \"error: failed to remove ${DST_IMAGE}\"\n\t\texit 1\n\tfi\nfi\n\n# stored zipped in svn, so unzip if needed\n# pass o to overwrite, or unzip waits for stdin\n# when trying to unpack the resource fork/EA\n\nif [ ! -f \"${SRC_IMAGE}\" ]; then\n\techo \"Unzipping disk image ${SRC_IMAGE}.zip\"\n\t/usr/bin/unzip -uo \"${SRC_IMAGE}.zip\"\n\tif [ $? != 0 ]; then\n\t\techo \"error: failed to unzip ${SRC_IMAGE}.zip\"\n\t\texit 1\n\tfi\nfi\n\n# copy empty image to /tmp\necho \"Copying disk image ${SRC_IMAGE} to ${DST_IMAGE}\"\n/bin/cp \"${SRC_IMAGE}\" \"${DST_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to copy ${SRC_IMAGE} to ${DST_IMAGE}\"\n\texit 1\nfi\n\n# mount image\necho \"Mounting disk image ${DST_IMAGE}\"\n/usr/bin/hdiutil attach -nobrowse -noautoopen \"${DST_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to mount ${DST_IMAGE}\"\n\texit 1\nfi\n\n# use cp to copy all files\necho \"Copying build product from ${SRC_BUNDLE} to ${DST_VOLUME}\"\n/bin/cp -R \"${SRC_BUNDLE}\" \"${DST_VOLUME}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to copy ${SRC_BUNDLE}\"\n\texit 1\nfi\n\n# tell finder to set the icon position\necho \"Moving build product in disk image\"\n/usr/bin/osascript -e \"tell application \\\"Finder\\\" to set the position of application file \\\"${NAME}.app\\\" of disk named \\\"${NAME}\\\" to {90, 206}\"\nif [ $? != 0 ]; then\n\techo \"error: Finder failed to set position\"\n\texit 1\nfi\n\n# data is copied, so unmount the volume, we may need to wait when the volume is in use\necho \"Ejecting disk image ${DST_VOLUME}\"\nN_TRIES=0\n/usr/sbin/diskutil eject \"${DST_VOLUME}\"\nwhile [ $? != 0 ]; do\n\tif [ $((++N_TRIES)) -gt 12 ]; then\n\t\techo \"error: failed to eject ${DST_VOLUME}\"\n\t\texit 1\n\telse\n\t\tsleep 5\n\t\t/usr/sbin/diskutil eject \"${DST_VOLUME}\"\n\tfi\ndone\n\n# resize image to fit\necho \"Resizing disk image ${DST_IMAGE}\"\n/usr/bin/hdiutil resize -size $(/usr/bin/hdiutil resize \"${DST_IMAGE}\" | cut -f -1 -)b \"${DST_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to resize ${DST_IMAGE}\"\n\texit 1\nfi\n\n# convert image to read only and compress\necho \"Converting disk image ${DST_IMAGE} to read only disk image at ${FINAL_IMAGE}\"\n/usr/bin/hdiutil convert \"${DST_IMAGE}\" -format UDZO -imagekey zlib-level=9 -o \"${FINAL_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"error: failed to convert ${DST_IMAGE}\"\n\texit 1\nfi\n\n# set internet-enable bit for Safari, even\n# though I dislike internet-enabled images...\n#echo \"Internet-enable disk image ${FINAL_IMAGE}\"\n#/usr/bin/hdiutil internet-enable -YES \"${FINAL_IMAGE}\"\n#if [ $? != 0 ]; then\n#\techo \"error: failed to internet-enable ${DST_IMAGE}\"\n#\texit 1\n#fi\n\n# remove temp image and source image\necho \"Removing temporary disk images ${DST_IMAGE} and ${SRC_IMAGE}\"\n/bin/rm -f \"${DST_IMAGE}\" \"${SRC_IMAGE}\"\nif [ $? != 0 ]; then\n\techo \"warning: failed to remove ${DST_IMAGE} or ${SRC_IMAGE}\"\nfi\n\n# create the Sparkle appcast\n# see http://www.entropy.ch/blog/Developer/2008/09/22/Sparkle-Appcast-Automation-in-Xcode.html\n\necho \"Creating appcast for Sparkle...\"\n\nDATE=$(/bin/date +\"%a, %d %b %Y %T %z\")\nSIZE=$(/usr/bin/stat -f %z \"${FINAL_IMAGE}\")\nVERSION_NUMBER=$(/usr/bin/defaults read \"${SRC_BUNDLE}/Contents/Info\" CFBundleVersion)\nURL=\"https://sourceforge.net/projects/skim-app/files/${NAME}/${DIST_NAME}/${DIST_NAME}.dmg/download\"\nAPPCAST=\"${HOME}/Desktop/${DIST_NAME}.xml\"\nKEY_NAME=\"${NAME} Sparkle Key\"\nSIGNATURE=$(/usr/bin/openssl dgst -sha1 -binary < \"${FINAL_IMAGE}\" | /usr/bin/openssl dgst -dss1 -sign <(security find-generic-password -g -s \"${KEY_NAME}\" 2>&1 1>/dev/null | perl -pe '($_) = /\"(.+)\"/; s/\\\\012/\\n/g') | /usr/bin/openssl enc -base64)\nif [ $? != 0 ]; then\n\techo \"warning: failed to generate signature.  You need the private key in a secure note named \\\"${KEY_NAME}\\\"\" >&2\nfi\n\n/bin/cat > \"${APPCAST}\" << EOF\n<?xml version=\"1.0\" encoding=\"utf-8\"?> \n<rss version=\"2.0\" xmlns:sparkle=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"  xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n    <channel> \n        <title>${NAME} Changelog</title>\n        <link>https://skim-app.sourceforge.io</link>\n        <description>PDF reader and note-taker</description>\n        <item>\n            <title>Version ${VERSION}</title>\n            <description><![CDATA[\n<h1>Version ${VERSION}</h1>\n\n<h2>New Features</h2>\n<ul>\n<li></li>\n</ul>\n\n<h2>Bugs Fixed</h2>\n<ul>\n<li></li>\n</ul>\n\t\t\t]]></description>\n            <pubDate>${DATE}</pubDate>\n            <sparkle:minimumSystemVersion>10.10.0</sparkle:minimumSystemVersion>\n            <enclosure sparkle:version=\"${VERSION_NUMBER}\" sparkle:shortVersionString=\"${VERSION}\" url=\"${URL}\" sparkle:dsaSignature=\"${SIGNATURE}\" length=\"${SIZE}\" type=\"application/x-apple-diskimage\"/>\n        </item>\n\n    </channel>\n</rss>\nEOF\n\n# reveal the disk image\necho \"Revealing disk image\"\n/usr/bin/open -R \"${FINAL_IMAGE}\"\n\nexit 0\n";
 		};
 		CEE1383C0BCEA63F00BF2D3E /* Run Script: Genstrings */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2537,6 +2641,7 @@
 				4530D7E80B27AAB9007C59F4 /* SKSnapshotWindowController.m in Sources */,
 				4530D7EF0B27AAD6007C59F4 /* SKMainWindowController.m in Sources */,
 				4530D8C90B27B04D007C59F4 /* SKApplicationController.m in Sources */,
+				CE21F736239944990078B257 /* SKColorMenuView.m in Sources */,
 				CE325592226F73810032390F /* SKAnnotationTypeImageView.m in Sources */,
 				4530DCF70B27CACE007C59F4 /* SKPDFView.m in Sources */,
 				CE546FC40B32D5DB00F8AFB6 /* SKNoteWindowController.m in Sources */,
@@ -2559,10 +2664,12 @@
 				CE820AEF21A04EB100AD34BE /* NSWindow_SKExtensions.m in Sources */,
 				CE2DE4EE0B85DB6300D0DA12 /* NSCursor_SKExtensions.m in Sources */,
 				CE2DE4FD0B85DBD400D0DA12 /* SKImageToolTipWindow.m in Sources */,
+				CEE7E77B24426C380034690E /* PDFAnnotationChoiceWidget_SKExtensions.m in Sources */,
 				CE2DE50D0B85DC4000D0DA12 /* PDFPage_SKExtensions.m in Sources */,
 				CE2DEB1C0B8618DE00D0DA12 /* SKFindController.m in Sources */,
 				CE2DED6C0B86334900D0DA12 /* SKFieldEditor.m in Sources */,
 				CEF7117F0B90B58F003A2771 /* SKVersionNumber.m in Sources */,
+				CE05DAA12524C32200BB9288 /* SKColorList.m in Sources */,
 				CEF711A10B90B714003A2771 /* NSUserDefaultsController_SKExtensions.m in Sources */,
 				CE7A3A2D2269CBDE00F1B89B /* SKControlTableCellView.m in Sources */,
 				CEF7175F0B90DF10003A2771 /* SKReleaseNotesController.m in Sources */,
@@ -2576,14 +2683,17 @@
 				CE1E30290BDB9D8E0011D9DD /* NSCharacterSet_SKExtensions.m in Sources */,
 				CE4972510BDE898F00D7F1D2 /* SKMainWindow.m in Sources */,
 				CE49726D0BDE8A7400D7F1D2 /* PDFSelection_SKExtensions.m in Sources */,
+				CE1DFA3D244CF04700D64C83 /* SKShareMenuController.m in Sources */,
 				CE49728B0BDE8B2900D7F1D2 /* SKToolbarItem.m in Sources */,
 				CE454B3E226DEB3C0034FD6B /* SKNoteTableRowView.m in Sources */,
 				CE6C03F10BEDF759007BF0B5 /* NSParagraphStyle_SKExtensions.m in Sources */,
 				CEF8B1AE22B3DE80001062A1 /* SKMainWindowController_FullScreen.m in Sources */,
 				CE31A6180C01FC45003612A9 /* SKDocumentController.m in Sources */,
+				CE426FC9255EDBDE00465569 /* SKViewSettingsController.m in Sources */,
 				F968C5A30C036E9D000BD1B2 /* NSBitmapImageRep_SKExtensions.m in Sources */,
 				CE48BAD80C089EA300A166C6 /* SKTemplateParser.m in Sources */,
 				CE41B2A70C08CFA900E36EB7 /* NSArray_SKExtensions.m in Sources */,
+				CE1CF48523FAA2DD005B5B40 /* SKThumbnailView.m in Sources */,
 				CE41B2CC0C08D17100E36EB7 /* NSValue_SKExtensions.m in Sources */,
 				CE7C20500C259A5D0059E08C /* NSColor_SKExtensions.m in Sources */,
 				CE8B46E90C29CA00005CE7F1 /* SKLineInspector.m in Sources */,
@@ -2594,7 +2704,7 @@
 				CE1ADEBF0C4C341100071840 /* SKTransitionController.m in Sources */,
 				CECDC4FF0C5966A80026AAEC /* NSImage_SKExtensions.m in Sources */,
 				CECDD2990C5B68580026AAEC /* SKCenteredTextFieldCell.m in Sources */,
-				CE2093910C5F9A8D009D3EFB /* SKGradientView.m in Sources */,
+				CE2093910C5F9A8D009D3EFB /* SKTopBarView.m in Sources */,
 				CEAA55800C6DE030006BD633 /* SKDownloadController.m in Sources */,
 				CE3ED121218CAA7900474EF3 /* NSScroller_SKExtensions.m in Sources */,
 				CEAA559E0C6DE235006BD633 /* SKDownload.m in Sources */,
@@ -2609,6 +2719,7 @@
 				CEBD52ED0C9C0AE500FBF6A4 /* SKBookmark.m in Sources */,
 				CEDB6A7A228F596000F93C87 /* SKColorPicker.m in Sources */,
 				CE209FAA0C9D38C6007C72F9 /* SKProgressController.m in Sources */,
+				CE1991E0256C70CD00FC4E25 /* SKRecentDocumentInfo.m in Sources */,
 				CE20B1950C9F23CC007C72F9 /* NSView_SKExtensions.m in Sources */,
 				CE7A3A402269CC5E00F1B89B /* SKProgressTableCellView.m in Sources */,
 				CEAE1C480CA1877F00849B0F /* SKSecondaryPDFView.m in Sources */,
@@ -2629,7 +2740,8 @@
 				CEE54F900DA3FE9A0037169F /* NSValueTransformer_SKExtensions.m in Sources */,
 				CE0859D20DAE912500760AFC /* SKSnapshotPageCell.m in Sources */,
 				CECF61FF0DB258D600587D96 /* SKFontWell.m in Sources */,
-				CEE176E40DBD5B0C00E6C317 /* PDFDisplayView_SKExtensions.m in Sources */,
+				CEE7E77824426C180034690E /* PDFAnnotationButtonWidget_SKExtensions.m in Sources */,
+				CEE176E40DBD5B0C00E6C317 /* PDFDocumentView_SKExtensions.m in Sources */,
 				CECB03D30DC7503A0000B16B /* SKGroupedSearchResult.m in Sources */,
 				CEEC0A0A0DCB2594003DD9B6 /* SKMainWindowController_UI.m in Sources */,
 				CE0EB4D60DD054DC0034DF92 /* NSInvocation_SKExtensions.m in Sources */,
@@ -2660,6 +2772,7 @@
 				CEE0F5EB0EBB3DEC000A7A8C /* SKLevelIndicatorCell.m in Sources */,
 				CE0A3C8E0EBF3AAA00526C74 /* NSResponder_SKExtensions.m in Sources */,
 				CE32531F0F4723EA0021BADD /* SKMainWindowController_Actions.m in Sources */,
+				CEE7E76524426BFF0034690E /* PDFAnnotationTextWidget_SKExtensions.m in Sources */,
 				CE9B804A1030642400EA8774 /* SKTransitionInfo.m in Sources */,
 				CEFBC96A103C5CBF00535C74 /* SKFormatCommand.m in Sources */,
 				CEA2045F1050233E008E082B /* SKPrintAccessoryController.m in Sources */,
@@ -2670,9 +2783,11 @@
 				CE42B8EC106996C60091F588 /* NSPointerArray_SKExtensions.m in Sources */,
 				CEA3DF6E106BDAC1002FB3DB /* SKFloatMapTable.m in Sources */,
 				CEE73ECE106CEC1900419544 /* SKSeparatorView.m in Sources */,
+				CE1CF47223FAA1D7005B5B40 /* SKThumbnailItem.m in Sources */,
 				CE0AEDC3107A137C000C075E /* SKColorCell.m in Sources */,
 				CE455394111DA4290060CAC9 /* SKImageToolTipContext.m in Sources */,
 				CE099663112577A000EDB88F /* SKNotesPage.m in Sources */,
+				CE91C7962449F56600D04039 /* SKFileShare.m in Sources */,
 				CE24875C112C9651006B4FA5 /* NSFont_SKExtensions.m in Sources */,
 				CEF60CE3114C01CA0074ACC4 /* SKLocalization.m in Sources */,
 				CE454B51226E33150034FD6B /* SKHighlightingTableRowView.m in Sources */,
@@ -2691,6 +2806,7 @@
 				CE121AC81180644A00951425 /* SKScriptMenu.m in Sources */,
 				CEFDEA9111F6FF8300D6FEBA /* NSScreen_SKExtensions.m in Sources */,
 				CE1C77B6123FB41E00C73F1A /* SKNoteTextView.m in Sources */,
+				CE863881250FDB9A004C7526 /* SKReflectionView.m in Sources */,
 				CE94D17B125535DE0053A520 /* synctex_parser_utils.m in Sources */,
 				CE1D798F129FE44E00EA3AF0 /* NSScriptCommand_SKExtensions.m in Sources */,
 				CE4E1E9A12BCFF5A005227ED /* HIDRemote.m in Sources */,
@@ -2708,12 +2824,11 @@
 				CE40D6161677A9DC00573882 /* SKTextNoteEditor.m in Sources */,
 				CE2083E416ADFFD600BC5AFB /* SKAlias.m in Sources */,
 				CE26175F16CCFC4900BDCE7C /* SKSyncDot.m in Sources */,
+				CEA5BAFE2424CAE100801B2E /* SKOverviewView.m in Sources */,
 				CE19641516E811D40027E2CF /* SKSnapshotWindow.m in Sources */,
-				CE7A30481822B950007E3D25 /* SKTextNoteField.m in Sources */,
 				CED76F011A1825DE00D1ACA4 /* SKScrollView.m in Sources */,
 				CE5234A61A6424F200710CF2 /* NSShadow_SKExtensions.m in Sources */,
 				CEEB32831AC30ECA00BDB4E8 /* SKScroller.m in Sources */,
-				CE1D28D122E7B2150061D93F /* NSAlert_SKExtensions.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2797,6 +2912,24 @@
 				CE1632C01582AC7000CFF419 /* zh_CN */,
 			);
 			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		CE0D370724323E2100451593 /* SpeedSheet.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				CE0D370824323E2100451593 /* en */,
+				CE0D371A24323E3900451593 /* nl */,
+				CE0D371B24323E3E00451593 /* fr */,
+				CE0D371C24323E4000451593 /* de */,
+				CE0D371D24323E4200451593 /* it */,
+				CE0D371E24323E4500451593 /* ru */,
+				CE0D371F24323E4900451593 /* es */,
+				CE0D372124323E5200451593 /* pl */,
+				CE0D372224323E5400451593 /* ja */,
+				CE0D37242432410700451593 /* zh_CN */,
+				CE0D37252432411900451593 /* zh_TW */,
+			);
+			name = SpeedSheet.strings;
 			sourceTree = "<group>";
 		};
 		CE0E84C6114D516F00E37F38 /* SyncPreferences.strings */ = {
@@ -2889,6 +3022,24 @@
 			name = ExportAccessoryView.strings;
 			sourceTree = "<group>";
 		};
+		CE13EC01255F41CA000F47CF /* ViewSettings.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				CE13EC02255F41CA000F47CF /* en */,
+				CE13EC14255F41D5000F47CF /* nl */,
+				CE13EC15255F41EC000F47CF /* de */,
+				CE13EC16255F41EE000F47CF /* fr */,
+				CE13EC17255F41F0000F47CF /* it */,
+				CE13EC18255F41F2000F47CF /* es */,
+				CE13EC19255F41F6000F47CF /* pl */,
+				CE13EC1A255F41F7000F47CF /* ru */,
+				CE13EC1B255F4200000F47CF /* zh_TW */,
+				CE13EC1D255F42DA000F47CF /* zh_CN */,
+				CE13EC1E255F42E9000F47CF /* ja */,
+			);
+			name = ViewSettings.strings;
+			sourceTree = "<group>";
+		};
 		CE4F9DEC0BC1BE3A005BE0A1 /* Localizable.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -2905,6 +3056,15 @@
 				CE1632C21582AC7B00CFF419 /* zh_CN */,
 			);
 			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		CE5545BE248DA3B000BEEAF0 /* skim.texi */ = {
+			isa = PBXVariantGroup;
+			children = (
+				CE5545BF248DA3B000BEEAF0 /* en */,
+				CE5545D1248DA3C200BEEAF0 /* nl */,
+			);
+			name = skim.texi;
 			sourceTree = "<group>";
 		};
 		CE67BB240BC44AC9007B6929 /* ZoomValues.strings */ = {
@@ -3274,7 +3434,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = CE17EE460E24ED7C00DE06EA /* Skim-App.xcconfig */;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 129;
 			};
 			name = Debug;
 		};
@@ -3282,7 +3442,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = CE17EE460E24ED7C00DE06EA /* Skim-App.xcconfig */;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 129;
 			};
 			name = Release;
 		};

@@ -5,9 +5,9 @@
 	<key>RegisteredDefaults</key>
 	<dict>
 		<key>SKBackgroundColor</key>
-		<data>BAt0eXBlZHN0cmVhbYED6IQBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMDhAJmZoM/AAAAAYY=</data>
+		<data>BAtzdHJlYW10eXBlZIHoA4QBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMGhANAQECEhIQITlNTdHJpbmcBlIQBKwZTeXN0ZW2GhJaYGHVuZGVyUGFnZUJhY2tncm91bmRDb2xvcoaEk5UDhAJmZoOOSxo/AYaG</data>
 		<key>SKFullScreenBackgroundColor</key>
-		<data>BAt0eXBlZHN0cmVhbYED6IQBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMDhAJmZoM+gAAAAYY=</data>
+		<data>BAtzdHJlYW10eXBlZIHoA4QBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMGhANAQECEhIQITlNTdHJpbmcBlIQBKwZTeXN0ZW2GhJaYGHVuZGVyUGFnZUJhY2tncm91bmRDb2xvcoaEk5UDhAJmZoOOSxo/AYaG</data>
 		<key>SKDarkBackgroundColor</key>
 		<data></data>
 		<key>SKDarkFullScreenBackgroundColor</key>
@@ -32,15 +32,21 @@
 			<false/>
 			<key>displaysPageBreaks</key>
 			<true/>
+			<key>displaysRTL</key>
+			<false/>
 			<key>displaysAsBook</key>
 			<true/>
 			<key>displayMode</key>
 			<integer>1</integer>
+			<key>displayDirection</key>
+			<integer>0</integer>
 			<key>displayBox</key>
 			<integer>1</integer>
 		</dict>
 		<key>SKDefaultFullScreenPDFDisplaySettings</key>
 		<dict/>
+		<key>SKWriteLegacySkimNotes</key>
+		<false/>
 		<key>SKAutoSaveSkimNotes</key>
 		<false/>
 		<key>SKSnapshotsOnTop</key>
@@ -49,12 +55,6 @@
 		<real>128</real>
 		<key>SKThumbnailSize</key>
 		<real>128</real>
-		<key>SKUpdateCheckInterval</key>
-		<integer>1</integer>
-		<key>SKUpdateCheckLastDate</key>
-		<string></string>
-		<key>SKUpdateLatestNotifiedVersion</key>
-		<string></string>
 		<key>SKLastToolMode</key>
 		<integer>0</integer>
 		<key>SKLastAnnotationMode</key>
@@ -67,6 +67,8 @@
 		<real>3</real>
 		<key>SKShouldAntiAlias</key>
 		<true/>
+		<key>SKInterpolationQuality</key>
+		<integer>0</integer>
 		<key>SKReadingBarColor</key>
 		<data>BAt0eXBlZHN0cmVhbYED6IQBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMBhARmZmZmAQEAAYY=</data>
 		<key>SKReadingBarInvert</key>
@@ -153,34 +155,6 @@
 		<string>mate</string>
 		<key>SKTeXEditorArguments</key>
 		<string>-l %line &quot;%file&quot;</string>
-		<key>SKNoteColumns</key>
-		<array>
-			<string>note</string>
-			<string>type</string>
-			<string>color</string>
-			<string>page</string>
-		</array>
-		<key>SKNoteColumnWidths</key>
-		<dict>
-			<key>author</key>
-			<real>32</real>
-			<key>date</key>
-			<real>32</real>
-		</dict>
-		<key>SKNotesDocumentColumns</key>
-		<array>
-			<string>note</string>
-			<string>type</string>
-			<string>color</string>
-			<string>page</string>
-		</array>
-		<key>SKNotesDocumentColumnWidths</key>
-		<dict>
-			<key>author</key>
-			<real>64</real>
-			<key>date</key>
-			<real>64</real>
-		</dict>
 		<key>SKSwatchColors</key>
 		<array>
 			<data>BAt0eXBlZHN0cmVhbYED6IQBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMBhARmZmZmAQAAAYY=</data>
@@ -248,6 +222,8 @@
 		<false/>
 		<key>SKCaseInsensitiveNoteSearch</key>
 		<true/>
+		<key>SKCaseInsensitiveFilter</key>
+		<true/>
 		<key>SKCaseInsensitiveFind</key>
 		<true/>
 	</dict>
@@ -262,6 +238,7 @@
 			<string>SKRememberSnapshots</string>
 			<string>SKDefaultPDFDisplaySettings</string>
 			<string>SKDefaultFullScreenPDFDisplaySettings</string>
+			<string>SKWriteLegacySkimNotes</string>
 			<string>SKAutoSaveSkimNotes</string>
 			<string>SKSnapshotsOnTop</string>
 			<string>SKSavePasswordOption</string>
@@ -272,6 +249,7 @@
 			<string>SKSnapshotThumbnailSize</string>
 			<string>SKTableFontSize</string>
 			<string>SKShouldAntiAlias</string>
+			<string>SKInterpolationQuality</string>
 			<string>SKGreekingThreshold</string>
 			<string>SKBackgroundColor</string>
 			<string>SKFullScreenBackgroundColor</string>
@@ -335,8 +313,6 @@
 			<string>SKLastAnnotationMode</string>
 			<string>SKLastSecondarySelectsText</string>
 			<string>SKBlankAllScreensInFullScreen</string>
-			<string>SKActivateFullScreenNavigationAtBottom</string>
-			<string>SKActivatePresentationNavigationAtBottom</string>
 			<string>SKReadMissingNotesFromSkimFileOption</string>
 			<string>SKReadNonMissingNotesFromSkimFileOption</string>
 			<string>SKEnableAppleRemote</string>
@@ -388,6 +364,14 @@
 		<dict>
 			<key>name</key>
 			<string>Emacs</string>
+			<key>command</key>
+			<string>emacsclient</string>
+			<key>arguments</key>
+			<string>--no-wait +%line &quot;%file&quot;</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>EmacsMac</string>
 			<key>command</key>
 			<string>emacsclient</string>
 			<key>arguments</key>

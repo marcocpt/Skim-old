@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 8/11/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,6 @@
 #import "NSString_SKExtensions.h"
 #import "NSImage_SKExtensions.h"
 #import "NSURL_SKExtensions.h"
-#import "NSURLSession_SKForwardDeclarations.h"
 
 NSString *SKDownloadFileNameKey = @"fileName";
 NSString *SKDownloadFileURLKey = @"fileURL";
@@ -66,12 +65,9 @@ NSString *SKDownloadStatusKey = @"status";
 
 static NSSet *keysAffectedByStatus = nil;
 
-static BOOL usesSession = NO;
-
 + (void)initialize {
     SKINITIALIZE;
     keysAffectedByStatus = [[NSSet alloc] initWithObjects:@"downloading", @"statusDescription", @"cancelImage", @"resumeImage", @"cancelToolTip", @"resumeToolTip", nil];
-    usesSession = Nil != NSClassFromString(@"NSURLSession");
 }
 
 + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
@@ -88,7 +84,7 @@ static BOOL usesSession = NO;
 + (NSImage *)deleteImage {
     static NSImage *deleteImage = nil;
     if (deleteImage == nil) {
-        deleteImage = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) drawingHandler:^(NSRect rect){
+        deleteImage = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) flipped:NO drawingHandler:^(NSRect rect){
             [[[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kToolbarDeleteIcon)] drawInRect:NSMakeRect(-2.0, -1.0, 20.0, 20.0) fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
             return YES;
         }] retain];
@@ -99,21 +95,11 @@ static BOOL usesSession = NO;
 + (NSImage *)cancelImage {
     static NSImage *cancelImage = nil;
     if (cancelImage == nil) {
-        cancelImage = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) drawingHandler:^(NSRect rect){
-            if (RUNNING_AFTER(10_9)) {
-                [[NSImage imageNamed:NSImageNameStopProgressFreestandingTemplate] drawInRect:NSInsetRect(rect, 1.0, 1.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
-            } else {
-                [[NSColor lightGrayColor] setFill];
-                [[NSBezierPath bezierPathWithRect:NSInsetRect(rect, 1.0, 1.0)] fill];
-                [[NSImage imageNamed:NSImageNameStopProgressFreestandingTemplate] drawInRect:NSInsetRect(rect, 1.0, 1.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
-                [[NSGraphicsContext currentContext] setCompositingOperation:NSCompositeDestinationOver];
-                [[NSColor whiteColor] setFill];
-                [[NSBezierPath bezierPathWithOvalInRect:NSInsetRect(rect, 2.0, 2.0)] fill];
-            }
+        cancelImage = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) flipped:NO drawingHandler:^(NSRect rect){
+            [[NSImage imageNamed:NSImageNameStopProgressFreestandingTemplate] drawInRect:NSInsetRect(rect, 1.0, 1.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
             return YES;
         }] retain];
-        if (RUNNING_AFTER(10_9))
-            [cancelImage setTemplate:YES];
+        [cancelImage setTemplate:YES];
     }
     return cancelImage;
 }
@@ -121,21 +107,11 @@ static BOOL usesSession = NO;
 + (NSImage *)resumeImage {
     static NSImage *resumeImage = nil;
     if (resumeImage == nil) {
-        resumeImage = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) drawingHandler:^(NSRect rect){
-            if (RUNNING_AFTER(10_9)) {
-                [[NSImage imageNamed:NSImageNameRefreshFreestandingTemplate] drawInRect:NSInsetRect(rect, 1.0, 1.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
-            } else {
-                [[NSColor lightGrayColor] setFill];
-                [[NSBezierPath bezierPathWithRect:NSInsetRect(rect, 1.0, 1.0)] fill];
-                [[NSImage imageNamed:NSImageNameRefreshFreestandingTemplate] drawInRect:NSInsetRect(rect, 1.0, 1.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
-                [[NSGraphicsContext currentContext] setCompositingOperation:NSCompositeDestinationOver];
-                [[NSColor whiteColor] setFill];
-                [[NSBezierPath bezierPathWithOvalInRect:NSInsetRect(rect, 2.0, 2.0)] fill];
-            }
+        resumeImage = [[NSImage imageWithSize:NSMakeSize(16.0, 16.0) flipped:NO drawingHandler:^(NSRect rect){
+            [[NSImage imageNamed:NSImageNameRefreshFreestandingTemplate] drawInRect:NSInsetRect(rect, 1.0, 1.0) fromRect:NSZeroRect operation:NSCompositeDestinationAtop fraction:1.0];
             return YES;
         }] retain];
-        if (RUNNING_AFTER(10_9))
-            [resumeImage setTemplate:YES];
+        [resumeImage setTemplate:YES];
     }
     return resumeImage;
 }
@@ -171,7 +147,7 @@ static BOOL usesSession = NO;
         receivedContentLength = [[properties objectForKey:@"receivedContentLength"] longLongValue];
         status = [[properties objectForKey:@"status"] integerValue];
         resumeData = nil;
-        if ((usesSession ? fileURL == nil : [fileURL checkResourceIsReachableAndReturnError:NULL]))
+        if (fileURL == nil)
             resumeData = [[properties objectForKey:@"resumeData"] retain];
     }
     return self;
@@ -206,9 +182,8 @@ static BOOL usesSession = NO;
     [dict setValue:[NSNumber numberWithLongLong:expectedContentLength] forKey:@"expectedContentLength"];
     [dict setValue:[NSNumber numberWithLongLong:receivedContentLength] forKey:@"receivedContentLength"];
     [dict setValue:[[self fileURL] path] forKey:@"file"];
-    if ([self status] == SKDownloadStatusCanceled ||
-        (usesSession && [self status] == SKDownloadStatusFailed))
-            [dict setValue:resumeData forKey:@"resumeData"];
+    if ([self status] == SKDownloadStatusCanceled || [self status] == SKDownloadStatusFailed)
+        [dict setValue:resumeData forKey:@"resumeData"];
     return dict;
 }
 
@@ -221,7 +196,7 @@ static BOOL usesSession = NO;
         } else {
             fileName = [URL host];
             if (fileName == nil)
-                fileName = [[[URL resourceSpecifier] lastPathComponent] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+                fileName = [[[URL resourceSpecifier] lastPathComponent] stringByRemovingPercentEncoding];
         }
     }
     return fileName;
@@ -308,13 +283,14 @@ static BOOL usesSession = NO;
     [self setReceivedContentLength:0];
     receivedResponse = NO;
     downloadTask = [[SKDownloadController sharedDownloadController] newDownloadTaskForDownload:self];
-    [self setStatus:[downloadTask isKindOfClass:[NSURLDownload class]] ? SKDownloadStatusStarting : SKDownloadStatusDownloading];
+    [self setStatus:SKDownloadStatusDownloading];
 }
 
 - (void)cancel {
     if ([self canCancel]) {
         
-        [[SKDownloadController sharedDownloadController] cancelDownloadTask:downloadTask forDownload:self];
+        [downloadTask cancelByProducingResumeData:^(NSData *data){ [self setResumeData:data]; }];
+        [[SKDownloadController sharedDownloadController] removeDownloadTask:downloadTask];
         SKDESTROY(downloadTask);
         [self setStatus:SKDownloadStatusCanceled];
     }
@@ -323,8 +299,7 @@ static BOOL usesSession = NO;
 - (void)resume {
     if ([self canResume]) {
         
-        if (resumeData &&
-            (usesSession || ([self status] == SKDownloadStatusCanceled && [[self fileURL] checkResourceIsReachableAndReturnError:NULL]))) {
+        if (resumeData) {
             
             receivedResponse = NO;
             [downloadTask release];
@@ -337,6 +312,8 @@ static BOOL usesSession = NO;
             [self cleanup];
             [self setFileURL:nil];
             if (downloadTask) {
+                if ([downloadTask state] < NSURLSessionTaskStateCanceling)
+                    [downloadTask cancel];
                 [[SKDownloadController sharedDownloadController] removeDownloadTask:downloadTask];
                 SKDESTROY(downloadTask);
             }
@@ -354,13 +331,8 @@ static BOOL usesSession = NO;
 }
 
 - (void)moveToTrash {
-    if ([self canRemove] && fileURL) {
-        NSURL *folderURL = [fileURL URLByDeletingLastPathComponent];
-        NSString *fileName = [fileURL lastPathComponent];
-        NSInteger tag = 0;
-        
-        [[NSWorkspace sharedWorkspace] performFileOperation:NSWorkspaceRecycleOperation source:[folderURL path] destination:@"" files:[NSArray arrayWithObjects:fileName, nil] tag:&tag];
-    }
+    if ([self canRemove] && fileURL)
+        [[NSWorkspace sharedWorkspace] recycleURLs:[NSArray arrayWithObjects:fileURL, nil] completionHandler:NULL];
 }
 
 - (BOOL)canCancel {
@@ -419,62 +391,13 @@ static BOOL usesSession = NO;
         return nil;
 }
 
-#pragma mark NSURLDownloadDelegate protocol
-
-- (void)downloadDidBegin:(NSURLDownload *)download{
-    [self setStatus:SKDownloadStatusDownloading];
-}
-
-- (void)download:(NSURLDownload *)download didReceiveResponse:(NSURLResponse *)response {
-    [self setExpectedContentLength:[response expectedContentLength]];
-    
-    CFStringRef UTI = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, (CFStringRef)[response MIMEType], kUTTypeData);
-    if (UTI) {
-        NSString *type = [[NSWorkspace sharedWorkspace] preferredFilenameExtensionForType:(NSString *)UTI];
-        if (type)
-            [self setFileIcon:[[NSWorkspace sharedWorkspace] iconForFileType:type]];
-        CFRelease(UTI);
-    }
-}
-
-- (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename {
-    NSString *downloadDir = [[[NSUserDefaults standardUserDefaults] stringForKey:SKDownloadsDirectoryKey] stringByExpandingTildeInPath];
-    BOOL isDir;
-    if ([[NSFileManager defaultManager] fileExistsAtPath:downloadDir isDirectory:&isDir] == NO || isDir == NO)
-        downloadDir = [[[NSFileManager defaultManager] URLForDirectory:NSDownloadsDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:NULL] path];
-    [download setDestination:[downloadDir stringByAppendingPathComponent:filename] allowOverwrite:YES];
-}
-
-- (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path {
-    [self setFileURL:[NSURL fileURLWithPath:path isDirectory:NO]];
-}
-
-- (void)download:(NSURLDownload *)download didReceiveDataOfLength:(NSUInteger)length {
-    if (expectedContentLength > 0) {
-        [self setReceivedContentLength:[self receivedContentLength] + length];
-    }
-}
-
-- (void)downloadDidFinish:(NSURLDownload *)download {
-    SKDESTROY(downloadTask);
-    [self setStatus:SKDownloadStatusFinished];
-}
-
-- (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error {
-    if (fileURL)
-        [[NSFileManager defaultManager] removeItemAtURL:fileURL error:NULL];
-    SKDESTROY(downloadTask);
-    [self setFileURL:nil];
-    [self setStatus:SKDownloadStatusFailed];
-}
-
 #pragma mark SKURLDownloadTaskDelegate
 
-- (void)downloadTask:(NSURLSessionDownloadTask *)task didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
+- (void)downloadDidWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
     
-    if ([task response] && receivedResponse == NO) {
+    if ([downloadTask response] && receivedResponse == NO) {
         receivedResponse = YES;
-        CFStringRef UTI = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, (CFStringRef)[[task response] MIMEType], kUTTypeData);
+        CFStringRef UTI = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, (CFStringRef)[[downloadTask response] MIMEType], kUTTypeData);
         if (UTI) {
             NSString *type = [[NSWorkspace sharedWorkspace] preferredFilenameExtensionForType:(NSString *)UTI];
             if (type)
@@ -489,8 +412,8 @@ static BOOL usesSession = NO;
         [self setReceivedContentLength:totalBytesWritten];
 }
 
-- (void)downloadTask:(NSURLSessionDownloadTask *)task didFinishDownloadingToURL:(NSURL *)location {
-    NSString *filename = [[task response] suggestedFilename] ?: [location lastPathComponent];
+- (void)downloadDidFinishDownloadingToURL:(NSURL *)location {
+    NSString *filename = [[downloadTask response] suggestedFilename] ?: [location lastPathComponent];
     NSString *downloadDir = [[[NSUserDefaults standardUserDefaults] stringForKey:SKDownloadsDirectoryKey] stringByExpandingTildeInPath];
     NSURL *downloadURL = nil;
     BOOL isDir;
@@ -498,7 +421,7 @@ static BOOL usesSession = NO;
         downloadURL = [NSURL fileURLWithPath:downloadDir isDirectory:NO];
     else
         downloadURL = [[NSFileManager defaultManager] URLForDirectory:NSDownloadsDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:NULL];
-    NSURL *destinationURL = [[downloadURL URLByAppendingPathComponent:filename] uniqueFileURL];
+    NSURL *destinationURL = [[downloadURL URLByAppendingPathComponent:filename isDirectory:NO] uniqueFileURL];
     NSError *error = nil;
     NSFileManager *fm = [NSFileManager defaultManager];
     if ([[destinationURL URLByDeletingLastPathComponent] checkResourceIsReachableAndReturnError:NULL] == NO)
@@ -509,7 +432,7 @@ static BOOL usesSession = NO;
     [self setStatus:success ? SKDownloadStatusFinished : SKDownloadStatusFailed];
 }
 
-- (void)downloadTask:(NSURLSessionDownloadTask *)task didFailWithError:(NSError *)error {
+- (void)downloadDidFailWithError:(NSError *)error {
     SKDESTROY(downloadTask);
     [self setFileURL:nil];
     [self setStatus:SKDownloadStatusFailed];

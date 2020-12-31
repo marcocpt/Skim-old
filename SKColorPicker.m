@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 17/05/2019.
 /*
- This software is Copyright (c) 2019
+ This software is Copyright (c) 2019-2020
  Christiaan Hofman. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 #import "SKColorPicker.h"
 #import "SKColorCell.h"
 #import "SKStringConstants.h"
-#import "NSValueTransformer_SKExtensions.h"
+#import "NSColor_SKExtensions.h"
 #import "NSUserDefaultsController_SKExtensions.h"
 
 #define COLOR_IDENTIFIER @"color"
@@ -66,13 +66,13 @@ static char SKColorPickerDefaultsObservationContext;
 #pragma clang diagnostic pop
         
         NSView *view = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 180, 30.0)] autorelease];
-        NSMutableArray *constraints = [NSMutableArray array];
+        NSArray *constraints = [NSArray arrayWithObjects:
+            [NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0],
+            [NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeTrailing relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeTrailing multiplier:1.0 constant:0.0],
+            [NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeCenterY multiplier:1.0 constant:0.0],
+            [NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:0.0 constant:22.0], nil];
         [scrubber setTranslatesAutoresizingMaskIntoConstraints:NO];
         [view addSubview:scrubber];
-        [constraints addObject:[NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0]];
-        [constraints addObject:[NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeTrailing relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeTrailing multiplier:1.0 constant:0.0]];
-        [constraints addObject:[NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeCenterY multiplier:1.0 constant:0.0]];
-        [constraints addObject:[NSLayoutConstraint constraintWithItem:scrubber attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:1.0 constant:22.0]];
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
         [NSLayoutConstraint activateConstraints:constraints];
@@ -95,8 +95,7 @@ static char SKColorPickerDefaultsObservationContext;
 
 - (NSArray *)colors {
     if (colors == nil) {
-        NSValueTransformer *transformer = [NSValueTransformer valueTransformerForName:SKUnarchiveFromDataArrayTransformerName];
-        colors = [[transformer transformedValue:[[NSUserDefaults standardUserDefaults] objectForKey:SKSwatchColorsKey]] retain];
+        colors = [[NSColor favoriteColors] retain];
     }
     return colors;
 }

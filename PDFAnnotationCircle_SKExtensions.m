@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/1/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -77,6 +77,8 @@ NSString *SKPDFAnnotationScriptingInteriorColorKey = @"scriptingInteriorColor";
 
 - (BOOL)isMovable { return [self isSkimNote]; }
 
+- (BOOL)hasInteriorColor { return [self isSkimNote]; }
+
 - (BOOL)isConvertibleAnnotation { return YES; }
 
 - (BOOL)hitTest:(NSPoint)point {
@@ -86,13 +88,26 @@ NSString *SKPDFAnnotationScriptingInteriorColorKey = @"scriptingInteriorColor";
     NSRect bounds = [self bounds];
     CGFloat dx = 2.0 * (point.x - NSMidX(bounds)) / NSWidth(bounds);
     CGFloat dy = 2.0 * (point.y - NSMidY(bounds)) / NSHeight(bounds);
-    return dx * dx + dy * dy <= 1.0;
+    if (dx * dx + dy * dy > 1.0)
+        return NO;
+    
+    if ([self interiorColor])
+        return YES;
+    
+    CGFloat delta = fmax(8.0, [self lineWidth]);
+    if (NSWidth(bounds) <= 2.0 * delta || NSHeight(bounds) <= 2.0 * delta)
+        return YES;
+    
+    bounds = NSInsetRect(bounds, delta, delta);
+    dx = 2.0 * (point.x - NSMidX(bounds)) / NSWidth(bounds);
+    dy = 2.0 * (point.y - NSMidY(bounds)) / NSHeight(bounds);
+    return dx * dx + dy * dy >= 1.0;
 }
 
 - (void)autoUpdateString {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableUpdateContentsFromEnclosedTextKey])
         return;
-    // this calculation is roughly the inverse of -[PDFView addAnnotationWithType:selection:event:]
+    // this calculation is roughly the inverse of -[PDFView addAnnotationWithType:context:]
     NSRect bounds = NSInsetRect([self bounds], [self lineWidth] - 1.0, [self lineWidth] - 1.0);
     CGFloat t, w = NSWidth(bounds), h = NSWidth(bounds);
     if (w <= 0.0 || h <= 0.0)

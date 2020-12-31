@@ -1,5 +1,5 @@
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -80,7 +80,7 @@ static NSTextStorage *createTextStorage()
     // retained by text storage
     [lm release];
     // see header; the CircleView example sets it to NO
-    [lm setUsesScreenFonts:YES];
+    //[lm setUsesScreenFonts:YES];
 
     return textStorage;
 }
@@ -169,7 +169,8 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
         NSData *data = [[NSData alloc] initWithContentsOfURL:(NSURL *)url options:NSUncachedRead error:NULL];
         
         if (data) {
-            NSAttributedString *attrString = [SKQLConverter attributedStringWithNotes:[NSKeyedUnarchiver unarchiveObjectWithData:data] forThumbnail:thumbnail];
+            NSArray *notes = [SKQLConverter notesWithData:data];
+            NSAttributedString *attrString = [SKQLConverter attributedStringWithNotes:notes forThumbnail:thumbnail];
             [data release];
             
             if (attrString) {
@@ -194,25 +195,24 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
     /* fallback case: draw the file icon using Icon Services */
     if (false == didGenerate) {
         
-        FSRef fileRef;
-        OSStatus err;
-        if (CFURLGetFSRef(url, &fileRef))
-            err = noErr;
-        else
-            err = fnfErr;
+        CFStringRef path = CFURLCopyPath(url);
+        NSImage *icon = [[NSWorkspace sharedWorkspace] iconForFile:(NSString *)path];
+        CFRelease(path);
         
-        IconRef iconRef;
-        CGRect rect = CGRectZero;
-        CGFloat side = MIN(maximumSize.width, maximumSize.height);
-        rect.size.width = side;
-        rect.size.height = side;
-        if (noErr == err)
-            err = GetIconRefFromFileInfo(&fileRef, 0, NULL, kFSCatInfoNone, NULL, kIconServicesNormalUsageFlag, &iconRef, NULL);
-        if (noErr == err) {
-            CGContextRef ctxt = QLThumbnailRequestCreateContext(thumbnail, rect.size, TRUE, NULL);
-            (void)PlotIconRefInContext(ctxt, &rect, kAlignAbsoluteCenter, kTransformNone, NULL, kPlotIconRefNormalFlags, iconRef);
+        if (icon) {
+            CGFloat side = MIN(maximumSize.width, maximumSize.height);
+            NSRect rect = NSMakeRect(0.0, 0.0, side, side);
+            CGContextRef ctxt = QLThumbnailRequestCreateContext(thumbnail, rect.size, FALSE, NULL);
+            NSGraphicsContext *nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:ctxt flipped:NO];
+            [NSGraphicsContext saveGraphicsState];
+            [NSGraphicsContext setCurrentContext:nsContext];
+            
+            [icon drawInRect:rect];
+            
+            QLThumbnailRequestFlushContext(thumbnail, ctxt);
             CGContextRelease(ctxt);
-            ReleaseIconRef(iconRef);
+            
+            [NSGraphicsContext restoreGraphicsState];
         }
     }
     [pool release];

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/17/08.
 /*
- This software is Copyright (c) 2008-2019
+ This software is Copyright (c) 2008-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,6 @@ typedef struct _SKLanguageDirections {
 - (NSArray *)fileIDStrings;
 - (NSDictionary *)initialSettings;
 - (SKLanguageDirections)languageDirections;
-/// 允许创建或修改笔记
 - (BOOL)allowsNotes;
 - (BOOL)realAllowsCommenting;
 - (NSDocument *)containingDocument;

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/10/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,6 @@
 #import "NSView_SKExtensions.h"
 #import "NSGraphics_SKExtensions.h"
 #import "NSGeometry_SKExtensions.h"
-#import "NSAlert_SKExtensions.h"
 
 
 #define SKPreferencesToolbarIdentifier @"SKPreferencesToolbarIdentifier"
@@ -135,7 +134,7 @@ static SKPreferenceController *sharedPrefenceController = nil;
         NSView *contentView = [window contentView];
         NSView *oldView = [currentPane view];
         NSView *view = [pane view];
-        NSRect frame = SKShrinkRect([window frame],  NSHeight([contentView frame]) - NSMaxY([view frame]), NSMinYEdge);
+        NSRect frame = SKShrinkRect([window frame],  NSHeight([contentView frame]) - NSHeight([view frame]) - BOTTOM_MARGIN, NSMinYEdge);
         
         // make sure edits are committed
         [currentPane commitEditing];
@@ -149,15 +148,24 @@ static SKPreferenceController *sharedPrefenceController = nil;
         
         [panesButton setSelectedSegment:[preferencePanes indexOfObject:currentPane]];
         
+        NSArray *constraints = [NSArray arrayWithObjects:
+            [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:contentView attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0],
+            [NSLayoutConstraint constraintWithItem:contentView attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeBottom multiplier:1.0 constant:BOTTOM_MARGIN],
+            [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationGreaterThanOrEqual toItem:contentView attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0],
+            [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:contentView attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0], nil];
+        [[constraints lastObject] setPriority:NSLayoutPriorityDefaultLow];
+        
         if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableAnimationsKey]) {
             [contentView replaceSubview:oldView with:view];
+            [NSLayoutConstraint activateConstraints:constraints];
             [window setFrame:frame display:YES];
         } else {
-            NSTimeInterval duration = [window animationResizeTime:frame];
+            NSTimeInterval duration = fmax(0.25, [window animationResizeTime:frame]);
             [contentView displayIfNeeded];
             [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context){
                     [context setDuration:duration];
                     [[contentView animator] replaceSubview:oldView with:view];
+                    [NSLayoutConstraint activateConstraints:constraints];
                     [[window animator] setFrame:frame display:YES];
                 }
                 completionHandler:^{}];
@@ -167,6 +175,7 @@ static SKPreferenceController *sharedPrefenceController = nil;
 
 - (void)windowDidLoad {
     NSWindow *window = [self window];
+    NSView *contentView = [window contentView];
     NSToolbar *toolbar = [[[NSToolbar alloc] initWithIdentifier:SKPreferencesToolbarIdentifier] autorelease];
     
     [toolbar setAllowsUserCustomization:NO];
@@ -176,7 +185,7 @@ static SKPreferenceController *sharedPrefenceController = nil;
     [window setToolbar:toolbar];
     [window setShowsToolbarButton:NO];
     
-    [[window contentView] setWantsLayer:YES];
+    [contentView setWantsLayer:YES];
     
     // we want to restore the top of the window, while without the force it restores the bottom position without the size
     [window setFrameUsingName:SKPreferenceWindowFrameAutosaveName force:YES];
@@ -193,16 +202,6 @@ static SKPreferenceController *sharedPrefenceController = nil;
         width = fmax(width, size.width);
         [view setFrameSize:size];
     }
-    for (pane in preferencePanes) {
-        view = [pane view];
-        frame.origin = NSMakePoint(0.0, BOTTOM_MARGIN);
-        frame.size = [view frame].size;
-        if (([view autoresizingMask] & NSViewWidthSizable))
-            frame.size.width = width;
-        else
-            frame.origin.x = floor(0.5 * (width - NSWidth(frame)));
-        [view setFrame:frame];
-    }
     
     currentPane = [self preferencePaneForItemIdentifier:[[NSUserDefaults standardUserDefaults] stringForKey:SKLastSelectedPreferencePaneKey]] ?: [preferencePanes objectAtIndex:0];
     [toolbar setSelectedItemIdentifier:[currentPane nibName]];
@@ -212,10 +211,18 @@ static SKPreferenceController *sharedPrefenceController = nil;
     view = [currentPane view];
     frame = [window frame];
     frame.size.width = width;
-    frame = SKShrinkRect(frame, NSHeight([[window contentView] frame]) - NSMaxY([view frame]), NSMinYEdge);
+    frame = SKShrinkRect(frame, NSHeight([[window contentView] frame]) - NSHeight([view frame]) - BOTTOM_MARGIN, NSMinYEdge);
     [window setFrame:frame display:NO];
     
     [[window contentView] addSubview:view];
+    
+    NSArray *constraints = [NSArray arrayWithObjects:
+        [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:contentView attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0],
+        [NSLayoutConstraint constraintWithItem:contentView attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeBottom multiplier:1.0 constant:BOTTOM_MARGIN],
+        [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationGreaterThanOrEqual toItem:contentView attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0],
+        [NSLayoutConstraint constraintWithItem:view attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:contentView attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0], nil];
+    [[constraints lastObject] setPriority:NSLayoutPriorityDefaultLow];
+    [NSLayoutConstraint activateConstraints:constraints];
 }
 
 - (void)windowDidResignMain:(NSNotification *)notification {

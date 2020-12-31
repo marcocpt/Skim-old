@@ -4,7 +4,7 @@
 //
 //  Created by Adam Maxwell on 07/23/05.
 /*
- This software is Copyright (c) 2005-2019
+ This software is Copyright (c) 2005-2020
  Adam Maxwell. All rights reserved.
  
  Redistribution and use in source and binary forms, with or without
@@ -43,13 +43,14 @@
 #import "SKMainDocument.h"
 #import "SKPDFSynchronizer.h"
 #import "SKStringConstants.h"
-#import "SKGradientView.h"
+#import "SKTopBarView.h"
 #import "PDFSelection_SKExtensions.h"
 #import "PDFView_SKExtensions.h"
 #import "NSGeometry_SKExtensions.h"
 #import "NSMenu_SKExtensions.h"
 #import "NSColor_SKExtensions.h"
 #import "SKPDFView.h"
+#import "NSGraphics_SKExtensions.h"
 
 
 @interface SKSnapshotPDFView (SKPrivate)
@@ -64,13 +65,11 @@
 
 - (void)setAutoScales:(BOOL)newAuto adjustPopup:(BOOL)flag;
 
-- (void)handleScrollViewFrameDidChange:(NSNotification *)notification;
-
 - (void)handlePDFViewFrameChangedNotification:(NSNotification *)notification;
 - (void)handlePDFContentViewFrameChangedNotification:(NSNotification *)notification;
 - (void)handlePDFContentViewFrameChangedDelayedNotification:(NSNotification *)notification;
-
 - (void)handlePDFViewScaleChangedNotification:(NSNotification *)notification;
+- (void)handleScrollerStyleChangedNotification:(NSNotification *)notification;
 
 @end
 
@@ -100,9 +99,15 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     autoFitRect = NSZeroRect;
     minHistoryIndex = 0;
     
+    SKSetHasDefaultAppearance(self);
+    SKSetHasLightAppearance([[self scrollView] contentView]);
+    [self handleScrollerStyleChangedNotification:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScrollerStyleChangedNotification:)
+                                                 name:NSPreferredScrollerStyleDidChangeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePDFViewFrameChangedNotification:)
                                                  name:NSViewFrameDidChangeNotification object:self];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePDFViewFrameChangedNotification:) 
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePDFViewFrameChangedNotification:)
                                                  name:NSViewBoundsDidChangeNotification object:self];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handlePDFContentViewFrameChangedNotification:) 
                                                  name:NSViewBoundsDidChangeNotification object:[[self scrollView] contentView]];
@@ -145,10 +150,7 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     
     if (scalePopUpButton == nil) {
         
-        NSScrollView *scrollView = [self scrollView];
-        [scrollView setHasHorizontalScroller:YES];
-        
-        // create it        
+        // create it
         scalePopUpButton = [[NSPopUpButton allocWithZone:[self zone]] initWithFrame:NSMakeRect(0.0, 0.0, 1.0, 1.0) pullsDown:NO];
         
         [[scalePopUpButton cell] setControlSize:NSSmallControlSize];
@@ -161,26 +163,16 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
         NSUInteger cnt, numberOfDefaultItems = SKDefaultScaleMenuFactorsCount;
         id curItem;
         NSString *label;
-        CGFloat width, maxWidth = 0.0;
-        NSSize size = NSMakeSize(1000.0, 1000.0);
-        NSDictionary *attrs = [NSDictionary dictionaryWithObjectsAndKeys:[scalePopUpButton font], NSFontAttributeName, nil];
-        NSUInteger maxIndex = 0;
         
         // fill it
         for (cnt = 0; cnt < numberOfDefaultItems; cnt++) {
             label = [[NSBundle mainBundle] localizedStringForKey:SKDefaultScaleMenuLabels[cnt] value:@"" table:@"ZoomValues"];
-            width = NSWidth([label boundingRectWithSize:size options:0 attributes:attrs]);
-            if (width > maxWidth) {
-                maxWidth = width;
-                maxIndex = cnt;
-            }
             [scalePopUpButton addItemWithTitle:label];
             curItem = [scalePopUpButton itemAtIndex:cnt];
             [curItem setRepresentedObject:(SKDefaultScaleMenuFactors[cnt] > 0.0 ? [NSNumber numberWithDouble:SKDefaultScaleMenuFactors[cnt]] : nil)];
         }
         
         // Make sure the popup is big enough to fit the largest cell
-        [scalePopUpButton selectItemAtIndex:maxIndex];
         [scalePopUpButton sizeToFit];
         [scalePopUpButton setFrameSize:NSMakeSize(NSWidth([scalePopUpButton frame]) - CONTROL_WIDTH_OFFSET, CONTROL_HEIGHT)];
         [scalePopUpButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
@@ -200,25 +192,34 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
 		// don't let it become first responder
 		[scalePopUpButton setRefusesFirstResponder:YES];
         
-        SKGradientView *gradientView = [[SKGradientView alloc] initWithFrame:[scalePopUpButton frame]];
-        [gradientView setMinSize:[scalePopUpButton frame].size];
-        [gradientView setBackgroundColors:[NSArray arrayWithObjects:[NSColor pdfControlBackgroundColor], nil]];
-        [gradientView addSubview:scalePopUpButton];
+        SKTopBarView *topBar = [[SKTopBarView alloc] initWithFrame:[scalePopUpButton frame]];
+        [topBar setMinSize:[scalePopUpButton frame].size];
+        if (RUNNING_BEFORE(10_14)) {
+            [topBar setBackgroundColors:[NSArray arrayWithObjects:[NSColor pdfControlBackgroundColor], nil]];
+            [topBar setAlternateBackgroundColors:nil];
+        }
+        [topBar addSubview:scalePopUpButton];
         
-        controlView = gradientView;
+        controlView = topBar;
+        [controlView setTranslatesAutoresizingMaskIntoConstraints:NO];
+        NSLayoutConstraint *heightConstraint = [NSLayoutConstraint constraintWithItem:controlView attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:0.0 constant:NSHeight([controlView bounds])];
+        [heightConstraint setActive:YES];
         
-        [self handleScrollViewFrameDidChange:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScrollViewFrameDidChange:) name:NSViewFrameDidChangeNotification object:scrollView];
+        [self updateTrackingAreas];
     }
 }
 
 - (void)showControlView {
-    NSScrollView *scrollView = [self scrollView];
-    NSRect rect = [scrollView bounds];
-    rect = SKSliceRect(rect, NSHeight([controlView frame]), NSMinYEdge);
+    NSRect rect = [self bounds];
+    rect = SKSliceRect(rect, NSHeight([controlView frame]), [self isFlipped] ? NSMinYEdge : NSMaxYEdge);
     [controlView setFrame:rect];
     [controlView setAlphaValue:0.0];
-    [scrollView addSubview:controlView positioned:NSWindowAbove relativeTo:[[scrollView subviews] lastObject]];
+    [self addSubview:controlView positioned:NSWindowAbove relativeTo:nil];
+    NSArray *constraints = [NSArray arrayWithObjects:
+        [NSLayoutConstraint constraintWithItem:controlView attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:self attribute:NSLayoutAttributeLeading multiplier:1.0 constant:0.0],
+        [NSLayoutConstraint constraintWithItem:controlView attribute:NSLayoutAttributeTrailing relatedBy:NSLayoutRelationEqual toItem:self attribute:NSLayoutAttributeTrailing multiplier:1.0 constant:0.0],
+        [NSLayoutConstraint constraintWithItem:controlView attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self attribute:NSLayoutAttributeTop multiplier:1.0 constant:0.0], nil];
+    [NSLayoutConstraint activateConstraints:constraints];
     [[controlView animator] setAlphaValue:1.0];
 }
 
@@ -244,16 +245,26 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     }
 }
 
-- (void)handleScrollViewFrameDidChange:(NSNotification *)notification {
-    NSScrollView *scrollView = [self scrollView];
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
     if (trackingArea)
-        [scrollView removeTrackingArea:trackingArea];
-    NSRect rect = [scrollView bounds];
-    if (NSHeight(rect) > NSHeight([controlView frame])) {
-        rect = SKSliceRect(rect, NSHeight([controlView frame]), [scrollView isFlipped] ? NSMinYEdge : NSMaxYEdge);
-        trackingArea = [[NSTrackingArea alloc] initWithRect:rect options:NSTrackingActiveInKeyWindow | NSTrackingMouseEnteredAndExited owner:self userInfo:nil];
-        [scrollView addTrackingArea:trackingArea];
+        [self removeTrackingArea:trackingArea];
+    if (controlView) {
+        NSRect rect = [self bounds];
+        if (NSHeight(rect) > NSHeight([controlView frame])) {
+            rect = SKSliceRect(rect, NSHeight([controlView frame]), [self isFlipped] ? NSMinYEdge : NSMaxYEdge);
+            trackingArea = [[NSTrackingArea alloc] initWithRect:rect options:NSTrackingActiveInKeyWindow | NSTrackingMouseEnteredAndExited owner:self userInfo:nil];
+            [self addTrackingArea:trackingArea];
+        }
     }
+}
+
+- (id <SKSnapshotPDFViewDelegate>)delegate {
+    return (id <SKSnapshotPDFViewDelegate>)[super delegate];
+}
+
+- (void)setDelegate:(id <SKSnapshotPDFViewDelegate>)newDelegate {
+    [super setDelegate:newDelegate];
 }
 
 - (void)handlePDFViewFrameChangedNotification:(NSNotification *)notification {
@@ -283,6 +294,16 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
 - (void)handlePDFViewScaleChangedNotification:(NSNotification *)notification {
     if ([self autoFits] == NO && [self autoScales] == NO)
         [self setScaleFactor:fmax([self scaleFactor], SKMinDefaultScaleMenuFactor) adjustPopup:YES];
+}
+
+- (void)handleScrollerStyleChangedNotification:(NSNotification *)notification {
+    if ([NSScroller preferredScrollerStyle] == NSScrollerStyleLegacy) {
+        SKSetHasDefaultAppearance([[self scrollView] verticalScroller]);
+        SKSetHasDefaultAppearance([[self scrollView] horizontalScroller]);
+    } else {
+        SKSetHasLightAppearance([[self scrollView] verticalScroller]);
+        SKSetHasLightAppearance([[self scrollView] horizontalScroller]);
+    }
 }
 
 - (void)resetAutoFitRectIfNeeded {
@@ -487,6 +508,14 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     [self setPhysicalScaleFactor:1.0];
 }
 
+- (void)externalGoTo:(id)sender {
+    if ([[self delegate] respondsToSelector:@selector(PDFView:goToExternalDestination:)]) {
+        PDFPage *page = [self currentPage];
+        NSPoint point = [self convertPoint:SKTopLeftPoint([self bounds]) toPage:page];
+        [[self delegate] PDFView:self goToExternalDestination:[[[PDFDestination alloc] initWithPage:page atPoint:point] autorelease]];
+    }
+}
+
 // we don't want to steal the printDocument: action from the responder chain
 - (void)printDocument:(id)sender{}
 
@@ -499,17 +528,34 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     if (selectionActions == nil)
         selectionActions = [[NSSet alloc] initWithObjects:@"copy:", @"_searchInSpotlight:", @"_searchInGoogle:", @"_searchInDictionary:", @"_revealSelection:", nil];
     NSMenu *menu = [super menuForEvent:theEvent];
+    NSInteger i = 0;
     
-    [self setCurrentSelection:RUNNING_AFTER(10_12) ? [[[PDFSelection alloc] initWithDocument:[self document]] autorelease] : nil];
-    while ([menu numberOfItems]) {
-        NSMenuItem *item = [menu itemAtIndex:0];
-        if ([item isSeparatorItem] || [self validateMenuItem:item] == NO || [selectionActions containsObject:NSStringFromSelector([item action])])
+    if ([[menu itemAtIndex:0] view] != nil) {
+        [menu removeItemAtIndex:0];
+        if ([[menu itemAtIndex:0] isSeparatorItem])
             [menu removeItemAtIndex:0];
-        else
-            break;
     }
     
-    NSInteger i;
+    [self setCurrentSelection:nil];
+    NSMenuItem *item;
+    BOOL allowsSeparator = NO;
+    while ([menu numberOfItems] > i) {
+        item = [menu itemAtIndex:i];
+        if ([item isSeparatorItem]) {
+            if (allowsSeparator) {
+                i++;
+                allowsSeparator = NO;
+            } else {
+                [menu removeItemAtIndex:i];
+            }
+        } else if ([self validateMenuItem:item] == NO || [selectionActions containsObject:NSStringFromSelector([item action])]) {
+            [menu removeItemAtIndex:i];
+        } else {
+            i++;
+            allowsSeparator = YES;
+        }
+    }
+    
     if ([self shouldAutoFit]) {
         i = [menu indexOfItemWithTarget:self andAction:NSSelectorFromString(@"_setAutoSize:")];
         if (i != -1)
@@ -518,10 +564,13 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     i = [menu indexOfItemWithTarget:self andAction:NSSelectorFromString(@"_setActualSize:")];
     if (i != -1) {
         [[menu itemAtIndex:i] setAction:@selector(doActualSize:)];
-        NSMenuItem *item = [menu insertItemWithTitle:NSLocalizedString(@"Physical Size", @"Menu item title") action:@selector(doPhysicalSize:) target:self atIndex:i + 1];
+        item = [menu insertItemWithTitle:NSLocalizedString(@"Physical Size", @"Menu item title") action:@selector(doPhysicalSize:) target:self atIndex:i + 1];
         [item setKeyEquivalentModifierMask:NSAlternateKeyMask];
         [item setAlternate:YES];
     }
+    
+    [menu addItem:[NSMenuItem separatorItem]];
+    [menu addItemWithTitle:NSLocalizedString(@"Go", @"Menu item title") action:@selector(externalGoTo:) target:self];
     
     return menu;
 }
@@ -540,6 +589,18 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
         return [super validateMenuItem:menuItem];
     }
     return YES;
+}
+
+- (void)keyDown:(NSEvent *)theEvent {
+    if ([theEvent firstCharacter] == '?' && ([theEvent standardModifierFlags] & ~NSShiftKeyMask) == 0) {
+        [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(showControlView) object:nil];
+        if ([controlView superview])
+            [controlView removeFromSuperview];
+        else
+            [self showControlView];
+    } else {
+        [super keyDown:theEvent];
+    }
 }
 
 #pragma mark Gestures
@@ -574,7 +635,28 @@ static CGFloat SKDefaultScaleMenuFactors[] = {0.0, 0.1, 0.2, 0.25, 0.35, 0.5, 0.
     [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(showControlView) object:nil];
     [[self window] makeFirstResponder:self];
 	
-    if ([theEvent standardModifierFlags] == (NSCommandKeyMask | NSShiftKeyMask)) {
+    if ([theEvent standardModifierFlags] == NSCommandKeyMask) {
+        
+        [[NSCursor arrowCursor] push];
+        
+        // eat up mouseDragged/mouseUp events, so we won't get their event handlers
+        NSEvent *lastEvent = theEvent;
+        while (YES) {
+            lastEvent = [[self window] nextEventMatchingMask: NSLeftMouseUpMask | NSLeftMouseDraggedMask];
+            if ([lastEvent type] == NSLeftMouseUp)
+                break;
+        }
+        
+        [NSCursor pop];
+        [self performSelector:@selector(mouseMoved:) withObject:lastEvent afterDelay:0];
+        
+        if ([[self delegate] respondsToSelector:@selector(PDFView:goToExternalDestination:)]) {
+            NSPoint location = NSZeroPoint;
+            PDFPage *page = [self pageAndPoint:&location forEvent:theEvent nearest:YES];
+            [[self delegate] PDFView:self goToExternalDestination:[[[PDFDestination alloc] initWithPage:page atPoint:location] autorelease]];
+        }
+        
+    } else if ([theEvent standardModifierFlags] == (NSCommandKeyMask | NSShiftKeyMask)) {
         
         [self doPdfsyncWithEvent:theEvent];
         

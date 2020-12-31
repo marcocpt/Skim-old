@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 12/15/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,6 @@
 #import "PDFPage_SKExtensions.h"
 #import "NSValueTransformer_SKExtensions.h"
 #import "NSString_SKExtensions.h"
-#import "SKGradientView.h"
 #import "NSGeometry_SKExtensions.h"
 #import "NSGraphics_SKExtensions.h"
 #import "SKNoteTextView.h"
@@ -83,7 +82,7 @@ static char SKNoteWindowNoteObservationContext;
 
 @implementation SKNoteWindowController
 
-@synthesize textView, gradientView, imageView, statusBar, iconTypePopUpButton, iconLabelField, checkButton, noteController, note, keepOnTop, forceOnTop;
+@synthesize textView, topView, edgeView, imageView, statusBar, iconTypePopUpButton, iconLabelField, checkButton, noteController, note, keepOnTop, forceOnTop;
 @dynamic isNoteType;
 
 static NSImage *noteIcons[7] = {nil, nil, nil, nil, nil, nil, nil};
@@ -102,9 +101,10 @@ static NSImage *noteIcons[7] = {nil, nil, nil, nil, nil, nil, nil};
     NSUInteger i;
     for (i = 0; i < 7; i++) {
         [annotation setIconType:i];
-        noteIcons[i] = [[NSImage bitmapImageWithSize:SKNPDFAnnotationNoteSize drawingHandler:^(NSRect rect){
-                [page drawWithBox:kPDFDisplayBoxMediaBox];
-            }] retain];
+        noteIcons[i] = [[NSImage alloc] initWithSize:SKNPDFAnnotationNoteSize];
+        [noteIcons[i] lockFocus];
+        [page drawWithBox:kPDFDisplayBoxMediaBox];
+        [noteIcons[i] unlockFocus];
         [noteIcons[i] setTemplate:YES];
     }
     [page release];
@@ -167,7 +167,8 @@ static NSURL *temporaryDirectoryURL = nil;
     SKDESTROY(textViewUndoManager);
     SKDESTROY(note);
     SKDESTROY(textView);
-    SKDESTROY(gradientView);
+    SKDESTROY(topView);
+    SKDESTROY(edgeView);
     SKDESTROY(imageView);
     SKDESTROY(statusBar);
     SKDESTROY(iconTypePopUpButton);
@@ -195,14 +196,13 @@ static NSURL *temporaryDirectoryURL = nil;
     
     [[self window] setCollectionBehavior:[[self window] collectionBehavior] | NSWindowCollectionBehaviorFullScreenAuxiliary];
     
-    if (RUNNING_BEFORE(10_10))
-        [[[[statusBar subviews] lastObject] cell] setBackgroundStyle:NSBackgroundStyleRaised];
-    
     if ([self isNoteType]) {
-        [gradientView setEdges:SKMinYEdgeMask];
-        [gradientView setBackgroundColors:nil];
-        [gradientView setAlternateBackgroundColors:nil];
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+        if (RUNNING_AFTER(10_13))
+            [edgeView setFillColor:[NSColor separatorColor]];
+#pragma clang diagnostic push
+        
         NSFont *font = [[NSUserDefaults standardUserDefaults] fontForNameKey:SKAnchoredNoteFontNameKey sizeKey:SKAnchoredNoteFontSizeKey];
         if (font)
             [textView setFont:font];
@@ -216,11 +216,14 @@ static NSURL *temporaryDirectoryURL = nil;
             [item setImage:noteIcons[[item tag]]];
         
     } else {
-        [gradientView removeFromSuperview];
+        [topView removeFromSuperview];
         
-        [[[self window] contentView] addConstraint:[NSLayoutConstraint constraintWithItem:[textView enclosingScrollView] attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:[[self window] contentView] attribute:NSLayoutAttributeTop multiplier:1.0 constant:0.0]];
+        NSLayoutConstraint *constraint = [NSLayoutConstraint constraintWithItem:[textView enclosingScrollView] attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:[[self window] contentView] attribute:NSLayoutAttributeTop multiplier:1.0 constant:0.0];
+        [constraint setActive:YES];
         
         [textView setRichText:NO];
+        [textView setImportsGraphics:NO];
+        [textView setAllowsImageEditing:NO];
         [textView setUsesDefaultFontSize:YES];
         [textView bind:@"value" toObject:noteController withKeyPath:@"selection.string" options:nil];
         
@@ -333,7 +336,7 @@ static NSURL *temporaryDirectoryURL = nil;
         NSString *name = [note string];
         if ([name length] == 0)
             name = @"NoteImage";
-        NSURL *fileURL = [[destination URLByAppendingPathComponent:name] URLByAppendingPathExtension:@"tiff"];
+        NSURL *fileURL = [[destination URLByAppendingPathComponent:name isDirectory:NO] URLByAppendingPathExtension:@"tiff"];
         fileURL = [fileURL uniqueFileURL];
         if ([[image TIFFRepresentation] writeToURL:fileURL atomically:YES])
             return fileURL;
@@ -462,7 +465,7 @@ static NSURL *temporaryDirectoryURL = nil;
         NSFileManager *fm = [NSFileManager defaultManager];
         NSURL *tmpDirURL = [previewURL URLByDeletingLastPathComponent];
         [fm removeItemAtURL:previewURL error:NULL];
-        if ([[fm contentsOfDirectoryAtURL:tmpDirURL includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL] count] == 0)
+        if ([[fm contentsOfDirectoryAtURL:tmpDirURL includingPropertiesForKeys:[NSArray array] options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL] count] == 0)
             [fm removeItemAtURL:tmpDirURL error:NULL];
         SKDESTROY(previewURL);
     }

@@ -4,7 +4,7 @@
 //
 //  Created by Michael McCracken on 12/5/06.
 /*
- This software is Copyright (c) 2006-2019
+ This software is Copyright (c) 2006-2020
  Michael O. McCracken. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -62,8 +62,6 @@ extern NSString *SKSkimFileDidSaveNotification;
     
     SKExportAccessoryController *exportAccessoryController;
     
-    NSInteger version;
-    
     struct _mdFlags {
         unsigned int exportOption:2;
         unsigned int exportUsingPanel:1;
@@ -75,7 +73,6 @@ extern NSString *SKSkimFileDidSaveNotification;
 
 - (IBAction)readNotes:(id)sender;
 - (IBAction)convertNotes:(id)sender;
-- (IBAction)emailArchive:(id)sender;
 - (IBAction)moveToTrash:(id)sender;
 
 @property (nonatomic, readonly) SKMainWindowController *mainWindowController;

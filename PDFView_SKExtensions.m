@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 7/3/11.
 /*
- This software is Copyright (c) 2011-2019
+ This software is Copyright (c) 2011-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@
 #import "NSUserDefaults_SKExtensions.h"
 #import "SKStringConstants.h"
 #import <SkimNotes/SkimNotes.h>
-#import "NSColor_SKExtensions.h"
+#import "NSGraphics_SKExtensions.h"
 #import "SKApplication.h"
 #import "NSView_SKExtensions.h"
 #import "NSImage_SKExtensions.h"
@@ -68,20 +68,33 @@
 
 #if SDK_BEFORE(10_13)
 
+typedef NS_ENUM(NSInteger, PDFDisplayDirection) {
+    kPDFDisplayDirectionVertical = 0,
+    kPDFDisplayDirectionHorizontal = 1,
+};
+
 @interface PDFView (SKHighSierraDeclarations)
 - (CGFloat)minScaleFactor;
 - (CGFloat)maxScaleFactor;
+@property (nonatomic) PDFDisplayDirection displayDirection;
+@property (nonatomic) NSEdgeInsets pageBreakMargins;
 @end
 
 #endif
 
 @implementation PDFView (SKExtensions)
 
-@dynamic physicalScaleFactor, scrollView, displayedPageIndexRange, displayedPages, minimumScaleFactor, maximumScaleFactor;
+@dynamic physicalScaleFactor, scrollView, displayedPages, minimumScaleFactor, maximumScaleFactor;
 
 static void (*original_keyDown)(id, SEL, id) = NULL;
 static void (*original_drawPage_toContext)(id, SEL, id, CGContextRef) = NULL;
 static void (*original_goToRect_onPage)(id, SEL, NSRect, id) = NULL;
+static void (*original_setCurrentSelection)(id, SEL, id) = NULL;
+static void (*original_goToNextPage)(id, SEL, id) = NULL;
+static void (*original_goToPreviousPage)(id, SEL, id) = NULL;
+static void (*original_goToFirstPage)(id, SEL, id) = NULL;
+static void (*original_goToLastPage)(id, SEL, id) = NULL;
+static void (*original_goToPage)(id, SEL, id) = NULL;
 
 // on Yosemite, the arrow up/down and page up/down keys in non-continuous mode switch pages the wrong way
 - (void)replacement_keyDown:(NSEvent *)theEvent {
@@ -143,18 +156,103 @@ static void (*original_goToRect_onPage)(id, SEL, NSRect, id) = NULL;
 
 - (void)replacement_goToRect:(NSRect)rect onPage:(PDFPage *)page {
     NSView *docView = [self documentView];
-    if (NSLocationInRange([page pageIndex], [self displayedPageIndexRange]) == NO)
+    if ([self isPageAtIndexDisplayed:[page pageIndex]] == NO)
         [self goToPage:page];
     [docView scrollRectToVisible:[self convertRect:[self convertRect:rect fromPage:page] toView:docView]];
 }
 
+- (void)replacement_setCurrentSelection:(PDFSelection *)currentSelection {
+    original_setCurrentSelection(self, _cmd, currentSelection ?: [[[PDFSelection alloc] initWithDocument:[self document]] autorelease]);
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+
+static inline BOOL hasHorizontalLayout(PDFView *pdfView) {
+    return [pdfView displayMode] == kPDFDisplaySinglePageContinuous && [pdfView displayDirection] == kPDFDisplayDirectionHorizontal;
+}
+
+#pragma clang diagnostic pop
+
+- (void)replacement_goToPreviousPage:(id)sender {
+    if (hasHorizontalLayout(self) && [self canGoToPreviousPage]) {
+        PDFDocument *doc = [self document];
+        PDFPage *page = [doc pageAtIndex:[doc indexForPage:[self currentPage]] - 1];
+        [self goToPage:page];
+    } else {
+        original_goToPreviousPage(self, _cmd, sender);
+    }
+}
+
+- (void)replacement_goToNextPage:(id)sender {
+    if (hasHorizontalLayout(self) && [self canGoToNextPage]) {
+        PDFDocument *doc = [self document];
+        PDFPage *page = [doc pageAtIndex:[doc indexForPage:[self currentPage]] + 1];
+        [self goToPage:page];
+    } else {
+        original_goToNextPage(self, _cmd, sender);
+    }
+}
+
+- (void)replacement_goToFirstPage:(id)sender {
+    if (hasHorizontalLayout(self) && [self canGoToFirstPage]) {
+        PDFDocument *doc = [self document];
+        PDFPage *page = [doc pageAtIndex:0];
+        [self goToPage:page];
+    } else {
+        original_goToFirstPage(self, _cmd, sender);
+    }
+}
+
+- (void)replacement_goToLastPage:(id)sender {
+    if (hasHorizontalLayout(self) && [self canGoToLastPage]) {
+        PDFDocument *doc = [self document];
+        PDFPage *page = [doc pageAtIndex:[doc pageCount] - 1];
+        [self goToPage:page];
+    } else {
+        original_goToLastPage(self, _cmd, sender);
+    }
+}
+
+- (void)replacement_goToPage:(PDFPage *)page {
+    if (hasHorizontalLayout(self)) {
+        NSRect bounds = [page boundsForBox:[self displayBox]];
+        if ([self displaysPageBreaks]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+            NSEdgeInsets margins = [self pageBreakMargins];
+#pragma clang diagnostic pop
+            bounds = NSInsetRect(bounds, -margins.left, ([page rotation] % 180) == 0 ? -margins.bottom : -margins.left);
+        }
+        NSPoint point;
+        switch ([page rotation]) {
+            case 0:   point = SKTopLeftPoint(bounds);     break;
+            case 90:  point = SKBottomLeftPoint(bounds);  break;
+            case 180: point = SKBottomRightPoint(bounds); break;
+            case 270: point = SKTopRightPoint(bounds);    break;
+            default:  point = SKTopLeftPoint(bounds);     break;
+        }
+        [self goToDestination:[[[PDFDestination alloc] initWithPage:page atPoint:point] autorelease]];
+    } else {
+        original_goToPage(self, _cmd, page);
+    }
+}
+
 + (void)load {
-    if (RUNNING_AFTER(10_9) && RUNNING_BEFORE(10_12))
+    if (RUNNING_BEFORE(10_12)) {
         original_keyDown = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(keyDown:), @selector(replacement_keyDown:));
-    if (RUNNING(10_12))
+    } else if (RUNNING(10_12)) {
         original_drawPage_toContext = (void (*)(id, SEL, id, CGContextRef))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(drawPage:toContext:), @selector(replacement_drawPage:toContext:));
-    if (RUNNING(10_13))
+        original_setCurrentSelection = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(setCurrentSelection:), @selector(replacement_setCurrentSelection:));
+    } else if (RUNNING(10_13)) {
         original_goToRect_onPage = (void (*)(id, SEL, NSRect,  id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(goToRect:onPage:), @selector(replacement_goToRect:onPage:));
+    } else if (RUNNING(10_15)) {
+        original_goToPreviousPage = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(goToPreviousPage:), @selector(replacement_goToPreviousPage:));
+        original_goToNextPage = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(goToNextPage:), @selector(replacement_goToNextPage:));
+        original_goToFirstPage = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(goToFirstPage:), @selector(replacement_goToFirstPage:));
+        original_goToLastPage = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(goToLastPage:), @selector(replacement_goToLastPage:));
+        original_goToPage = (void (*)(id, SEL, id))SKReplaceInstanceMethodImplementationFromSelector(self, @selector(goToPage:), @selector(replacement_goToPage:));
+    }
 }
 
 static inline CGFloat physicalScaleFactorForView(NSView *view) {
@@ -176,11 +274,11 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
 }
 
 - (NSScrollView *)scrollView {
-    return [[self documentView] enclosingScrollView];
+    return [[self documentView] enclosingScrollView] ?: [self descendantOfClass:[NSScrollView class]];
 }
 
 - (void)setNeedsDisplayInRect:(NSRect)rect ofPage:(PDFPage *)page {
-    if (NSLocationInRange([page pageIndex], [self displayedPageIndexRange])) {
+    if ([self isPageAtIndexDisplayed:[page pageIndex]]) {
         // for some versions we need to dirty the documentView, otherwise it won't redisplay when scrolled out of view,
         // for 10.12 dirtying the documentView dioes not do anything
         NSView *view = RUNNING_BEFORE(10_12) ? [self documentView] : self;
@@ -256,7 +354,6 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
     return context == NSDraggingContextWithinApplication ? NSDragOperationNone : NSDragOperationCopy;
 }
 
-/// 拖动选中的文字
 - (BOOL)doDragTextWithEvent:(NSEvent *)theEvent {
     if ([[self currentSelection] hasCharacters] == NO)
         return NO;
@@ -307,7 +404,7 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
     NSUInteger pageCount = [[self document] pageCount];
     PDFDisplayMode displayMode = [self displayMode];
     NSRange range = NSMakeRange(0, pageCount);
-    if (pageCount > 0 && (displayMode == kPDFDisplaySinglePage || displayMode == kPDFDisplayTwoUp)) {
+    if (pageCount > 0 && (displayMode & kPDFDisplaySinglePageContinuous) == 0) {
         range = NSMakeRange([[self currentPage] pageIndex], 1);
         if (displayMode == kPDFDisplayTwoUp) {
             if ([self displaysAsBook] == (BOOL)(range.location % 2)) {
@@ -320,6 +417,10 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
         }
     }
     return range;
+}
+
+- (BOOL)isPageAtIndexDisplayed:(NSUInteger)pageIndex {
+    return NSLocationInRange(pageIndex, [self displayedPageIndexRange]);
 }
 
 - (NSArray *)displayedPages {
@@ -349,13 +450,13 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
 
 #pragma clang diagnostic pop
 
-- (NSRect)integralRect:(NSRect)rect onPage:(PDFPage *)page {
-    // we'd like to use backingAlignedRect, but that is not thread safe, and we need this for drawing
-    return [self convertRect:[self convertRect:rect fromPage:page] toPage:page];
-}
-
 - (CGFloat)unitWidthOnPage:(PDFPage *)page {
     return NSWidth([self convertRect:NSMakeRect(0.0, 0.0, 1.0, 1.0) toPage:page]);
+}
+
+- (NSRect)backingAlignedRect:(NSRect)rect onPage:(PDFPage *)page {
+    // this is called from drawing methods that on 10.12+ may run on a background thread
+    return RUNNING_AFTER(10_11) ? rect : [self convertRect:[self backingAlignedRect:[self convertRect:rect fromPage:page] options:NSAlignAllEdgesOutward] toPage:page];
 }
 
 + (NSColor *)defaultPageBackgroundColor {
@@ -369,26 +470,21 @@ static inline CGFloat physicalScaleFactorForView(NSView *view) {
         [self setPageColor:[[self class] defaultPageBackgroundColor]];
 }
 
-- (void)applyDefaultInterpolationQuality {
-    if ([self respondsToSelector:@selector(setInterpolationQuality:)]) {
-        NSImageInterpolation interpolation = [[NSUserDefaults standardUserDefaults] integerForKey:SKImageInterpolationKey];
-        // smooth graphics when anti-aliasing
-        if (interpolation == NSImageInterpolationDefault)
-            interpolation = [self shouldAntiAlias] ? NSImageInterpolationHigh : NSImageInterpolationNone;
-        [self setInterpolationQuality:interpolation == NSImageInterpolationHigh ? kPDFInterpolationQualityHigh : interpolation == NSImageInterpolationLow ? kPDFInterpolationQualityLow : kPDFInterpolationQualityNone];
-    }
+static NSColor *defaultBackgroundColor(NSString *backgroundColorKey, NSString *darkBackgroundColorKey) {
+    NSColor *color = nil;
+    if (SKHasDarkAppearance(NSApp))
+        color = [[NSUserDefaults standardUserDefaults] colorForKey:darkBackgroundColorKey];
+    if (color == nil)
+        color = [[NSUserDefaults standardUserDefaults] colorForKey:backgroundColorKey];
+    return color;
 }
 
 + (NSColor *)defaultBackgroundColor {
-    NSColor *color = [[NSUserDefaults standardUserDefaults] colorForKey:SKBackgroundColorKey];
-    NSColor *darkColor = [[NSUserDefaults standardUserDefaults] colorForKey:SKDarkBackgroundColorKey];
-    return darkColor ? [NSColor colorWithAquaColor:color darkAquaColor:darkColor] : color;
+    return defaultBackgroundColor(SKBackgroundColorKey, SKDarkBackgroundColorKey);
 }
 
 + (NSColor *)defaultFullScreenBackgroundColor {
-    NSColor *color = [[NSUserDefaults standardUserDefaults] colorForKey:SKFullScreenBackgroundColorKey];
-    NSColor *darkColor = [[NSUserDefaults standardUserDefaults] colorForKey:SKDarkFullScreenBackgroundColorKey];
-    return darkColor ? [NSColor colorWithAquaColor:color darkAquaColor:darkColor] : color;
+    return defaultBackgroundColor(SKFullScreenBackgroundColorKey, SKDarkFullScreenBackgroundColorKey);
 }
 
 @end

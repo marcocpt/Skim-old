@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 2/8/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,38 +41,17 @@
 
 
 @interface SKSideWindow : SKMainWindow {
-    NSDrawerState state;
-    NSRectEdge edge;
     NSView *mainContentView;
-    NSTrackingArea *trackingArea;
-    NSTimer *timer;
-    BOOL enabled;
     BOOL resizing;
-    BOOL acceptsMouseOver;
 }
 
-+ (CGFloat)requiredMargin;
-
-@property (nonatomic, retain) NSView *mainView;
-@property (nonatomic, readonly) NSRectEdge edge;
-@property (nonatomic, readonly) NSDrawerState state;
-@property (nonatomic, getter=isEnabled) BOOL enabled;
-@property (nonatomic) BOOL acceptsMouseOver;
-
-- (id)initWithEdge:(NSRectEdge)anEdge;
+- (id)initWithView:(NSView *)view;
 - (void)attachToWindow:(NSWindow *)window;
-- (void)slideIn;
-- (void)slideOut;
-- (void)expand;
-- (void)collapse;
 - (void)remove;
 - (void)resizeWithEvent:(NSEvent *)theEvent;
 
 @end
 
 
-@interface SKSideWindowContentView : NSView {
-    NSRectEdge edge;
-}
-- (id)initWithFrame:(NSRect)frameRect edge:(NSRectEdge)anEdge;
+@interface SKSideWindowContentView : NSView
 @end

@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 4/6/06.
 /*
- This software is Copyright (c) 2005-2019
+ This software is Copyright (c) 2005-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -41,33 +41,11 @@
 
 @implementation SKFieldEditor
 
-- (void)dealloc {
-    SKDESTROY(ignoredSelectors);
-    [super dealloc];
-}
-
 - (BOOL)respondsToSelector:(SEL)aSelector {
-    if (ignoredSelectors && NSHashGet(ignoredSelectors, aSelector) != NULL)
+    if (aSelector == @selector(performFindPanelAction:) ||
+        aSelector == @selector(centerSelectionInVisibleArea:))
         return NO;
     return [super respondsToSelector:aSelector];
-}
-
-- (void)ignoreSelectors:(SEL)aSelector, ... {
-    if (aSelector) {
-        if (ignoredSelectors)
-            NSResetHashTable(ignoredSelectors);
-        else
-            ignoredSelectors = NSCreateHashTable(NSNonOwnedPointerHashCallBacks, 0);
-        NSHashInsert(ignoredSelectors, aSelector);
-        va_list selectorList;
-        SEL nextSelector;
-        va_start(selectorList, aSelector);
-        while ((nextSelector = va_arg(selectorList, SEL)))
-            NSHashInsert(ignoredSelectors, nextSelector);
-        va_end(selectorList);
-    } else {
-        SKDESTROY(ignoredSelectors);
-    }
 }
 
 @end

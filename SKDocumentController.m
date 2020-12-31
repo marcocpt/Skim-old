@@ -4,7 +4,7 @@
 //
 //  Created by Christiaan Hofman on 5/21/07.
 /*
- This software is Copyright (c) 2007-2019
+ This software is Copyright (c) 2007-2020
  Christiaan Hofman. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -69,7 +69,9 @@ NSString *SKArchiveDocumentType = @"org.gnu.gnu-zip-tar-archive";
 NSString *SKFolderDocumentType = @"public.folder";
 
 NSString *SKDocumentSetupAliasKey = @"_BDAlias";
+NSString *SKDocumentSetupBookmarkKey = @"bookmark";
 NSString *SKDocumentSetupFileNameKey = @"fileName";
+NSString *SKDocumentSetupWindowFrameKey = @"windowFrame";
 NSString *SKDocumentSetupTabsKey = @"tabs";
 
 NSString *SKDocumentControllerWillRemoveDocumentNotification = @"SKDocumentControllerWillRemoveDocumentNotification";
@@ -81,13 +83,6 @@ NSString *SKDocumentControllerDocumentKey = @"document";
 #define SKPasteboardTypePostScript @"com.adobe.encapsulated-postscript"
 
 #define WARNING_LIMIT 10
-
-#if SDK_BEFORE(10_8)
-@interface NSDocumentController (SKMountainLionDeclarations)
-// this is used in 10.8 and later from the openDocument: action
-- (void)beginOpenPanel:(NSOpenPanel *)openPanel forTypes:(NSArray *)types completionHandler:(void (^)(NSInteger result))completionHandler;
-@end
-#endif
 
 #if SDK_BEFORE(10_12)
 @interface NSResponder(NSWindowTabbing)
@@ -103,7 +98,7 @@ NSString *SKDocumentControllerDocumentKey = @"document";
 @implementation SKDocumentController
 
 @synthesize openedFile;
-/// ✅ 设置文档自动保存的时间间隔。SKAutosaveIntervalKey 未设置。
+
 - (id)init {
     self = [super init];
     if (self) {
@@ -445,7 +440,7 @@ static NSData *convertTIFFDataToPDF(NSData *tiffData)
         [alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Button title")];
         [alert addButtonWithTitle:NSLocalizedString(@"Open", @"Button title")];
         
-        return NSAlertFirstButtonReturn == [alert runModal];
+        return NSAlertSecondButtonReturn == [alert runModal];
     }
     return YES;
 }
@@ -503,13 +498,56 @@ static NSData *convertTIFFDataToPDF(NSData *tiffData)
     return urls;
 }
 
+static inline void normalizeOptions(NSMutableDictionary *options) {
+    for (NSString *key in [options allKeys]) {
+        if ([key isEqualToString:@"autoscales"]) {
+            id value = [NSNumber numberWithBool:[[options objectForKey:key] boolValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"autoScales"];
+        } else if ([key isEqualToString:@"scalefactor"] || [key isEqualToString:@"scale"]) {
+            id value = [NSNumber numberWithDouble:[[options objectForKey:key] doubleValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"scaleFactor"];
+        } else if ([key isEqualToString:@"displayspagebreaks"] || [key isEqualToString:@"pagebreaks"]) {
+            id value = [NSNumber numberWithBool:[[options objectForKey:key] boolValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displaysPageBreaks"];
+        } else if ([key isEqualToString:@"displaysasbook"] || [key isEqualToString:@"book"]) {
+            id value = [NSNumber numberWithBool:[[options objectForKey:key] boolValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displaysAsBook"];
+        } else if ([key isEqualToString:@"displaymode"] || [key isEqualToString:@"mode"]) {
+            id value = [NSNumber numberWithInteger:[[options objectForKey:key] integerValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displayMode"];
+        } else if ([key isEqualToString:@"displaydirection"] || [key isEqualToString:@"direction"] || [key isEqualToString:@"horizontal"]) {
+            id value = [NSNumber numberWithInteger:[[options objectForKey:key] integerValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displayDirection"];
+        } else if ([key isEqualToString:@"displaysrtl"] || [key isEqualToString:@"rtl"]) {
+            id value = [NSNumber numberWithInteger:[[options objectForKey:key] integerValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displaysRTL"];
+        } else if ([key isEqualToString:@"displaybox"] || [key isEqualToString:@"box"]) {
+            id value = [NSNumber numberWithInteger:[[options objectForKey:key] integerValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displayBox"];
+        } else if ([key isEqualToString:@"displaybox"]) {
+            id value = [NSNumber numberWithInteger:[[options objectForKey:key] integerValue]];
+            [options removeObjectForKey:key];
+            [options setObject:value forKey:@"displayBox"];
+        }
+    }
+}
+
 static inline NSDictionary *optionsFromFragmentAndEvent(NSString *fragment) {
     NSMutableDictionary *options = [NSMutableDictionary dictionary];
     for (NSString *fragmentItem in [fragment componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"&#"]]) {
         NSUInteger i = [fragmentItem rangeOfString:@"="].location;
         if (i != NSNotFound)
-            [options setObject:[fragmentItem substringFromIndex:i + 1] forKey:[[fragmentItem substringToIndex:i] lowercaseString]];
+            [options setObject:[[fragmentItem substringFromIndex:i + 1] stringByRemovingPercentEncoding] forKey:[[fragmentItem substringToIndex:i] lowercaseString]];
     }
+    normalizeOptions(options);
     if ([[NSUserDefaults standardUserDefaults] boolForKey:SKDisableSearchAfterSpotlighKey] == NO && [options objectForKey:@"search"] == NO) {
         
         NSAppleEventDescriptor *event = [[NSAppleEventManager sharedAppleEventManager] currentAppleEvent];
@@ -532,7 +570,6 @@ static inline NSDictionary *optionsFromFragmentAndEvent(NSString *fragment) {
                             searchString = [searchString substringWithRange:NSMakeRange(0, range.location)];
                     }
                 }
-                searchString = [(id)CFURLCreateStringByAddingPercentEscapes(NULL, (CFStringRef)searchString, NULL, CFSTR("[]&="), kCFStringEncodingUTF8) autorelease];
                 [options setObject:searchString forKey:@"search"];
             }
         }
@@ -588,7 +625,7 @@ static inline NSDictionary *optionsFromFragmentAndEvent(NSString *fragment) {
         
         if ([ws type:type conformsToType:SKNotesDocumentType]) {
             NSAppleEventDescriptor *event = [[NSAppleEventManager sharedAppleEventManager] currentAppleEvent];
-            if ([event eventID] == kAEOpenDocuments && [event descriptorForKeyword:keyAESearchText]) {
+            if ([event eventID] == kAEOpenDocuments && [[[event descriptorForKeyword:keyAESearchText] stringValue] length]) {
                 NSURL *pdfURL = [absoluteURL URLReplacingPathExtension:@"pdf"];
                 if ([pdfURL checkResourceIsReachableAndReturnError:NULL])
                     absoluteURL = pdfURL;
@@ -608,7 +645,7 @@ static inline NSDictionary *optionsFromFragmentAndEvent(NSString *fragment) {
     }
 }
 
-/// ✅ By not responding to newWindowForTab: no "+" button is shown in the tab bar
+// By not responding to newWindowForTab: no "+" button is shown in the tab bar
 - (BOOL)respondsToSelector:(SEL)aSelector {
     return aSelector != @selector(newWindowForTab:) && [super respondsToSelector:aSelector];
 }
