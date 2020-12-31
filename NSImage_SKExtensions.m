@@ -1124,7 +1124,7 @@ APPLY_NOTE_TYPES(DECLARE_NOTE_FUNCTIONS);
         drawAddBadgeAtPoint(NSMakePoint(18.0, 14.0));
     );
 }
-
+/// 绘制工具栏中 "Add Note" 部分的小图标
 + (void)makeNoteImages {
     
 #define MAKE_NOTE_IMAGE(name) \
